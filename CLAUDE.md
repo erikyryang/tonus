@@ -24,11 +24,20 @@ PostgreSQL, Flyway, Testcontainers, ShedLock, Maven.
   Todo o resto em internal/ — subpastas web/ (controllers + DTOs REST)
   e domain/ (entidades + regras); services e repositories soltos.
 - Dependências permitidas: scheduling→registration, billing→registration,
-  notification→registration, todos→shared. NADA além disso. Sem ciclos.
-  Verificado por ApplicationModules.verify() em teste — obrigatório.
+  notification→registration, auth→registration, todos→shared. NADA além disso.
+  Sem ciclos — registration não pode conhecer auth, isso fecharia ciclo.
+  Declarado em @ApplicationModule(allowedDependencies) no package-info.java de
+  cada módulo e verificado por ApplicationModules.verify() em teste. Sem a
+  declaração a lista não é conferida por nada: aresta nova exige editar o
+  package-info, e é isso que força a decisão a ser consciente.
 - Comunicação entre módulos: query = chamada síncrona via fachada;
   efeito colateral = evento via @ApplicationModuleListener.
-- Entrega de eventos é at-least-once: todo listener é idempotente.
+- Entrega de eventos é at-least-once: todo listener é idempotente. O registry
+  persistido (spring-modulith-starter-jpa, tabela event_publication) é o que
+  torna isso verdadeiro.
+- @ApplicationModuleListener é ASSÍNCRONO — o Modulith liga o suporte a @Async
+  sozinho, sem @EnableAsync. Em teste, esperar pelo efeito (helper Eventually);
+  assertar logo após a resposta HTTP é corrida.
 
 ## Nomenclatura (padrão do projeto)
 - Todo identificador de código é em inglês: pacotes, classes, métodos,

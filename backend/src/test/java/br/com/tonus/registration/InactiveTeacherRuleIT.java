@@ -1,0 +1,85 @@
+package br.com.tonus.registration;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+/**
+ * Professor que saiu do estúdio (inativo) não recebe aluno novo, mas os alunos
+ * que já eram dele continuam editáveis — desativar o professor não pode
+ * congelar o cadastro de quem ficou pendurado nele.
+ */
+class InactiveTeacherRuleIT extends AbstractRegistrationIntegrationTest {
+
+    @Test
+    void rejectsNewStudentForInactiveTeacher() throws Exception {
+        long teacherId = createTeacher(unique("Professor Que Saiu"));
+        mockMvc.perform(patch("/teachers/{id}/deactivate", teacherId).cookie(admin))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/students")
+                        .cookie(admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Aluno Orfao","phone":"+5511977770000","teacherId":%d}
+                                """.formatted(teacherId)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Professor inativo: " + teacherId));
+    }
+
+    @Test
+    void rejectsMovingStudentToInactiveTeacher() throws Exception {
+        long activeTeacher = createTeacher(unique("Professora Ativa"));
+        long leavingTeacher = createTeacher(unique("Professor De Saida"));
+        long studentId = createStudent(unique("Aluno Movido"), activeTeacher);
+
+        mockMvc.perform(patch("/teachers/{id}/deactivate", leavingTeacher).cookie(admin))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(put("/students/{id}", studentId)
+                        .cookie(admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Aluno Movido","phone":"+5511977770000","teacherId":%d}
+                                """.formatted(leavingTeacher)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void stillAllowsEditingStudentOfInactiveTeacher() throws Exception {
+        long teacherId = createTeacher(unique("Professor Que Sai Depois"));
+        long studentId = createStudent(unique("Aluno Que Fica"), teacherId);
+
+        mockMvc.perform(patch("/teachers/{id}/deactivate", teacherId).cookie(admin))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(put("/students/{id}", studentId)
+                        .cookie(admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Aluno Que Fica Renomeado","phone":"+5511977771111","teacherId":%d}
+                                """.formatted(teacherId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Aluno Que Fica Renomeado"));
+    }
+
+    /**
+     * Ordem importa: aluno inexistente é 404 do recurso pedido, não 400 do
+     * corpo enviado, mesmo quando o corpo também está inválido.
+     */
+    @Test
+    void unknownStudentWinsOverInvalidTeacher() throws Exception {
+        mockMvc.perform(put("/students/{id}", 99_999_999L)
+                        .cookie(admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Aluno Fantasma","phone":"+5511977770000","teacherId":88888888}
+                                """))
+                .andExpect(status().isNotFound());
+    }
+}

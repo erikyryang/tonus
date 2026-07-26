@@ -27,6 +27,9 @@ public class User extends BaseEntity {
     @Column(name = "teacher_id")
     private Long teacherId;
 
+    @Column(nullable = false)
+    private boolean active = true;
+
     protected User() {
     }
 
@@ -36,6 +39,19 @@ public class User extends BaseEntity {
         this.role = role;
         this.studentId = studentId;
         this.teacherId = teacherId;
+        this.active = true;
+    }
+
+    public void deactivate() {
+        this.active = false;
+    }
+
+    public void activate() {
+        this.active = true;
+    }
+
+    public boolean isActive() {
+        return active;
     }
 
     public String getLogin() {
