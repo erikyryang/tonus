@@ -36,6 +36,8 @@ HELP.md
 
 ### === IDEs Java (IntelliJ, Eclipse, NetBeans, VS Code) === ###
 
+backend/target/
+
 # IntelliJ IDEA
 .idea/
 *.iws

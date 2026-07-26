@@ -1,0 +1,14 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${DB_NAME:-tonus}
+      POSTGRES_USER: ${DB_USER:-tonus}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-tonus}
+    ports:
+      - "5432:5432"
+    volumes:
+      - tonus-db-data:/var/lib/postgresql/data
+
+volumes:
+  tonus-db-data:

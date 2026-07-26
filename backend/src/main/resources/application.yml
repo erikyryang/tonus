@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: tonus
+  mvc:
+    problemdetails:
+      enabled: true
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:tonus}
+    username: ${DB_USER:tonus}
+    password: ${DB_PASSWORD:tonus}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+server:
+  port: ${SERVER_PORT:8080}
+
+auth:
+  jwt:
+    secret: ${JWT_SECRET:dev-only-secret-change-me-before-any-real-deploy-0123456789}
+    access-token-ttl: 10m
+  refresh-token:
+    ttl: 7d
