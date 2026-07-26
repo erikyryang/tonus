@@ -79,5 +79,11 @@ mediante autorização explícita. Detalhes completos em `CLAUDE.md`.
   rotação de refresh token com detecção de reuso, rate limit no login,
   Problem Details para erros, e auditoria automática de entidades via
   listener JPA.
-- Auto-registro, recuperação de senha e gestão de usuários ficam para a
-  próxima spec (SPEC-002).
+- **SPEC-002 (`registration`)** — implementada e testada: CRUD de alunos e
+  professores com vínculo obrigatório aluno→professor, desativação em vez de
+  DELETE (preserva histórico de fatura), listagens paginadas e filtráveis,
+  `RegistrationFacade` para os módulos seguintes, e criação do usuário de
+  acesso pelo ADMIN via `POST /users`. Quem é desativado no cadastro tem o
+  acesso revogado automaticamente, por evento.
+- Auto-registro e recuperação de senha seguem fora de escopo.
+- Próximos: `scheduling`, `billing`, `notification`.

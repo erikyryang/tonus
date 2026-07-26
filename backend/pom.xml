@@ -65,6 +65,15 @@
             <groupId>org.springframework.modulith</groupId>
             <artifactId>spring-modulith-starter-core</artifactId>
         </dependency>
+        <!--
+          Registry de publicação de eventos persistido: é o que sustenta a
+          entrega at-least-once entre módulos. Sem ele, um listener que falha
+          perde o evento em silêncio.
+        -->
+        <dependency>
+            <groupId>org.springframework.modulith</groupId>
+            <artifactId>spring-modulith-starter-jpa</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>org.flywaydb</groupId>

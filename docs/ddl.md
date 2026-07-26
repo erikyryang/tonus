@@ -1,0 +1,98 @@
+# DDL — tabelas e constraints
+
+Fonte de verdade do schema. O que vale de fato é o conteúdo de
+`backend/src/main/resources/db/migration`; este documento existe para explicar
+**por que** cada constraint existe, já que várias delas são regra de negócio e
+não detalhe técnico.
+
+Nunca usar `ddl-auto` para criar nada — `validate` é o único modo permitido.
+Toda mudança entra como migration nova; migration aplicada não se edita.
+
+## Convenções
+
+- Nomes em inglês, sem exceção (tabela, coluna, constraint, arquivo).
+- Arquivo: `V###__modulo_descricao.sql`.
+- Toda entidade de negócio herda `id`, `created_at`, `updated_at` de `BaseEntity`.
+- Timestamps preenchidos via JPA auditing, que usa o bean `Clock` — por isso
+  data em teste é controlável e `LocalDateTime.now()` é proibido no código.
+
+## Migrations aplicadas
+
+| Versão | Módulo | O que faz |
+|---|---|---|
+| V001 | auth | `users` |
+| V002 | auth | `refresh_token` |
+| V003 | shared | `audit_log` |
+| V004 | registration | `teacher` |
+| V005 | registration | `student` |
+| V006 | shared | `event_publication` (registry do Modulith) |
+| V007 | auth | `users.active` + índices do vínculo |
+
+---
+
+## `users` (auth)
+
+`id`, `login`, `password`, `role`, `student_id`, `teacher_id`, `active`,
+`created_at`, `updated_at`.
+
+- `uk_users_login` — login é a identidade de acesso; duplicar quebraria a
+  autenticação.
+- `role CHECK IN ('ADMIN','TEACHER','STUDENT')` — a autorização inteira depende
+  desses três valores; um valor fora da lista não teria significado nenhum.
+- `password` guarda hash BCrypt, nunca a senha.
+- `student_id` / `teacher_id` — vínculo com o cadastro. **Sem FK, de propósito:**
+  a integridade é garantida em código, no `AuthService.createUser`, via
+  `RegistrationFacade`. Pôr FK aqui acoplaria os dois módulos no schema de um
+  jeito que o `ApplicationModules.verify()` não enxergaria, e o acoplamento
+  ficaria sem guarda automática. Ver `docs/design-summary.md`.
+- `active` — revogação de acesso. Quem sai do estúdio tem o login barrado por
+  aqui; a linha permanece, porque apagá-la levaria junto o histórico.
+
+## `refresh_token` (auth)
+
+`id`, `user_id`, `token_hash`, `family`, `expires_at`, `used`, timestamps.
+
+- FK para `users` — token órfão não teria a quem se referir.
+- `uk_refresh_token_token_hash` — o hash é a chave de busca do token
+  apresentado; duplicata tornaria a resolução ambígua.
+- `family` agrupa a cadeia de rotações. Reuso de um token já usado revoga a
+  família inteira: é como se detecta roubo de token.
+- Guarda hash, nunca o token em claro.
+
+## `audit_log` (shared)
+
+`id`, `entity_name`, `entity_id`, `action`, `changed_at`.
+
+- Populada pelo `AuditListener` apenas para entidades anotadas com `@Audited`.
+- Por decisão de arquitetura, só `invoice.status` e `default_schedule` serão
+  auditados. Cadastro de aluno/professor **não** gera registro.
+
+## `teacher` (registration)
+
+`id`, `name`, `phone`, `active`, timestamps.
+
+- Só esses campos, por minimização LGPD. Nada de CPF, endereço ou foto.
+- `active` — saída do estúdio. Não existe DELETE físico.
+
+## `student` (registration)
+
+`id`, `name`, `phone`, `teacher_id`, `active`, timestamps.
+
+- **`teacher_id NOT NULL` + `fk_student_teacher`** — é o critério de aceite
+  "criar aluno sem professor → 400" expresso no banco. A API também valida, mas
+  a constraint segura mesmo se alguém escrever direto no banco ou se a validação
+  do DTO for removida por engano. Há teste cobrindo os dois caminhos.
+- `idx_student_teacher_id` — a fachada lista alunos por professor.
+- `idx_student_active` — listagem filtrada por `?active=`.
+- Não existe DELETE: aluno que sai é desativado, para preservar o histórico de
+  fatura que apontará para ele.
+
+## `event_publication` (shared)
+
+Registry do Spring Modulith. Schema espelha o mapeamento de
+`JpaEventPublication` — `ddl-auto: validate` confere esta tabela como qualquer
+outra, então divergência derruba o contexto na subida.
+
+Cada evento entregue a um listener vira uma linha, marcada como completa só
+quando o listener termina. Linha com `completion_date IS NULL` é entrega que
+não fechou — é isso que sustenta o at-least-once. Ver `docs/eventos.md`.
