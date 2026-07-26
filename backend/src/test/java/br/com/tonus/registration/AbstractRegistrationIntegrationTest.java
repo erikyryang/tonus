@@ -24,8 +24,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Os testes compartilham um Postgres único para a JVM, sem rollback entre
  * classes: todo nome gerado leva um sufixo aleatório e nenhuma asserção depende
  * de contagem global da tabela.
+ *
+ * É pública porque scheduling (SPEC-003) precisa semear aluno e professor para
+ * montar agenda — mesmo motivo de {@link AbstractAuthIntegrationTest} ser
+ * pública. O acoplamento com a API do registration fica confinado aqui.
  */
-abstract class AbstractRegistrationIntegrationTest extends AbstractAuthIntegrationTest {
+public abstract class AbstractRegistrationIntegrationTest extends AbstractAuthIntegrationTest {
 
     @Autowired
     protected ObjectMapper objectMapper;
@@ -33,7 +37,7 @@ abstract class AbstractRegistrationIntegrationTest extends AbstractAuthIntegrati
     protected Cookie admin;
 
     @BeforeEach
-    void authenticateAsAdmin() throws Exception {
+    protected void authenticateAsAdmin() throws Exception {
         admin = adminCookie("admin-registration@tonus.com");
     }
 

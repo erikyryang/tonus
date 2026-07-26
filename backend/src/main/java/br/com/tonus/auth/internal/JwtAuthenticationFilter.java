@@ -31,9 +31,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 .flatMap(jwtService::parse)
                 .ifPresent(jws -> {
                     String role = jwtService.roleClaim(jws);
-                    String subject = jws.getPayload().getSubject();
                     List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
-                    var authentication = new UsernamePasswordAuthenticationToken(subject, null, authorities);
+                    // O principal é o AuthenticatedUser de shared, e não o id em
+                    // String, para que os endpoints /me de outros módulos leiam o
+                    // vínculo sem depender de auth.
+                    var authentication = new UsernamePasswordAuthenticationToken(
+                            jwtService.principal(jws), null, authorities);
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 });
         chain.doFilter(request, response);

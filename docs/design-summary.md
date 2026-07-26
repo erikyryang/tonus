@@ -20,6 +20,10 @@ billing       → shared, registration
 notification  → shared, registration
 ```
 
+Declarado em `@ApplicationModule(allowedDependencies = ...)` de cada
+`package-info.java`. `scheduling` já está no ar (SPEC-003); `billing` e
+`notification` ainda não existem como código.
+
 **Isso é verificado, não combinado.** Cada módulo declara
 `@ApplicationModule(allowedDependencies = ...)` no seu `package-info.java`, e
 `ArchitectureTest` roda `ApplicationModules.verify()`. Uma aresta não declarada
@@ -45,6 +49,26 @@ Descartadas:
   limpo, `auth` ficaria puro. Custo alto agora: refatoraria o schema da SPEC-001
   e o caminho token→aluno que os endpoints `/me` vão usar. Continua sendo a
   melhor saída se `auth` um dia precisar existir sem `registration`.
+
+### Por que o token carrega `studentId`/`teacherId`
+
+Os endpoints `/me/...` vivem no módulo dono do dado — `/me/schedule` é do
+`scheduling`, não do `auth`. Mas o vínculo usuário→aluno mora em `users`, que é
+do `auth`, e `scheduling → auth` fecharia um ciclo (auth já depende de
+registration).
+
+Saída: o access token leva `studentId` e `teacherId` como claims, e o principal
+autenticado é `shared.AuthenticatedUser`. O `auth` preenche; qualquer módulo lê,
+porque todos podem depender de `shared`.
+
+Descartadas:
+- **`scheduling` consultar `users`**: a aresta proibida, direto.
+- **Fachada do auth resolvendo usuário→aluno**: transformaria toda leitura de
+  `/me` numa consulta síncrona a outro módulo, e ainda criaria a aresta.
+
+Efeito colateral bom: o id do aluno não tem por onde chegar do cliente. Não é
+que o endpoint confira se o id pedido é o do token — é que não existe parâmetro
+de id. IDOR deixa de ser algo que alguém precisa lembrar de prevenir.
 
 ## Comunicação entre módulos
 
@@ -82,6 +106,18 @@ erro, WhatsApp, label — continua em português.
   dois casos contaria a quem tenta que aquele login existe.
 - LGPD por minimização: só nome, telefone e situação. Nada de CPF, endereço ou
   foto. Nunca logar telefone completo nem conteúdo de mensagem.
+
+## Tempo
+
+O bean `Clock` é o único jeito permitido de saber a hora — `LocalDate.now()`
+sem argumento é proibido, porque data não controlável em teste transforma
+regra de negócio em coisa que passa de segunda a sexta e quebra no sábado.
+
+O clock vive no fuso do estúdio (`America/Sao_Paulo`), não em UTC. Instante
+independe de fuso, mas "hoje" não: `/me/schedule` sem data resolve o dia por
+`LocalDate.now(clock)`, e em UTC todo acesso depois das 21h de Brasília
+mostraria a agenda do dia seguinte. Erro que só aparece de noite é o mais caro
+de descobrir.
 
 ## Banco
 
