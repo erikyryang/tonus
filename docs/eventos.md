@@ -50,6 +50,29 @@ registry, "at-least-once" seria só uma frase.
 - **Significa:** professor saiu do estúdio.
 - **Consome:** `auth`, mesmo tratamento.
 
+### `ClassCanceled(Long studentId, LocalDate date)`
+
+- **Publica:** `scheduling`, em `SchedulingService.cancelClass`.
+- **Significa:** a aula daquele aluno naquele dia não acontece.
+- **Consome:** ninguém ainda. `notification` (SPEC-004) avisará o aluno.
+- **Idempotência:** o consumidor precisa tolerar o mesmo aviso duas vezes — a
+  entrega é at-least-once, e mandar WhatsApp repetido é o efeito colateral mais
+  visível que existe.
+
+### `ClassRescheduled(Long studentId, LocalDate originalDate, LocalDate newDate, LocalTime newTime)`
+
+- **Publica:** `scheduling`, em `SchedulingService.rescheduleClass`.
+- **Significa:** a aula mudou de dia/hora.
+- **Carrega a data original** porque quem avisa o aluno precisa dizer de onde
+  para onde; "sua aula foi remarcada" sem a origem não informa nada.
+
+### `HolidayCreated(LocalDate date)`
+
+- **Publica:** `scheduling`, em `SchedulingService.createHoliday`.
+- **Significa:** o dia inteiro deixou de ter aula, para todo mundo.
+- **Não carrega a lista de alunos afetados:** quem são eles é pergunta que o
+  consumidor faz à agenda, e a resposta muda entre a publicação e o consumo.
+
 ---
 
 ## O que deliberadamente não é evento

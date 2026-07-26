@@ -27,6 +27,9 @@ Toda mudança entra como migration nova; migration aplicada não se edita.
 | V005 | registration | `student` |
 | V006 | shared | `event_publication` (registry do Modulith) |
 | V007 | auth | `users.active` + índices do vínculo |
+| V008 | scheduling | `default_schedule` |
+| V009 | scheduling | `schedule_exception` |
+| V010 | scheduling | `holiday` |
 
 ---
 
@@ -86,6 +89,51 @@ Toda mudança entra como migration nova; migration aplicada não se edita.
 - `idx_student_active` — listagem filtrada por `?active=`.
 - Não existe DELETE: aluno que sai é desativado, para preservar o histórico de
   fatura que apontará para ele.
+
+## `default_schedule` (scheduling)
+
+`id`, `student_id`, `time_of_day`, timestamps.
+
+- **`uk_default_schedule_student`** — é o critério de aceite "segundo horário
+  para o mesmo aluno → 409" expresso no banco. A API também recusa, mas há
+  teste que insere direto no banco justamente para provar que a regra não
+  depende da validação de aplicação.
+- **Sem `teacher_id`, de propósito** — o professor da aula é o do vínculo atual
+  em `student`. Um campo aqui seria uma segunda verdade, que diverge da
+  primeira na troca de professor de um aluno.
+- `student_id` **sem FK**, mesma decisão de `users.student_id`: FK entre módulos
+  acopla no schema de um jeito que o `ApplicationModules.verify()` não enxerga.
+  A existência do aluno é validada via `RegistrationFacade`.
+- `time_of_day`, e não `time`, porque `TIME` é nome de tipo em SQL.
+
+## `schedule_exception` (scheduling)
+
+`id`, `student_id`, `date`, `type`, `new_date`, `new_time`, timestamps.
+
+- `uk_schedule_exception_student_date` — uma exceção por aluno por dia. Duas
+  tornariam o dia ambíguo: cancelou e remarcou? remarcou para onde?
+- `ck_schedule_exception_type` — `CANCELED` ou `RESCHEDULED`, mesma razão do
+  CHECK de `users.role`: valor fora da lista não teria significado.
+- **`ck_schedule_exception_target`** — o par `(new_date, new_time)` existe se e
+  somente se for `RESCHEDULED`. Remarcação sem destino seria uma aula que some
+  sem reaparecer; cancelamento com destino não quer dizer nada.
+- `idx_schedule_exception_date` / `idx_schedule_exception_new_date` — a
+  expansão da agenda pergunta duas coisas por dia: quem tem exceção em D (para
+  subtrair) e quem foi remarcado para D (para somar).
+
+## `holiday` (scheduling)
+
+`id`, `date`, `description`, timestamps.
+
+- `uk_holiday_date` — feriado é global, uma linha por data. Duplicata tornaria
+  ambíguo o "existe feriado em D?" que a expansão da agenda pergunta.
+- Não existe feriado por professor ou por turma: se existisse, a pergunta
+  deixaria de ter resposta única.
+
+Nenhuma tabela de agenda guarda aula materializada: a agenda de um dia é
+derivada a cada consulta (template − feriado − exceções + remarcações).
+Materializar obrigaria a gerar linhas para o futuro inteiro e a reconciliar
+tudo a cada troca de horário.
 
 ## `event_publication` (shared)
 

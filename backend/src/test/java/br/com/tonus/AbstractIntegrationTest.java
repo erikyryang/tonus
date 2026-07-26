@@ -1,5 +1,6 @@
 package br.com.tonus;
 
+import br.com.tonus.support.PostgresContainer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -14,19 +15,11 @@ import org.testcontainers.containers.PostgreSQLContainer;
 public abstract class AbstractIntegrationTest {
 
     /**
-     * Container único para toda a JVM de teste (padrão "singleton container"
-     * do Testcontainers): iniciado uma vez no static initializer, nunca
-     * parado explicitamente (o Ryuk derruba ao fim da JVM). Usar
-     * {@code @Testcontainers}/{@code @Container} aqui reiniciaria o container
-     * a cada classe de teste e deixava o Spring com um ApplicationContext em
-     * cache apontando pra uma porta antiga já morta.
+     * Container compartilhado por toda a JVM de teste — ver
+     * {@link PostgresContainer} para o porquê de ele morar fora daqui.
      */
     @ServiceConnection
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16");
-
-    static {
-        POSTGRES.start();
-    }
+    static final PostgreSQLContainer<?> POSTGRES = PostgresContainer.INSTANCE;
 
     @Autowired
     protected MockMvc mockMvc;
