@@ -88,9 +88,24 @@ public class SchedulingService {
         return defaultScheduleRepository.findAll(withStableSort(pageable));
     }
 
+    /**
+     * Apaga o horário e, junto, todas as exceções do aluno.
+     *
+     * Sem a limpeza, uma exceção sobrevive ao horário que a originou: como
+     * schedule_exception é indexada por (student_id, date) e não pelo id do
+     * horário, um CANCELED antigo continuaria valendo e suprimiria em silêncio
+     * a aula de um horário novo criado depois para o mesmo aluno no mesmo dia.
+     *
+     * A limpeza é de tudo — cancelamento e remarcação — e não seletiva:
+     * apagar o horário devolve o aluno a "sem agenda", em vez de decidir caso a
+     * caso o que sobrevive. É a leitura mais simples de "apagado", e a única
+     * que fecha o bug sem deixar outra combinação por trás.
+     */
     @Transactional
     public void deleteDefaultSchedule(Long id) {
-        defaultScheduleRepository.delete(requireSchedule(id));
+        DefaultSchedule schedule = requireSchedule(id);
+        scheduleExceptionRepository.deleteByStudentId(schedule.getStudentId());
+        defaultScheduleRepository.delete(schedule);
     }
 
     @Transactional

@@ -15,4 +15,12 @@ public interface ScheduleExceptionRepository
 
     /** O que entra na agenda de D: as remarcações cujo destino é D. */
     List<ScheduleException> findByNewDate(LocalDate newDate);
+
+    /**
+     * Usado ao apagar o horário padrão do aluno. A exceção é indexada por
+     * (student_id, date), sem qualquer vínculo com o id do horário — sem esta
+     * limpeza, uma exceção antiga sobreviveria à exclusão e voltaria a
+     * suprimir um horário novo criado depois para o mesmo aluno no mesmo dia.
+     */
+    void deleteByStudentId(Long studentId);
 }
