@@ -61,6 +61,32 @@ class StudentCrudIT extends AbstractRegistrationIntegrationTest {
     }
 
     /**
+     * Trocar o professor de um aluno é operação individual válida — a spec só
+     * põe a troca em lote fora de escopo. Até agora só os caminhos de recusa
+     * (professor inexistente, professor inativo) tinham teste.
+     */
+    @Test
+    void movesStudentToAnotherActiveTeacher() throws Exception {
+        long originalTeacher = createTeacher(unique("Professora Original"));
+        long newTeacher = createTeacher(unique("Professor Novo"));
+        String name = unique("Aluno Remanejado");
+        long studentId = createStudent(name, originalTeacher);
+
+        mockMvc.perform(put("/students/{id}", studentId)
+                        .cookie(admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"%s","phone":"+5511988880000","teacherId":%d}
+                                """.formatted(name, newTeacher)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.teacherId").value(newTeacher));
+
+        mockMvc.perform(get("/students/{id}", studentId).cookie(admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.teacherId").value(newTeacher));
+    }
+
+    /**
      * Minimização LGPD: a API não aceita campo fora do escopo da spec.
      */
     @Test

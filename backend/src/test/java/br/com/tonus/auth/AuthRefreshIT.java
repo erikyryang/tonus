@@ -12,6 +12,31 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class AuthRefreshIT extends AbstractAuthIntegrationTest {
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
+    /**
+     * O refresh token vale 7 dias (SPEC-001). Vencido, não renova nada.
+     *
+     * A expiração é envelhecida direto no banco em vez de mexer no Clock: o
+     * bean é compartilhado por todo o contexto, e recuá-lo sete dias afetaria
+     * qualquer outro teste que rodasse na mesma JVM.
+     */
+    @Test
+    void expiredRefreshTokenIsRejected() throws Exception {
+        createUser("expirado@tonus.com", "s3cret-pass", Role.ADMIN);
+        Cookie refreshCookie = extractCookie(login("expirado@tonus.com", "s3cret-pass"), REFRESH_COOKIE);
+
+        int aged = jdbcTemplate.update("""
+                UPDATE refresh_token SET expires_at = NOW() - INTERVAL '1 day'
+                WHERE user_id = (SELECT id FROM users WHERE login = ?)
+                """, "expirado@tonus.com");
+        assertThat(aged).isPositive();
+
+        mockMvc.perform(post("/auth/refresh").cookie(refreshCookie))
+                .andExpect(status().isUnauthorized());
+    }
+
     @Test
     void refreshRotatesAccessAndRefreshTokens() throws Exception {
         createUser("teacher@tonus.com", "s3cret-pass", Role.TEACHER);
