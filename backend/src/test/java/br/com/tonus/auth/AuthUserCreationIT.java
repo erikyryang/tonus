@@ -112,6 +112,13 @@ class AuthUserCreationIT extends AbstractAuthIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    void returnsNotFoundActivatingUnknownUser() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .patch("/users/{id}/activate", 99_999_999L).cookie(admin))
+                .andExpect(status().isNotFound());
+    }
+
     private long createTeacher() throws Exception {
         MvcResult result = mockMvc.perform(post("/teachers")
                         .cookie(admin)

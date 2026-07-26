@@ -37,4 +37,18 @@ class AuthLogoutIT extends AbstractAuthIntegrationTest {
         mockMvc.perform(post("/auth/refresh").cookie(refreshCookie))
                 .andExpect(status().isUnauthorized());
     }
+
+    /**
+     * Logout sem cookie nenhum é o caso de quem já estava deslogado, ou de quem
+     * limpou os cookies antes de clicar em sair. Tem que ser no-op silencioso:
+     * transformar isso em erro só produziria ruído numa ação que já alcançou o
+     * resultado desejado.
+     */
+    @Test
+    void logoutWithoutCookiesIsHarmless() throws Exception {
+        mockMvc.perform(post("/auth/logout"))
+                .andExpect(status().isOk())
+                .andExpect(cookie().maxAge(ACCESS_COOKIE, 0))
+                .andExpect(cookie().maxAge(REFRESH_COOKIE, 0));
+    }
 }
