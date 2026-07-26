@@ -55,10 +55,14 @@ Valida a decisão de arquitetura central do projeto.
   abrisse `/me/schedule` depois das 21h veria a agenda do dia seguinte.
 - **DELETE de exceção existe** e devolve o dia ao template. Sem ele, desfazer
   um cancelamento marcado por engano só seria possível no banco.
-- **Não se exige horário padrão para criar exceção.** A invariante não se
-  sustentaria: apagar o horário depois deixaria exceções órfãs de qualquer
-  jeito, e validar só na criação seria teatro. A expansão já ignora exceção de
-  aluno sem template.
+- **Não se exige horário padrão para criar exceção**, mas **apagar o horário
+  apaga junto todas as exceções do aluno** — cancelamento e remarcação, sem
+  seletividade. Sem a limpeza havia um bug real, não só dado morto:
+  `schedule_exception` é indexada por `(student_id, date)`, sem vínculo com o
+  id do horário, então uma exceção antiga sobrevivia à exclusão do horário e
+  voltava a suprimir em silêncio a aula de um horário **novo** criado depois
+  para o mesmo aluno no mesmo dia. Limpar tudo, e não caso a caso, é a leitura
+  mais simples de "apagado" e fecha o bug sem deixar outra combinação por trás.
 - **Bloqueio de remarcação para feriado é assumidamente parcial**: vale para
   feriado já cadastrado, mas nada impede cadastrar o feriado depois. Nesse caso
   a aula some da agenda, porque o feriado suprime o dia inteiro. A checagem
