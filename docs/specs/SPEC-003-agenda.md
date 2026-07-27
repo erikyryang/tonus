@@ -68,7 +68,7 @@ Valida a decisão de arquitetura central do projeto.
   a aula some da agenda, porque o feriado suprime o dia inteiro. A checagem
   existe para o ADMIN descobrir na hora, não para garantir consistência.
 - **Apagar remarcação não publica evento.** O aluno já avisado pode ficar com
-  informação desatualizada. Decidido junto com a SPEC-004, quando existir
+  informação desatualizada. Decidido junto com a SPEC-005, quando existir
   consumidor — inventar o contrato agora, sem quem o consuma, seria adivinhação.
 - **Relógio fixo nos testes de agenda** (`SchedulingClockConfig`): com as regras
   de data passada, teste que usa o relógio do sistema passa hoje e falha sozinho

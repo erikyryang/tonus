@@ -54,9 +54,23 @@ public class JwtService {
                 .compact();
     }
 
+    /**
+     * A validação usa o mesmo {@code Clock} da emissão.
+     *
+     * Sem o {@code .clock(...)} explícito, a JJWT compara {@code exp} contra o
+     * relógio do sistema, e o token passa a nascer sob um relógio e a ser
+     * conferido sob outro. Em produção os dois coincidem e nada aparece; em
+     * teste, com relógio fixo, o token nasce expirado assim que a hora real
+     * passa do instante fixo + TTL — o que fazia a suíte depender da hora do
+     * dia em que rodava.
+     */
     public Optional<Jws<Claims>> parse(String token) {
         try {
-            return Optional.of(Jwts.parser().verifyWith(key).build().parseSignedClaims(token));
+            return Optional.of(Jwts.parser()
+                    .verifyWith(key)
+                    .clock(() -> Date.from(clock.instant()))
+                    .build()
+                    .parseSignedClaims(token));
         } catch (JwtException | IllegalArgumentException e) {
             return Optional.empty();
         }

@@ -34,6 +34,7 @@ Toda mudança entra como migration nova; migration aplicada não se edita.
 | V012 | billing | `invoice` |
 | V013 | billing | `payment` |
 | V014 | shared | `shedlock` (tabela de lock do ShedLock) |
+| V015 | notification | `notification_log` |
 
 ---
 
@@ -206,3 +207,43 @@ timestamps.
   de `event_publication` (V006) — infra do Modulith, não dado de domínio de
   um módulo de negócio. `billing` é o único consumidor hoje (job diário de
   cobrança), mas a tabela não é dele.
+
+## `notification_log` (notification)
+
+`id`, `student_id`, `template`, `reference_key`, `sent_at`, timestamps.
+
+- `student_id` **sem FK**, mesma decisão de `default_schedule.student_id` e
+  `subscription.student_id`: a integridade é garantida em código, via
+  `RegistrationFacade`.
+- **`uk_notification_log_template_student_reference`** — UNIQUE(`template`,
+  `student_id`, `reference_key`). É o critério de aceite "evento reprocessado
+  não reenvia mensagem" expresso no banco, e não só verificação em código: a
+  entrega é at-least-once, e a constraint é o que segura duas entregas
+  concorrentes do mesmo evento — a verificação sozinha tem janela entre o
+  SELECT e o envio. Mesmo raciocínio de `uk_invoice_subscription_period`.
+- `reference_key` é `VARCHAR` e não uma coluna por tipo de evento: cada
+  template deriva sua chave do próprio payload (a data em `CLASS_CANCELED` e
+  `HOLIDAY_CREATED`, o id da fatura nos três de cobrança, origem+destino em
+  `CLASS_RESCHEDULED`) e não há formato comum entre eles.
+- `ck_notification_log_template CHECK (template IN (...))` — mesma razão do
+  CHECK de `invoice.status`.
+- **Não há coluna de status nem contador de tentativas.** A linha é gravada
+  antes do envio, e falha no envio derruba a transação inteira: uma tentativa
+  malsucedida nunca chega a existir no banco. Quem rastreia falha é
+  `event_publication.completion_date IS NULL` — a tabela do Modulith já é o
+  registro de "não terminou", e duplicá-lo aqui daria dois lugares para
+  discordar.
+- `idx_notification_log_student` — histórico de avisos de um aluno.
+- Sem `@Audited`: a tabela já é, ela própria, o registro do que aconteceu.
+- **Podada por `notification.log-retention` (180 dias), e isso só é seguro
+  porque a reentrega tem teto.** A linha é a chave de idempotência: apagá-la
+  enquanto a publicação correspondente ainda puder ser reentregue faz o aluno
+  receber a mensagem de novo — e no fan-out de feriado as linhas dos já
+  avisados convivem com uma publicação incompleta, então o caso não é
+  hipotético. O teto é `shared.events.max-age` (24h) somado a
+  `republish-outstanding-events-on-restart=false`; ligado, o Modulith
+  reentrega na subida tudo que está incompleto sem olhar idade, e não haveria
+  teto nenhum. Um piso em `NotificationProperties` recusa retenção menor que
+  7 dias, porque as duas configurações moram em módulos diferentes e nada
+  mais as relaciona.
+

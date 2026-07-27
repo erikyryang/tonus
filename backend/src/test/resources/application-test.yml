@@ -5,6 +5,27 @@ spring:
   flyway:
     enabled: true
 
+shared:
+  events:
+    # Crons que não rodam durante a suíte (3h de 1º de janeiro). Os testes que
+    # exercitam reprocessamento chamam a API do Modulith na mão; deixar os jobs
+    # soltos acrescentaria reentrega — ou apagamento — imprevisível no meio de
+    # outro teste.
+    republish-cron: "0 0 3 1 1 *"
+    cleanup-cron: "0 0 3 1 1 *"
+
+notification:
+  # Mesma razão: a poda do histórico é chamada na mão pelo teste que a
+  # exercita, e um job solto apagaria linha no meio de outro teste.
+  cleanup-cron: "0 0 3 1 1 *"
+
+billing:
+  # O job diário roda às 3h em produção — e rodaria no meio da suíte para quem
+  # a executasse de madrugada, gerando fatura e publicando evento por baixo dos
+  # testes. BillingJobIT chama BillingService direto (ver o javadoc de lá sobre
+  # o lock), então nada aqui depende do agendamento.
+  job-cron: "0 0 3 1 1 *"
+
 auth:
   jwt:
     secret: test-secret-key-not-for-production-use-0123456789

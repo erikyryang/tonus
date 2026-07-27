@@ -5,6 +5,7 @@ import br.com.tonus.auth.internal.domain.Role;
 import br.com.tonus.auth.internal.domain.User;
 import br.com.tonus.auth.internal.domain.UserRepository;
 import jakarta.servlet.http.Cookie;
+import java.time.Clock;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +31,9 @@ public abstract class AbstractAuthIntegrationTest extends AbstractIntegrationTes
     @Autowired
     protected PasswordEncoder passwordEncoder;
 
+    @Autowired
+    protected Clock clock;
+
     protected User createUser(String login, String rawPassword, Role role) {
         User user = new User(login, passwordEncoder.encode(rawPassword), role, null, null);
         return userRepository.saveAndFlush(user);
@@ -52,13 +56,22 @@ public abstract class AbstractAuthIntegrationTest extends AbstractIntegrationTes
      * sem importar {@code auth.internal.*} — o acoplamento com os detalhes do
      * auth fica confinado aqui.
      *
-     * O cookie é cacheado por login para a JVM inteira: o POST /auth/login tem
-     * rate limit de 5 tentativas/minuto por usuário, e autenticar de novo a
-     * cada @BeforeEach estouraria o limite (429) em qualquer classe com mais de
+     * O cookie é cacheado para a JVM inteira: o POST /auth/login tem rate limit
+     * de 5 tentativas/minuto por usuário, e autenticar de novo a cada
+     * @BeforeEach estouraria o limite (429) em qualquer classe com mais de
      * cinco testes. O access token vale 10 min, de sobra para a suíte.
+     *
+     * A chave inclui o {@code Clock} do contexto, e não só o login. Um token
+     * nasce e é conferido contra o relógio de quem o emitiu, e as classes de
+     * teste não compartilham relógio — billing, scheduling e os testes de
+     * relógio real sobem contextos com {@code Clock} próprio. Cacheado só por
+     * login, o cookie emitido sob um relógio vazaria para um contexto com
+     * outro e chegaria expirado. Identidade do bean é o recorte exato de "o
+     * contexto que emitiu este token".
      */
     protected Cookie cookieFor(String login, Role role) throws Exception {
-        Cookie cached = COOKIE_CACHE.get(login);
+        String key = login + "#" + System.identityHashCode(clock);
+        Cookie cached = COOKIE_CACHE.get(key);
         if (cached != null) {
             return cached;
         }
@@ -66,7 +79,7 @@ public abstract class AbstractAuthIntegrationTest extends AbstractIntegrationTes
             createUser(login, DEFAULT_PASSWORD, role);
         }
         Cookie cookie = extractCookie(login(login, DEFAULT_PASSWORD), ACCESS_COOKIE);
-        COOKIE_CACHE.put(login, cookie);
+        COOKIE_CACHE.put(key, cookie);
         return cookie;
     }
 

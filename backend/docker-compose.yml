@@ -9,6 +9,55 @@ services:
       - "5432:5432"
     volumes:
       - tonus-db-data:/var/lib/postgresql/data
+      # Cria o banco da Evolution na primeira subida do volume. Ver o
+      # cabeçalho do arquivo para o caso de volume já existente.
+      - ./docker/init-evolution-db.sql:/docker-entrypoint-initdb.d/10-evolution.sql:ro
+    networks:
+      - tonus
+
+  # Gateway de WhatsApp (SPEC-005).
+  #
+  # Sem `ports`: a Evolution NÃO é alcançável do host, só de dentro da rede
+  # `tonus`. Quem abre essa porta expõe à internet uma API que manda mensagem
+  # em nome do estúdio e carrega a sessão de WhatsApp — a sessão é credencial,
+  # e o volume abaixo é o que a guarda entre reinícios.
+  #
+  # Atrás de um profile para `docker compose up -d db` continuar subindo só o
+  # banco, que é o fluxo de desenvolvimento documentado no CLAUDE.md. Em
+  # desenvolvimento NOTIFICATION_ENABLED=false e a aplicação nem procura por
+  # ela; subir este serviço só faz sentido junto com a aplicação na mesma rede.
+  #
+  #   docker compose --profile whatsapp up -d
+  evolution:
+    image: atendai/evolution-api:v2.2.3
+    profiles:
+      - whatsapp
+    restart: unless-stopped
+    environment:
+      # Sem `:?` de propósito: o compose interpola o arquivo inteiro antes de
+      # olhar profiles, então a variante que exige a variável quebraria o
+      # `docker compose up -d db` do fluxo de desenvolvimento. A chave ausente
+      # é barrada onde importa — a Evolution recusa subir sem ela, e a
+      # aplicação recusa subir com enabled=true e api-key vazia.
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:-}
+      # Nomes conferidos contra o .env.example do próprio produto. O conjunto
+      # completo é bem maior; aqui está só o mínimo para subir com Postgres e
+      # sem Redis — acrescentar Redis seria infra nova para discutir antes.
+      SERVER_URL: http://evolution:8080
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://${DB_USER:-tonus}:${DB_PASSWORD:-tonus}@db:5432/evolution
+      CACHE_REDIS_ENABLED: "false"
+      CACHE_LOCAL_ENABLED: "true"
+    volumes:
+      - tonus-evolution-instances:/evolution/instances
+    depends_on:
+      - db
+    networks:
+      - tonus
 
 volumes:
   tonus-db-data:
+  tonus-evolution-instances:
+
+networks:
+  tonus:

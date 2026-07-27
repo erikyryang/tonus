@@ -10,12 +10,13 @@ import org.springframework.context.annotation.Primary;
 /**
  * "Hoje" fixo para a suíte MockMvc de billing.
  *
- * Precisa ficar perto da data real: o login gera um JWT cujo {@code iat} usa
- * este Clock, mas a validação do token (JJWT) compara {@code exp} contra o
- * relógio real do sistema, não contra este bean. Um "hoje" de teste distante
- * da data real faria todo token nascer expirado (ou nunca expirar) na
- * validação — mesmo motivo por trás da escolha de data em
- * {@code SchedulingClockConfig}.
+ * Não precisa ficar perto da data real. Já precisou: enquanto o
+ * {@code JwtService} emitia com este Clock e validava contra o relógio do
+ * sistema, um "hoje" de teste distante fazia todo token nascer expirado, e a
+ * suíte passava ou falhava conforme a hora em que rodava. Hoje a validação usa
+ * o mesmo Clock da emissão, e {@code AuthFixedClockIT} guarda essa
+ * propriedade — a data aqui volta a ser escolha de domínio, não concessão à
+ * infraestrutura de token.
  */
 @TestConfiguration
 public class BillingClockConfig {
