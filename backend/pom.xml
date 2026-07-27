@@ -22,6 +22,7 @@
         <spring-modulith.version>1.4.12</spring-modulith.version>
         <jjwt.version>0.12.6</jjwt.version>
         <bucket4j.version>8.10.1</bucket4j.version>
+        <shedlock.version>6.6.0</shedlock.version>
     </properties>
 
     <dependencyManagement>
@@ -111,6 +112,21 @@
             <groupId>com.bucket4j</groupId>
             <artifactId>bucket4j-core</artifactId>
             <version>${bucket4j.version}</version>
+        </dependency>
+
+        <!--
+          Trava distribuída do job diário de cobrança: garante que só uma
+          instância execute o job por vez, mesmo com múltiplas réplicas.
+        -->
+        <dependency>
+            <groupId>net.javacrumbs.shedlock</groupId>
+            <artifactId>shedlock-spring</artifactId>
+            <version>${shedlock.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.javacrumbs.shedlock</groupId>
+            <artifactId>shedlock-provider-jdbc-template</artifactId>
+            <version>${shedlock.version}</version>
         </dependency>
 
         <dependency>

@@ -73,6 +73,36 @@ registry, "at-least-once" seria só uma frase.
 - **Não carrega a lista de alunos afetados:** quem são eles é pergunta que o
   consumidor faz à agenda, e a resposta muda entre a publicação e o consumo.
 
+### `InvoiceDueSoon(Long invoiceId, Long studentId, LocalDate dueDate, BigDecimal amount)`
+
+- **Publica:** `billing`, em `BillingService.generateDueInvoices` (job diário),
+  quando nasce a fatura da competência de uma assinatura ativa.
+- **Significa:** a fatura do mês venceu hoje.
+- **Consome:** ninguém ainda. `notification` avisará o aluno.
+- **Idempotência:** o pré-check de existência + `uk_invoice_subscription_period`
+  garantem que o job só publica este evento uma vez por fatura, mesmo rodando
+  2× no mesmo dia. Ainda assim o consumidor precisa tolerar entrega repetida —
+  a garantia é at-least-once.
+
+### `InvoiceOverdue(Long invoiceId, Long studentId, LocalDate dueDate)`
+
+- **Publica:** `billing`, em `BillingService.markOverdueInvoices` (job diário),
+  na transição ABERTA -> ATRASADA.
+- **Significa:** a fatura passou do prazo de tolerância
+  (`billing.days-overdue`) sem pagamento.
+- **Consome:** ninguém ainda. `notification` avisará o aluno.
+- **Idempotência:** publicado só na transição — a query do job só varre
+  faturas ainda ABERTAS, então rodar de novo no mesmo dia não republica.
+
+### `PaymentRegistered(Long invoiceId, Long studentId, LocalDate paymentDate, BigDecimal amount)`
+
+- **Publica:** `billing`, em `BillingService.registerPayment`, quando o ADMIN
+  dá baixa numa fatura.
+- **Significa:** a fatura foi paga.
+- **Consome:** ninguém ainda. `notification` avisará o aluno.
+- **Idempotência:** o consumidor precisa tolerar o mesmo aviso duas vezes —
+  entrega at-least-once.
+
 ---
 
 ## O que deliberadamente não é evento
