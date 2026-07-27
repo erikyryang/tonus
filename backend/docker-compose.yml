@@ -29,7 +29,11 @@ services:
   #
   #   docker compose --profile whatsapp up -d
   evolution:
-    image: atendai/evolution-api:v2.2.3
+    # evoapicloud, não atendai: o produto migrou de repositório e
+    # `docker pull atendai/evolution-api` responde "access denied". Imagem e
+    # variáveis daqui são as mesmas de EvolutionApiContractIT — se uma tag
+    # sumir, quebra no teste e não no deploy.
+    image: evoapicloud/evolution-api:v2.3.7
     profiles:
       - whatsapp
     restart: unless-stopped
@@ -45,7 +49,7 @@ services:
       # sem Redis — acrescentar Redis seria infra nova para discutir antes.
       SERVER_URL: http://evolution:8080
       DATABASE_PROVIDER: postgresql
-      DATABASE_CONNECTION_URI: postgresql://${DB_USER:-tonus}:${DB_PASSWORD:-tonus}@db:5432/evolution
+      DATABASE_CONNECTION_URI: postgresql://${DB_USER:-tonus}:${DB_PASSWORD:-tonus}@db:5432/evolution?schema=public
       CACHE_REDIS_ENABLED: "false"
       CACHE_LOCAL_ENABLED: "true"
     volumes:
