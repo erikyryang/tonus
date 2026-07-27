@@ -30,6 +30,10 @@ Toda mudança entra como migration nova; migration aplicada não se edita.
 | V008 | scheduling | `default_schedule` |
 | V009 | scheduling | `schedule_exception` |
 | V010 | scheduling | `holiday` |
+| V011 | billing | `subscription` |
+| V012 | billing | `invoice` |
+| V013 | billing | `payment` |
+| V014 | shared | `shedlock` (tabela de lock do ShedLock) |
 
 ---
 
@@ -144,3 +148,61 @@ outra, então divergência derruba o contexto na subida.
 Cada evento entregue a um listener vira uma linha, marcada como completa só
 quando o listener termina. Linha com `completion_date IS NULL` é entrega que
 não fechou — é isso que sustenta o at-least-once. Ver `docs/eventos.md`.
+
+## `subscription` (billing)
+
+`id`, `student_id`, `monthly_amount`, `due_day`, `active`, timestamps.
+
+- `student_id` **sem FK**, mesma decisão de `default_schedule.student_id`: a
+  integridade é garantida em código, via `RegistrationFacade`.
+- `uk_subscription_student` — um aluno tem no máximo uma assinatura. Duas
+  tornariam ambíguo quem o job diário deveria faturar.
+- `ck_subscription_due_day CHECK (due_day BETWEEN 1 AND 31)` — dia de mês
+  válido; a resolução para o último dia do mês (31 em fevereiro) é lógica de
+  domínio (`Subscription.dueDateFor`), não do banco.
+
+## `invoice` (billing)
+
+`id`, `subscription_id`, `reference_month`, `amount`, `due_date`, `status`,
+timestamps.
+
+- `subscription_id` com FK normal para `subscription`: as duas tabelas são do
+  mesmo módulo, então não há o acoplamento entre módulos que se evita em
+  `student_id`/`teacher_id`.
+- `reference_month` guarda sempre o dia 1 do mês — é a representação de
+  `YearMonth` no banco, para reaproveitar `DATE` em vez de duas colunas
+  separadas de ano e mês.
+- **`uk_invoice_subscription_period`** — uma fatura por assinatura por
+  competência. É o critério de aceite "job rodando 2× no mesmo dia não
+  duplica fatura" expresso no banco: a idempotência do job vira constraint,
+  não só verificação em código.
+- `ck_invoice_status CHECK (status IN ('OPEN', 'PAID', 'OVERDUE'))` — mesma
+  razão do CHECK de `users.role`.
+- `idx_invoice_status` / `idx_invoice_due_date` — o job diário varre faturas
+  por status (abertas vencendo → atrasadas) e por vencimento (quem vence
+  hoje).
+- Auditada (`@Audited`): transição de status de fatura precisa ficar
+  rastreável — mesma decisão de `default_schedule`.
+
+## `payment` (billing)
+
+`id`, `invoice_id`, `payment_date`, `registered_by`, timestamps.
+
+- `invoice_id` com FK normal para `invoice` (mesmo módulo).
+- `registered_by` guarda o id do usuário ADMIN que deu baixa, **sem FK**:
+  billing não pode depender de auth (fecharia ciclo com `auth → registration`).
+- **`uk_payment_invoice`** — uma fatura só pode ser paga uma vez. É o
+  critério de aceite "baixa em fatura já paga → 409" expresso no banco.
+
+## `shedlock` (shared)
+
+`name`, `lock_until`, `locked_at`, `locked_by`.
+
+- Schema padrão exigido pelo `JdbcTemplateLockProvider` do ShedLock — não
+  segue a convenção de `BaseEntity` (sem `id`/`created_at`/`updated_at`)
+  porque não é uma entidade de negócio, é infra do agendador.
+- Fica em `shared`, não em `billing`: é infra genérica reutilizável por
+  qualquer módulo que precise de job com lock distribuído, mesmo raciocínio
+  de `event_publication` (V006) — infra do Modulith, não dado de domínio de
+  um módulo de negócio. `billing` é o único consumidor hoje (job diário de
+  cobrança), mas a tabela não é dele.

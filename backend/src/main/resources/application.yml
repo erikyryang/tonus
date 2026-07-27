@@ -30,3 +30,11 @@ auth:
     access-token-ttl: 10m
   refresh-token:
     ttl: 7d
+
+billing:
+  # Dias de tolerância após o vencimento antes de uma fatura ABERTA virar
+  # ATRASADA (ver SPEC-004).
+  days-overdue: 1
+  # Cron do job diário de cobrança (@Scheduled + ShedLock): 3h da manhã,
+  # fuso do estúdio.
+  job-cron: "0 0 3 * * *"
