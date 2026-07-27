@@ -27,8 +27,23 @@ logo depois da chamada é corrida — use o helper `Eventually` (em
 `spring-modulith-starter-jpa` mantém o registry em `event_publication`. A linha
 é criada na transação de quem publica e marcada como completa quando o listener
 termina. Se o listener falhar ou o processo cair no meio, a linha fica com
-`completion_date IS NULL` — o evento não sumiu, e dá para reprocessar. Sem esse
-registry, "at-least-once" seria só uma frase.
+`completion_date IS NULL` — o evento não sumiu.
+
+Mas registrar não é reentregar. Quem lê essas linhas é o `EventRepublicationJob`
+(em `shared`), a cada 5 minutos, e ele é o **único** caminho de reentrega: a
+republicação de subida do Modulith está desligada de propósito, porque reentrega
+tudo que está incompleto sem olhar idade. Sem esse job, "at-least-once" seria só
+uma frase — a pendência ficaria no banco e ninguém a leria.
+
+A reentrega tem janela: nada é retentado antes de `shared.events.min-age` (para
+não competir com um listener ainda em curso) nem depois de `shared.events.max-age`
+(24h). O teto existe porque a tabela não guarda contador de tentativas — sem
+ele, o que falha em definitivo seria retentado para sempre. Passado o teto o job
+desiste e emite WARN, e a linha fica com `completion_date` nulo: é a evidência
+de que aquela entrega nunca aconteceu.
+
+Entrega concluída é apagada depois de `shared.events.retention` (7 dias), pelo
+`EventPublicationCleanupJob` — o registry não poda nada sozinho.
 
 ---
 
@@ -54,31 +69,46 @@ registry, "at-least-once" seria só uma frase.
 
 - **Publica:** `scheduling`, em `SchedulingService.cancelClass`.
 - **Significa:** a aula daquele aluno naquele dia não acontece.
-- **Consome:** ninguém ainda. `notification` (SPEC-004) avisará o aluno.
+- **Consome:** `notification` (SPEC-005) — avisa o aluno por WhatsApp.
 - **Idempotência:** o consumidor precisa tolerar o mesmo aviso duas vezes — a
   entrega é at-least-once, e mandar WhatsApp repetido é o efeito colateral mais
-  visível que existe.
+  visível que existe. Em `notification` a garantia é a UNIQUE de
+  `notification_log`, chaveada por `(template, student_id, date)`.
 
 ### `ClassRescheduled(Long studentId, LocalDate originalDate, LocalDate newDate, LocalTime newTime)`
 
 - **Publica:** `scheduling`, em `SchedulingService.rescheduleClass`.
 - **Significa:** a aula mudou de dia/hora.
+- **Consome:** `notification` (SPEC-005) — avisa o aluno por WhatsApp.
 - **Carrega a data original** porque quem avisa o aluno precisa dizer de onde
   para onde; "sua aula foi remarcada" sem a origem não informa nada.
+- **Idempotência:** a chave em `notification_log` inclui origem *e* destino. A
+  mesma aula pode ser remarcada duas vezes a partir do mesmo dia — apagar a
+  exceção e recriá-la republica o evento com `originalDate` igual e destino
+  diferente —, e chavear só pela origem engoliria o segundo aviso.
 
 ### `HolidayCreated(LocalDate date)`
 
 - **Publica:** `scheduling`, em `SchedulingService.createHoliday`.
 - **Significa:** o dia inteiro deixou de ter aula, para todo mundo.
+- **Consome:** `notification` (SPEC-005) — avisa cada aluno por WhatsApp.
 - **Não carrega a lista de alunos afetados:** quem são eles é pergunta que o
-  consumidor faz à agenda, e a resposta muda entre a publicação e o consumo.
+  consumidor faz no momento do consumo, porque a resposta muda entre a
+  publicação e o consumo.
+- **Quem responde essa pergunta é o `registration`, não a agenda.** O
+  consumidor natural seria `scheduling`, que sabe quem tem aula no dia — mas
+  `notification → scheduling` não é aresta permitida, e abri-la para um
+  evento só não se paga. `notification` usa
+  `RegistrationFacade.findActiveStudents()` e avisa todo aluno ativo. O preço
+  é avisar também quem está ativo sem horário padrão; a alternativa era mexer
+  no grafo de dependências. Ver SPEC-005.
 
 ### `InvoiceDueSoon(Long invoiceId, Long studentId, LocalDate dueDate, BigDecimal amount)`
 
 - **Publica:** `billing`, em `BillingService.generateDueInvoices` (job diário),
   quando nasce a fatura da competência de uma assinatura ativa.
 - **Significa:** a fatura do mês venceu hoje.
-- **Consome:** ninguém ainda. `notification` avisará o aluno.
+- **Consome:** `notification` (SPEC-005) — avisa o aluno por WhatsApp.
 - **Idempotência:** o pré-check de existência + `uk_invoice_subscription_period`
   garantem que o job só publica este evento uma vez por fatura, mesmo rodando
   2× no mesmo dia. Ainda assim o consumidor precisa tolerar entrega repetida —
@@ -90,7 +120,7 @@ registry, "at-least-once" seria só uma frase.
   na transição ABERTA -> ATRASADA.
 - **Significa:** a fatura passou do prazo de tolerância
   (`billing.days-overdue`) sem pagamento.
-- **Consome:** ninguém ainda. `notification` avisará o aluno.
+- **Consome:** `notification` (SPEC-005) — avisa o aluno por WhatsApp.
 - **Idempotência:** publicado só na transição — a query do job só varre
   faturas ainda ABERTAS, então rodar de novo no mesmo dia não republica.
 
@@ -99,7 +129,7 @@ registry, "at-least-once" seria só uma frase.
 - **Publica:** `billing`, em `BillingService.registerPayment`, quando o ADMIN
   dá baixa numa fatura.
 - **Significa:** a fatura foi paga.
-- **Consome:** ninguém ainda. `notification` avisará o aluno.
+- **Consome:** `notification` (SPEC-005) — manda o recibo ao aluno.
 - **Idempotência:** o consumidor precisa tolerar o mesmo aviso duas vezes —
   entrega at-least-once.
 

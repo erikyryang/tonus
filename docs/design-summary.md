@@ -17,12 +17,12 @@ registration  → shared
 auth          → shared, registration
 scheduling    → shared, registration
 billing       → shared, registration
-notification  → shared, registration
+notification  → shared, registration, scheduling, billing
 ```
 
 Declarado em `@ApplicationModule(allowedDependencies = ...)` de cada
-`package-info.java`. `scheduling` já está no ar (SPEC-003); `billing` e
-`notification` ainda não existem como código.
+`package-info.java`. `scheduling` (SPEC-003) e `billing` (SPEC-004) já estão
+no ar; `notification` (SPEC-005) ainda não existe como código.
 
 **Isso é verificado, não combinado.** Cada módulo declara
 `@ApplicationModule(allowedDependencies = ...)` no seu `package-info.java`, e
@@ -49,6 +49,28 @@ Descartadas:
   limpo, `auth` ficaria puro. Custo alto agora: refatoraria o schema da SPEC-001
   e o caminho token→aluno que os endpoints `/me` vão usar. Continua sendo a
   melhor saída se `auth` um dia precisar existir sem `registration`.
+
+### Por que `notification` depende de `scheduling` e `billing`
+
+Consumir evento **é** dependência de compilação. O listener recebe
+`ClassCanceled`, e esse record mora na raiz do `scheduling`; não existe jeito
+de escutar sem referenciar o tipo. A lista `{shared, registration}` que a
+SPEC-005 previa foi recusada pelo `ArchitectureTest` nomeando as seis
+referências — descoberto na implementação, não no desenho.
+
+Vale registrar o que a aresta **não** significa: o acoplamento em tempo de
+execução continua assíncrono e num sentido só. `notification` nunca chama
+`scheduling` nem `billing`, e nenhum dos dois conhece `notification` — por
+isso não há ciclo. O que a declaração diz é que trocar a assinatura de um
+evento quebra a compilação de quem o escuta, o que é verdade e é bom que
+apareça no build.
+
+Descartadas:
+- **Escutar `Object` e filtrar por tipo em runtime**: some com a aresta no
+  papel e traz de volta em forma pior — a quebra vira erro de execução num
+  listener assíncrono, que é o lugar mais caro de descobrir qualquer coisa.
+- **Duplicar os records em `shared`**: duas verdades para o mesmo contrato, e
+  `shared` viraria depósito de tudo que dois módulos trocam.
 
 ### Por que o token carrega `studentId`/`teacherId`
 

@@ -24,8 +24,13 @@ PostgreSQL, Flyway, Testcontainers, ShedLock, Maven.
   Todo o resto em internal/ — subpastas web/ (controllers + DTOs REST)
   e domain/ (entidades + regras); services e repositories soltos.
 - Dependências permitidas: scheduling→registration, billing→registration,
-  notification→registration, auth→registration, todos→shared. NADA além disso.
+  auth→registration, notification→{registration, scheduling, billing},
+  todos→shared. NADA além disso.
   Sem ciclos — registration não pode conhecer auth, isso fecharia ciclo.
+  notification aponta para scheduling e billing porque consome os eventos
+  deles, e escutar um evento é referenciar o record que o publicador expõe na
+  raiz — dependência de compilação como qualquer outra. O acoplamento em
+  execução continua assíncrono e num sentido só. Ver docs/design-summary.md.
   Declarado em @ApplicationModule(allowedDependencies) no package-info.java de
   cada módulo e verificado por ApplicationModules.verify() em teste. Sem a
   declaração a lista não é conferida por nada: aresta nova exige editar o
@@ -34,7 +39,9 @@ PostgreSQL, Flyway, Testcontainers, ShedLock, Maven.
   efeito colateral = evento via @ApplicationModuleListener.
 - Entrega de eventos é at-least-once: todo listener é idempotente. O registry
   persistido (spring-modulith-starter-jpa, tabela event_publication) é o que
-  torna isso verdadeiro.
+  torna isso verdadeiro — junto com quem o lê: sem os jobs de shared
+  (EventRepublicationJob e EventPublicationCleanupJob) a pendência fica
+  registrada e ninguém a reentrega.
 - @ApplicationModuleListener é ASSÍNCRONO — o Modulith liga o suporte a @Async
   sozinho, sem @EnableAsync. Em teste, esperar pelo efeito (helper Eventually);
   assertar logo após a resposta HTTP é corrida.
