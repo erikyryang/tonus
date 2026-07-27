@@ -128,3 +128,27 @@ diretamente, não só na API.
 
 Por isso teste de integração usa Postgres real via Testcontainers. **H2 é
 proibido**: um banco que não tem as mesmas constraints não testa as regras.
+
+## `shared` como shared module do Modulith
+
+`TonusApplication` usa `@Modulith(sharedModules = "shared")`, não
+`@SpringBootApplication` puro.
+
+"Shared module" no Spring Modulith **não é inferido** de
+`@ApplicationModule(allowedDependencies = {})` — é sempre declaração explícita
+em `@Modulith(sharedModules = ...)`. Sem ela, `@ApplicationModuleTest` (usado
+por `SchedulingEventsIT`, `BillingJobIT`) filtra o bootstrap para o módulo sob
+teste + suas `allowedDependencies`, e **não inclui `shared.internal`** —
+mesmo `shared` sendo dependência de todo mundo. O sintoma: `JpaAuditingConfig`
+e `AuditListener` ficam de fora do contexto, `created_at`/`updated_at` nascem
+nulos, e o insert quebra a constraint `NOT NULL`. É fácil de não notar porque
+`@SpringBootTest` comum (a maioria dos testes) sobe o contexto inteiro e nunca
+exercita esse filtro.
+
+Efeito colateral da correção: uma vez que `shared` entra no bootstrap
+filtrado, `spring-modulith-moments` (feature de eventos de troca de dia/semana
+do próprio Modulith, transitiva de `spring-modulith-starter-core`, não usada
+pelo projeto) passa a competir por um bean `Clock` único e falha a resolver
+`@Primary` do jeito que o resto da aplicação resolve. Excluída via
+`spring.autoconfigure.exclude` em `application.yml` — não é usada, então
+excluir não muda comportamento nenhum, só remove ruído.
