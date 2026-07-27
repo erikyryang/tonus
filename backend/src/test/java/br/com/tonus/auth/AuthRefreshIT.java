@@ -19,7 +19,7 @@ class AuthRefreshIT extends AbstractAuthIntegrationTest {
      * O refresh token vale 7 dias (SPEC-001). Vencido, não renova nada.
      *
      * A expiração é envelhecida direto no banco em vez de mexer no Clock: o
-     * bean é compartilhado por todo o contexto, e recuá-lo sete dias afetaria
+     * bean é compartilhado por totalidade no contexto, e recuá-lo sete dias afetaria
      * qualquer outro teste que rodasse na mesma JVM.
      */
     @Test
