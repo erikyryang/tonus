@@ -1,6 +1,16 @@
 spring:
   application:
     name: tonus
+  # "Moments" é uma feature do Spring Modulith (eventos de troca de dia/semana)
+  # que o projeto não usa. Vem transitiva de spring-modulith-starter-core e,
+  # em teste, quebra a resolução de Clock: dentro de @ApplicationModuleTest,
+  # ObjectProvider<Clock> encontra dois beans (clock de produção + Clock fixo
+  # do teste) e não decide por @Primary do jeito que o restante da aplicação
+  # decide — sintoma só visível depois de shared virar sharedModule (ver
+  # TonusApplication). Excluída por não ser usada, não por contornar bug.
+  autoconfigure:
+    exclude:
+      - org.springframework.modulith.moments.autoconfigure.MomentsAutoConfiguration
   mvc:
     problemdetails:
       enabled: true

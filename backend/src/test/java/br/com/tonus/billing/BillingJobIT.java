@@ -8,33 +8,23 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.modulith.test.ApplicationModuleTest;
+import org.springframework.modulith.test.AssertablePublishedEvents;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.event.ApplicationEvents;
-import org.springframework.test.context.event.RecordApplicationEvents;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * O job diário é a espinha dorsal da cobrança (SPEC-004): gera fatura do dia e
- * marca fatura vencida como atrasada.
- *
- * {@code @SpringBootTest} (contexto cheio), e não {@code @ApplicationModuleTest}
- * como {@code SchedulingEventsIT}: o bootstrap filtrado por módulo do segundo
- * tem um bug pré-existente (não introduzido por esta spec) — beans de
- * {@code shared.internal} (auditing de created_at/updated_at, AuditListener)
- * não são pegos de forma confiável, e o mesmo já quebra
- * {@code SchedulingEventsIT} quando rodado isolado. A garantia de que billing
- * só depende do que declara em @ApplicationModule já vem do ArchitectureTest
- * global; aqui o contexto cheio é o caminho estável para exercitar o job.
- * Corrigir a causa raiz é fora do escopo da SPEC-004.
+ * marca fatura vencida como atrasada. Roda como {@code @ApplicationModuleTest}
+ * de propósito, mesmo padrão de {@code SchedulingEventsIT} — sobe o billing e
+ * suas dependências, e falha se o módulo precisar de alguém não declarado.
  *
  * Os testes chamam {@link BillingService} diretamente, não
  * {@code BillingJob.runDailyJob()}: o {@code @SchedulerLock} usa relógio real
@@ -45,16 +35,18 @@ import static org.assertj.core.api.Assertions.assertThat;
  * spec ("job rodando 2x não duplica"), que é o pré-check de existência +
  * uk_invoice_subscription_period.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
-@AutoConfigureMockMvc
+@ApplicationModuleTest(mode = ApplicationModuleTest.BootstrapMode.ALL_DEPENDENCIES)
 @ActiveProfiles("test")
-@RecordApplicationEvents
 class BillingJobIT {
 
     @ServiceConnection
     static final PostgreSQLContainer<?> POSTGRES = PostgresContainer.INSTANCE;
 
-    /** "Hoje" fixo, independente do resto da suíte de billing. */
+    /**
+     * Configuração aninhada, não {@code @Import}: o bootstrap do módulo filtra
+     * as definições de bean pelos pacotes do módulo sob teste, mesmo motivo
+     * documentado em {@code SchedulingEventsIT.FixedClockConfig}.
+     */
     @TestConfiguration
     static class FixedClockConfig {
 
@@ -77,7 +69,7 @@ class BillingJobIT {
     private JdbcTemplate jdbcTemplate;
 
     @Test
-    void jobRunningTwiceDoesNotDuplicateInvoiceOrEvent(ApplicationEvents events) {
+    void jobRunningTwiceDoesNotDuplicateInvoiceOrEvent(AssertablePublishedEvents events) {
         long studentId = seedStudent();
         long subscriptionId = seedSubscription(studentId, 15, "220.00");
 
@@ -90,12 +82,12 @@ class BillingJobIT {
         // Filtra por aluno: o Postgres é compartilhado entre as classes de teste
         // de billing sem rollback, então outras faturas/eventos da varredura
         // global do job podem coexistir na mesma execução.
-        assertThat(events.stream(InvoiceDueSoon.class).filter(e -> e.studentId() == studentId))
+        assertThat(events.ofType(InvoiceDueSoon.class).matching(InvoiceDueSoon::studentId, studentId))
                 .hasSize(1);
     }
 
     @Test
-    void jobTransitionsOverdueInvoiceOnceAndPublishesOnce(ApplicationEvents events) {
+    void jobTransitionsOverdueInvoiceOnceAndPublishesOnce(AssertablePublishedEvents events) {
         long subscriptionId = seedSubscription(seedStudent(), 1, "180.00");
         long invoiceId = seedInvoice(subscriptionId, "2026-07-01", "180.00", "2026-07-05", "OPEN");
 
@@ -109,7 +101,7 @@ class BillingJobIT {
         // Postgres é compartilhado entre as classes de teste de billing sem
         // rollback — outras faturas OPEN vencidas podem coexistir e também
         // virar OVERDUE nesta mesma chamada.
-        assertThat(events.stream(InvoiceOverdue.class).filter(e -> e.invoiceId() == invoiceId))
+        assertThat(events.ofType(InvoiceOverdue.class).matching(InvoiceOverdue::invoiceId, invoiceId))
                 .hasSize(1);
     }
 
