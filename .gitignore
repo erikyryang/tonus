@@ -106,16 +106,22 @@ coverage/
 .nyc_output/
 
 # Variáveis de ambiente
+# Qualquer .env fica fora do git; só o exemplo é versionado. A lista antiga
+# cobria apenas os sufixos .local e deixava passar .env.development e
+# .env.production, que o Vite lê do mesmo jeito.
 .env
-.env.local
-.env.*.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
 
 # Editor/OS específicos de front-end
 .vite/
 .rollup.cache/
+# Config em TypeScript faz o Vite gerar um bundle temporário ao lado do
+# arquivo; ele sobra quando o processo morre no meio.
+vite.config.ts.timestamp-*
+vite.config.js.timestamp-*
+# Convenção do Vite para arquivo de override só da máquina local.
+*.local
 
 ### === Sistema Operacional / Editores gerais === ###
 .DS_Store

@@ -71,6 +71,23 @@ public class AuthService {
         return new AuthTokens(accessToken, refreshToken);
     }
 
+    /**
+     * Login de quem está autenticado. É a única informação da sessão que não
+     * cabe no token — role e vínculo já são claims.
+     *
+     * Confere que o usuário ainda existe e continua ativo: o access token é
+     * autocontido e sobrevive à revogação por alguns minutos. Devolver 200 para
+     * quem acabou de ter o acesso cortado faria o front montar a tela inteira
+     * de uma sessão que a próxima chamada já recusaria.
+     */
+    @Transactional(readOnly = true)
+    public String activeLoginOf(Long userId) {
+        return userRepository.findById(userId)
+                .filter(User::isActive)
+                .map(User::getLogin)
+                .orElseThrow(InvalidSessionException::new);
+    }
+
     @Transactional(noRollbackFor = InvalidRefreshTokenException.class)
     public AuthTokens refresh(String rawRefreshToken) {
         RefreshToken token = refreshTokenRepository.findByTokenHash(hash(rawRefreshToken))

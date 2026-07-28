@@ -46,9 +46,9 @@ class BillingAccessControlIT extends AbstractBillingIntegrationTest {
 
     @Test
     void anonymousIsRejectedEverywhere() throws Exception {
-        mockMvc.perform(get("/subscriptions")).andExpect(status().isForbidden());
-        mockMvc.perform(get("/invoices")).andExpect(status().isForbidden());
-        mockMvc.perform(get("/me/invoices")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/subscriptions")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/invoices")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/me/invoices")).andExpect(status().isUnauthorized());
     }
 
     private Cookie linkedTeacherCookie(long teacherId) throws Exception {

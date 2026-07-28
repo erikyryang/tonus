@@ -29,14 +29,14 @@ class RegistrationAccessControlIT extends AbstractRegistrationIntegrationTest {
     }
 
     /**
-     * O entry point atual do Spring Security devolve 403 para anônimo, não 401.
-     * Se 401 é o certo, a mudança é no SecurityConfig do auth (SPEC-001) e vale
-     * para toda a API — não é decisão desta spec. Aqui só se garante que o
-     * anônimo não passa.
+     * Anônimo é 401 em toda a API desde a SPEC-006: o entry point próprio do
+     * SecurityConfig substituiu o 403 padrão do Spring Security, porque é o 401
+     * que o front usa como sinal de "sessão expirada, tente o refresh". 403
+     * ficou para quem está autenticado e não tem permissão.
      */
     @Test
     void anonymousCannotAccessRegistrationCrud() throws Exception {
-        mockMvc.perform(get("/students")).andExpect(status().isForbidden());
-        mockMvc.perform(get("/teachers")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/students")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/teachers")).andExpect(status().isUnauthorized());
     }
 }

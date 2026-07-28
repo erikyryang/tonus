@@ -69,15 +69,15 @@ class SchedulingAccessControlIT extends AbstractSchedulingIntegrationTest {
     }
 
     /**
-     * 403 e não 401 porque é a resposta que o projeto já dá a requisição sem
-     * credencial (ver {@code AuthInvalidTokenIT}): sem entry point próprio, o
-     * Spring Security devolve 403. A agenda não é lugar de inventar convenção
-     * diferente do resto da aplicação.
+     * 401 porque é a resposta que o projeto dá a requisição sem credencial
+     * desde a SPEC-006 (ver {@code AuthInvalidTokenIT}): o SecurityConfig tem
+     * entry point próprio. A agenda não é lugar de inventar convenção diferente
+     * do resto da aplicação.
      */
     @Test
     void anonymousIsRejected() throws Exception {
         mockMvc.perform(get("/schedule/day").param("date", MONDAY))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     private void expectForbiddenToCreateSchedule(Cookie cookie, long studentId) throws Exception {

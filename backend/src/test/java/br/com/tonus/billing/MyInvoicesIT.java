@@ -43,6 +43,6 @@ class MyInvoicesIT extends AbstractBillingIntegrationTest {
     @Test
     void anonymousIsRejected() throws Exception {
         mockMvc.perform(get("/me/invoices"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 }
