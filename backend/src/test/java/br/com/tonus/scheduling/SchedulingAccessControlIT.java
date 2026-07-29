@@ -80,6 +80,49 @@ class SchedulingAccessControlIT extends AbstractSchedulingIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    /**
+     * Cancelar e remarcar é do ADMIN, inclusive para o próprio aluno.
+     *
+     * Sem esta cobertura o prefixo {@code /schedule-exceptions} era o único de
+     * ADMIN sem teste de negação: um engano na regra deixaria qualquer aluno
+     * autenticado cancelando a aula de qualquer outro, e a suíte inteira
+     * continuaria verde.
+     */
+    @Test
+    void studentCannotCancelAnyClass() throws Exception {
+        long teacherId = createTeacher(unique("Professor Da Excecao Negada"));
+        long studentId = createStudent(unique("Aluno Que Nao Cancela"), teacherId);
+
+        expectForbiddenToCancel(linkedStudentCookie(studentId), studentId);
+    }
+
+    @Test
+    void teacherCannotCancelAnyClass() throws Exception {
+        long teacherId = createTeacher(unique("Professor Que Nao Cancela"));
+        long studentId = createStudent(unique("Aluno Do Professor Que Nao Cancela"), teacherId);
+
+        expectForbiddenToCancel(linkedTeacherCookie(teacherId), studentId);
+    }
+
+    @Test
+    void studentCannotListExceptions() throws Exception {
+        long teacherId = createTeacher(unique("Professor Da Listagem Negada"));
+        long studentId = createStudent(unique("Aluno Sem Listagem"), teacherId);
+
+        mockMvc.perform(get("/schedule-exceptions").cookie(linkedStudentCookie(studentId)))
+                .andExpect(status().isForbidden());
+    }
+
+    private void expectForbiddenToCancel(Cookie cookie, long studentId) throws Exception {
+        mockMvc.perform(post("/schedule-exceptions")
+                        .cookie(cookie)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"studentId":%d,"date":"%s","type":"CANCELED"}
+                                """.formatted(studentId, MONDAY)))
+                .andExpect(status().isForbidden());
+    }
+
     private void expectForbiddenToCreateSchedule(Cookie cookie, long studentId) throws Exception {
         mockMvc.perform(post("/default-schedules")
                         .cookie(cookie)
