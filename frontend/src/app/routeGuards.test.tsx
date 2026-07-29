@@ -2,6 +2,7 @@ import { screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { ADMIN, STUDENT, TEACHER, meOk, meUnauthorized, refreshFails } from '@/test/authHandlers';
 import { renderApp } from '@/test/renderApp';
+import { anyDayEmpty } from '@/test/schedulingHandlers';
 import { server } from '@/test/server';
 
 describe('guards de rota por papel', () => {
@@ -21,7 +22,7 @@ describe('guards de rota por papel', () => {
   });
 
   it('manda o ADMIN que tenta rota de aluno para o shell administrativo', async () => {
-    server.use(meOk(ADMIN));
+    server.use(meOk(ADMIN), anyDayEmpty());
     renderApp('/me/schedule');
 
     expect(await screen.findByRole('link', { name: 'Alunos' })).toBeInTheDocument();
@@ -36,7 +37,7 @@ describe('guards de rota por papel', () => {
   });
 
   it('resolve a raiz pelo destino do papel', async () => {
-    server.use(meOk(ADMIN));
+    server.use(meOk(ADMIN), anyDayEmpty());
     renderApp('/');
 
     expect(await screen.findByRole('link', { name: 'Agenda' })).toBeInTheDocument();

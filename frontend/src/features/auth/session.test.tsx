@@ -11,6 +11,7 @@ import {
   unauthorized,
 } from '@/test/authHandlers';
 import { renderApp } from '@/test/renderApp';
+import { anyDayEmpty } from '@/test/schedulingHandlers';
 import { server } from '@/test/server';
 
 describe('sessão', () => {
@@ -35,6 +36,7 @@ describe('sessão', () => {
         refresh();
         return new HttpResponse(null, { status: 200 });
       }),
+      anyDayEmpty(),
     );
 
     renderApp('/');
@@ -66,6 +68,7 @@ describe('sessão', () => {
           ? HttpResponse.json({ status: 500, detail: 'Erro interno' }, { status: 500 })
           : HttpResponse.json(ADMIN);
       }),
+      anyDayEmpty(),
     );
     const { user } = renderApp('/');
 
@@ -93,7 +96,7 @@ describe('sessão', () => {
   });
 
   it('no logout limpa todo o cache do Query e volta para o login', async () => {
-    server.use(meOk(ADMIN), logoutOk(), meUnauthorized(), refreshFails());
+    server.use(meOk(ADMIN), logoutOk(), meUnauthorized(), refreshFails(), anyDayEmpty());
     const { user, queryClient } = renderApp('/');
 
     await screen.findByRole('link', { name: 'Alunos' });

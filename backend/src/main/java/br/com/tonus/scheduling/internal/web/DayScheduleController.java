@@ -26,6 +26,6 @@ class DayScheduleController {
 
     @GetMapping("/day")
     DayScheduleResponse day(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return DayScheduleResponse.of(date, schedulingService.scheduleOf(date));
+        return DayScheduleResponse.of(schedulingService.dayOf(date));
     }
 }

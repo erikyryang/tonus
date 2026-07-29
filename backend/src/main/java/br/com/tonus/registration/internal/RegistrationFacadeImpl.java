@@ -5,9 +5,13 @@ import br.com.tonus.registration.StudentContact;
 import br.com.tonus.registration.StudentSummary;
 import br.com.tonus.registration.internal.domain.Student;
 import br.com.tonus.registration.internal.domain.StudentRepository;
+import br.com.tonus.registration.internal.domain.Teacher;
 import br.com.tonus.registration.internal.domain.TeacherRepository;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -56,16 +60,27 @@ class RegistrationFacadeImpl implements RegistrationFacade {
     @Override
     @Transactional(readOnly = true)
     public List<StudentSummary> findActiveStudents() {
-        return studentRepository.findByActiveTrue().stream().map(RegistrationFacadeImpl::toSummary).toList();
+        return toSummaries(studentRepository.findByActiveTrue());
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<StudentSummary> findStudentsByTeacher(Long teacherId) {
-        return studentRepository.findByTeacherId(teacherId).stream().map(RegistrationFacadeImpl::toSummary).toList();
+        return toSummaries(studentRepository.findByTeacherId(teacherId));
     }
 
-    private static StudentSummary toSummary(Student student) {
-        return new StudentSummary(student.getId(), student.getName(), student.getTeacherId(), student.isActive());
+    /**
+     * Os nomes dos professores saem de UMA consulta, não de uma por aluno: esta
+     * lista é percorrida inteira a cada abertura da agenda do dia, e um N+1 aqui
+     * apareceria justamente na tela mais usada do estúdio.
+     */
+    private List<StudentSummary> toSummaries(List<Student> students) {
+        Set<Long> teacherIds = students.stream().map(Student::getTeacherId).collect(Collectors.toSet());
+        Map<Long, String> teacherNames = teacherRepository.findAllById(teacherIds).stream()
+                .collect(Collectors.toMap(Teacher::getId, Teacher::getName));
+        return students.stream()
+                .map(student -> new StudentSummary(student.getId(), student.getName(), student.getTeacherId(),
+                        teacherNames.get(student.getTeacherId()), student.isActive()))
+                .toList();
     }
 }
