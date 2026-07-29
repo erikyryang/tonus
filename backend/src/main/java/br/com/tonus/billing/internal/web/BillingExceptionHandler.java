@@ -1,5 +1,6 @@
 package br.com.tonus.billing.internal.web;
 
+import br.com.tonus.billing.internal.FuturePaymentDateException;
 import br.com.tonus.billing.internal.InvoiceAlreadyPaidException;
 import br.com.tonus.billing.internal.InvoiceNotFoundException;
 import br.com.tonus.billing.internal.SubscriptionAlreadyExistsException;
@@ -27,8 +28,8 @@ class BillingExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
     }
 
-    @ExceptionHandler(UnknownStudentException.class)
-    ProblemDetail handleBadRequest(UnknownStudentException ex) {
+    @ExceptionHandler({UnknownStudentException.class, FuturePaymentDateException.class})
+    ProblemDetail handleBadRequest(RuntimeException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 

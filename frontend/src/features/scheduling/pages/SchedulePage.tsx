@@ -10,7 +10,7 @@ import { DayNavigator } from '../components/DayNavigator';
 import { type EntryActions, HourBlockSection } from '../components/HourBlockSection';
 import { RescheduleClassDialog } from '../components/RescheduleClassDialog';
 import { UndoExceptionDialog } from '../components/UndoExceptionDialog';
-import { apiMessage } from '../lib/apiMessage';
+import { apiMessage } from '@/lib/apiError';
 import { groupByHour } from '../lib/dayGroups';
 
 type PendingAction =

@@ -7,6 +7,7 @@ import br.com.tonus.registration.internal.domain.Student;
 import br.com.tonus.registration.internal.domain.StudentRepository;
 import br.com.tonus.registration.internal.domain.Teacher;
 import br.com.tonus.registration.internal.domain.TeacherRepository;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -55,6 +56,16 @@ class RegistrationFacadeImpl implements RegistrationFacade {
     @Transactional(readOnly = true)
     public boolean teacherIsActive(Long teacherId) {
         return teacherId != null && teacherRepository.existsByIdAndActiveTrue(teacherId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, String> findStudentNames(Collection<Long> studentIds) {
+        if (studentIds.isEmpty()) {
+            return Map.of();
+        }
+        return studentRepository.findAllById(studentIds).stream()
+                .collect(Collectors.toMap(Student::getId, Student::getName));
     }
 
     @Override

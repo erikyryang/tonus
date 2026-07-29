@@ -6,12 +6,14 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 
-public record InvoiceResponse(Long id, Long subscriptionId, Long studentId, YearMonth referenceMonth,
-                               BigDecimal amount, LocalDate dueDate, InvoiceStatus status) {
+/** {@code paymentDate} vem nulo enquanto a fatura não foi paga. */
+public record InvoiceResponse(Long id, Long subscriptionId, Long studentId, String studentName,
+                               YearMonth referenceMonth, BigDecimal amount, LocalDate dueDate,
+                               InvoiceStatus status, LocalDate paymentDate) {
 
     static InvoiceResponse from(InvoiceView view) {
         return new InvoiceResponse(view.invoice().getId(), view.invoice().getSubscriptionId(), view.studentId(),
-                view.invoice().getReferenceMonth(), view.invoice().getAmount(), view.invoice().getDueDate(),
-                view.invoice().getStatus());
+                view.studentName(), view.invoice().getReferenceMonth(), view.invoice().getAmount(),
+                view.invoice().getDueDate(), view.invoice().getStatus(), view.paymentDate());
     }
 }

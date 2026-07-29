@@ -55,6 +55,17 @@ abstract class AbstractBillingIntegrationTest extends AbstractRegistrationIntegr
     }
 
     /**
+     * Baixa já registrada. Serve à listagem, que precisa exibir a data do
+     * pagamento de uma fatura PAGA sem ter passado pelo endpoint de baixa.
+     */
+    protected void seedPayment(long invoiceId, String paymentDate, long registeredBy) {
+        jdbcTemplate.update("""
+                INSERT INTO payment (invoice_id, payment_date, registered_by, created_at, updated_at)
+                VALUES (?, ?::date, ?, now(), now())
+                """, invoiceId, paymentDate, registeredBy);
+    }
+
+    /**
      * Cookie de um aluno de verdade — com vínculo em {@code users.student_id}.
      * Mesma necessidade de {@code AbstractSchedulingIntegrationTest}: os
      * endpoints /me dependem do vínculo, e o {@code studentCookie} herdado do

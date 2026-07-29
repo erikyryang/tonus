@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogActions } from '@/components/ui/dialog';
 import { formatDate } from '@/lib/formatters';
-import { apiMessage } from '../lib/apiMessage';
+import { apiMessage } from '@/lib/apiError';
 
 /**
  * A confirmação diz o efeito real, não "tem certeza?": cancelar dispara

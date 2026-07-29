@@ -33,6 +33,14 @@ export function formatDayMonth(isoDate: string): string {
   return `${day}/${month}`;
 }
 
+/** Competência (yyyy-MM) para MM/yyyy — a fatura é do mês, não de um dia. */
+export function formatReferenceMonth(referenceMonth: string): string {
+  const match = /^(\d{4})-(\d{2})$/.exec(referenceMonth);
+  if (!match) return referenceMonth;
+  const [, year, month] = match;
+  return `${month}/${year}`;
+}
+
 /** dd/MM/yyyy de volta para yyyy-MM-dd — o formato que a API espera. */
 export function toIsoDate(brDate: string): string {
   const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(brDate);
