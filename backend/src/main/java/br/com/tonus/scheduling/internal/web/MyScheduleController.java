@@ -6,7 +6,6 @@ import java.time.Clock;
 import java.time.LocalDate;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,7 +33,6 @@ class MyScheduleController {
     }
 
     @GetMapping("/schedule")
-    @PreAuthorize("hasRole('STUDENT')")
     DayScheduleResponse mySchedule(@AuthenticationPrincipal AuthenticatedUser user,
                                    @RequestParam(required = false)
                                    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
@@ -44,7 +42,6 @@ class MyScheduleController {
     }
 
     @GetMapping("/grid")
-    @PreAuthorize("hasRole('TEACHER')")
     TeacherGridResponse myGrid(@AuthenticationPrincipal AuthenticatedUser user,
                                @RequestParam(required = false)
                                @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {

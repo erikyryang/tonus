@@ -6,7 +6,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,7 +26,6 @@ class MyInvoicesController {
     }
 
     @GetMapping("/invoices")
-    @PreAuthorize("hasRole('STUDENT')")
     Page<InvoiceResponse> myInvoices(@AuthenticationPrincipal AuthenticatedUser user, @PageableDefault Pageable pageable) {
         Long studentId = requireLink(user == null ? null : user.studentId());
         return billingService.findInvoicesOfStudent(studentId, pageable).map(InvoiceResponse::from);
