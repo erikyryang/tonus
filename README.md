@@ -4,6 +4,8 @@ Sistema de gestão para escolas/academias com três perfis de usuário —
 **admin**, **professor** e **aluno**. Cobre cadastro de pessoas, agenda de
 aulas/horários, cobrança (faturas) e notificações via WhatsApp.
 
+O repositório tem duas partes: uma API em `backend/` e um SPA em `frontend/`.
+
 ## Arquitetura
 
 Monólito modular (Spring Modulith) em vez de microserviços — um único
@@ -21,10 +23,30 @@ Módulos (pacote `br.com.tonus.*`):
 | `billing` | Cobrança e faturas |
 | `notification` | Notificações via WhatsApp |
 
-Dependências permitidas: `scheduling/billing/notification → registration`,
-todos os módulos → `shared`. Nada além disso, sem ciclos. Comunicação
-entre módulos é síncrona (fachada) para consultas, ou assíncrona
-(eventos, at-least-once) para efeitos colaterais.
+Dependências permitidas: `scheduling → registration`,
+`billing → registration`, `auth → registration`,
+`notification → {registration, scheduling, billing}`, e todos → `shared`.
+Nada além disso, sem ciclos. `notification` aponta para `scheduling` e
+`billing` porque consome os eventos deles — escutar um evento é referenciar
+o record que o publicador expõe na raiz, e isso é dependência de compilação
+como qualquer outra; em execução o acoplamento continua assíncrono e num
+sentido só. A lista é declarada em `@ApplicationModule(allowedDependencies)`
+no `package-info.java` de cada módulo: aresta nova exige editar o arquivo, e
+é isso que força a decisão a ser consciente.
+
+Comunicação entre módulos é síncrona (fachada) para consultas, ou assíncrona
+(eventos, at-least-once) para efeitos colaterais. Todo listener é idempotente.
+
+**Autorização mora só no `SecurityConfig`**, em regras por rota — não há
+`@PreAuthorize` em controller, e um teste de arquitetura reprova a volta do
+padrão. Concentrada, a configuração é o inventário legível de quem pode
+chamar o quê; espalhada em anotação, o controller esquecido não falha: ele
+libera.
+
+**Front e API são same-origin por decisão de arquitetura**, e por isso não há
+CORS no backend: em desenvolvimento quem faz a ponte é o proxy `/api` do
+Vite, em produção é o Caddy servindo o estático e fazendo reverse proxy. A
+sessão vive em cookie `httpOnly` — o JavaScript nunca lê nem anexa token.
 
 Decisões de arquitetura, contrato de eventos e DDL completo estão em
 `docs/`; o comportamento esperado de cada feature está em
@@ -32,58 +54,112 @@ Decisões de arquitetura, contrato de eventos e DDL completo estão em
 
 ## Stack
 
-Java 21, Spring Boot 3 (Web MVC, Data JPA, Security), Spring Modulith,
-PostgreSQL, Flyway, Testcontainers, JWT (jjwt), Bucket4j, Maven.
+**Backend** — Java 21, Spring Boot 3 (Web MVC, Data JPA, Security), Spring
+Modulith, PostgreSQL, Flyway, Testcontainers, ShedLock, JWT (jjwt), Bucket4j,
+Maven.
+
+**Frontend** — Vite, React 18, TypeScript (strict), React Router, TanStack
+Query (estado de servidor), react-hook-form + zod (formulários), Tailwind,
+Vitest + React Testing Library + MSW (testes).
 
 ## Como rodar localmente
 
-Pré-requisitos: Java 21, Docker rodando, e o wrapper do Maven (`./mvnw`,
-já incluso no repo — não precisa instalar Maven).
+Pré-requisitos: Java 21, Node 20+, Docker rodando, e o wrapper do Maven
+(`./mvnw`, já incluso no repo — não precisa instalar Maven).
 
 ```bash
+# API em localhost:8080
 cd backend
 cp .env.example .env        # ajuste os valores se necessário
 docker compose up -d db     # sobe o Postgres
-./mvnw spring-boot:run      # sobe a aplicação em localhost:8080
+./mvnw spring-boot:run
 ```
+
+```bash
+# SPA em localhost:5173, com proxy /api para a API acima
+cd frontend
+npm install
+npm run dev
+```
+
+Duas ressalvas para o primeiro acesso:
+
+- **Não existe seed de usuário.** `POST /users` exige um ADMIN já autenticado,
+  então o primeiro login só é possível inserindo um ADMIN direto no banco.
+- **Os cookies de sessão são `Secure`.** Chrome e Firefox tratam `localhost`
+  como origem segura e os aceitam; o Safari não faz essa exceção, e nele a
+  sessão não persiste em desenvolvimento.
 
 ## Como rodar os testes
 
-Os testes são de integração, com Postgres real via Testcontainers —
-**é obrigatório o Docker estar rodando**.
+Os testes do backend são de integração, com Postgres real via Testcontainers —
+**é obrigatório o Docker estar rodando**. H2 é proibido: as constraints do
+banco são regras de negócio e precisam ser testadas de verdade.
 
 ```bash
-cd backend
-./mvnw clean verify
+cd backend && ./mvnw clean verify
+```
+
+Os do frontend são de comportamento (Vitest + RTL), com a API mockada por MSW
+na fronteira HTTP — nunca o TanStack Query ou o cliente HTTP por dentro.
+
+```bash
+cd frontend && npm run test:run && npm run typecheck
 ```
 
 ## Estrutura do repositório
 
 ```
-backend/    # todo o código Java, pom.xml, migrations, testes, docker-compose
+backend/    # código Java, pom.xml, migrations, testes, docker-compose
+frontend/   # SPA (Vite + React + TypeScript)
 docs/       # specs de feature e decisões de arquitetura (fonte de verdade)
 CLAUDE.md   # convenções do projeto (arquitetura, nomenclatura, fluxo de dev)
 ```
+
+Cada parte tem o seu próprio `CLAUDE.md` quando as convenções divergem —
+`frontend/CLAUDE.md` traz as regras de sessão, rede e testes do SPA.
 
 ## Fluxo de desenvolvimento
 
 O projeto segue TDD com um gate manual: cada spec começa na fase **RED**
 (testes de aceite + o mínimo de código para passarem) e só avança para a
 fase **IMPLEMENTA** — que fecha casos de borda e finaliza o que sobrou —
-mediante autorização explícita. Detalhes completos em `CLAUDE.md`.
+mediante autorização explícita. Spec e código mudam no mesmo PR. Detalhes
+completos em `CLAUDE.md`.
 
 ## Status atual
 
-- **SPEC-001 (fundação: `shared` + `auth`)** — implementada e testada:
-  login/refresh/logout com JWT em cookie httpOnly `SameSite=Strict`,
-  rotação de refresh token com detecção de reuso, rate limit no login,
-  Problem Details para erros, e auditoria automática de entidades via
-  listener JPA.
-- **SPEC-002 (`registration`)** — implementada e testada: CRUD de alunos e
-  professores com vínculo obrigatório aluno→professor, desativação em vez de
-  DELETE (preserva histórico de fatura), listagens paginadas e filtráveis,
-  `RegistrationFacade` para os módulos seguintes, e criação do usuário de
-  acesso pelo ADMIN via `POST /users`. Quem é desativado no cadastro tem o
-  acesso revogado automaticamente, por evento.
-- Auto-registro e recuperação de senha seguem fora de escopo.
-- Próximos: `scheduling`, `billing`, `notification`.
+Backend e frontend completos até a SPEC-007.
+
+- **SPEC-001 (fundação: `shared` + `auth`)** — login/refresh/logout com JWT em
+  cookie httpOnly `SameSite=Strict`, rotação de refresh token com detecção de
+  reuso, rate limit no login, Problem Details para erros, e auditoria
+  automática de entidades via listener JPA.
+- **SPEC-002 (`registration`)** — CRUD de alunos e professores com vínculo
+  obrigatório aluno→professor, desativação em vez de DELETE (preserva
+  histórico de fatura), listagens paginadas e filtráveis, `RegistrationFacade`
+  para os módulos seguintes, e criação do usuário de acesso pelo ADMIN via
+  `POST /users`. Quem é desativado no cadastro tem o acesso revogado
+  automaticamente, por evento.
+- **SPEC-003 (`scheduling`)** — agenda recorrente seg–sex por horário padrão,
+  com exceções pontuais (cancelamento e remarcação) e feriados. A agenda de um
+  dia é derivada a cada consulta, nunca materializada. Endpoints
+  `/schedule/day` (ADMIN), `/me/schedule` (aluno) e `/me/grid` (professor).
+- **SPEC-004 (`billing`)** — ciclo assinatura → fatura → pagamento, com job
+  diário (`@Scheduled` + ShedLock) que gera faturas e marca atrasos. A
+  idempotência do job é uma constraint do banco, não uma checagem em código.
+  Dar baixa recalcula o vencimento da assinatura na mesma transação.
+- **SPEC-005 (`notification`)** — consome os seis eventos do catálogo e avisa o
+  aluno por WhatsApp (Evolution API). Único módulo que fala com o mundo
+  externo. `notification_log` com UNIQUE por (template, aluno, referência):
+  a idempotência do at-least-once também vira constraint.
+- **SPEC-006 (fundação do frontend)** — SPA com fluxo de sessão completo
+  (login, refresh transparente, logout, recuperação ao recarregar) e shell de
+  navegação por papel. Trouxe o `GET /auth/me` e tornou 401 — e não 403 — a
+  resposta a requisição não autenticada em toda a API.
+- **SPEC-007 (agenda do dia)** — a tela central do ADMIN: visão de um dia
+  agrupada por hora e professor, com cancelar, remarcar e desfazer exceção.
+
+Auto-registro e recuperação de senha seguem fora de escopo. Visão semanal,
+drag-and-drop e criação de horário padrão pela tela ficaram para as próximas
+specs.
