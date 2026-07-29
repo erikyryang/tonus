@@ -25,6 +25,14 @@ export function formatDate(isoDate: string): string {
   return `${day}/${month}/${year}`;
 }
 
+/** dd/MM — para rótulo curto, onde o ano já está implícito no contexto. */
+export function formatDayMonth(isoDate: string): string {
+  const match = ISO_DATE.exec(isoDate);
+  if (!match) return isoDate;
+  const [, , month, day] = match;
+  return `${day}/${month}`;
+}
+
 /** dd/MM/yyyy de volta para yyyy-MM-dd — o formato que a API espera. */
 export function toIsoDate(brDate: string): string {
   const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(brDate);

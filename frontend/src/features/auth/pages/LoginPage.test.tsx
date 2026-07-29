@@ -3,6 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 import { ADMIN, STUDENT, loginInvalid, loginOk, meOk, meUnauthorized } from '@/test/authHandlers';
 import { renderApp } from '@/test/renderApp';
+import { anyDayEmpty } from '@/test/schedulingHandlers';
 import { server } from '@/test/server';
 
 async function submitLogin(user: ReturnType<typeof renderApp>['user']) {
@@ -34,7 +35,7 @@ describe('LoginPage', () => {
   });
 
   it('leva o ADMIN para o shell administrativo após o login', async () => {
-    server.use(loginOk(), meOk(ADMIN));
+    server.use(loginOk(), meOk(ADMIN), anyDayEmpty());
     const { user } = renderApp('/login');
 
     await submitLogin(user);

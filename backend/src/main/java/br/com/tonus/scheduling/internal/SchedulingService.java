@@ -7,6 +7,7 @@ import br.com.tonus.scheduling.ClassRescheduled;
 import br.com.tonus.scheduling.HolidayCreated;
 import br.com.tonus.scheduling.internal.domain.DefaultSchedule;
 import br.com.tonus.scheduling.internal.domain.DefaultScheduleRepository;
+import br.com.tonus.scheduling.internal.domain.ExceptionType;
 import br.com.tonus.scheduling.internal.domain.Holiday;
 import br.com.tonus.scheduling.internal.domain.HolidayRepository;
 import br.com.tonus.scheduling.internal.domain.ScheduleException;
@@ -202,30 +203,104 @@ public class SchedulingService {
         if (holidayRepository.existsByDate(date)) {
             return List.of();
         }
+        return expand(date, activeStudentsById(), defaultScheduleRepository.findAll(),
+                scheduleExceptionRepository.findByDate(date));
+    }
+
+    /**
+     * O dia inteiro numa passada só: feriado, agenda e cancelamentos.
+     *
+     * Existe separado de {@link #scheduleOf} porque o painel do ADMIN precisa
+     * das três coisas de uma vez, e compor três chamadas públicas repetiria a
+     * consulta de feriado, a de alunos ativos e a de horários padrão a cada
+     * abertura de tela — a mais frequente do sistema.
+     */
+    @Transactional(readOnly = true)
+    public DayScheduleView dayOf(LocalDate date) {
+        Optional<Holiday> holiday = holidayRepository.findByDate(date);
+        if (holiday.isPresent()) {
+            return new DayScheduleView(date, holiday.get().getDescription(), List.of(), List.of());
+        }
 
         Map<Long, StudentSummary> students = activeStudentsById();
+        List<DefaultSchedule> schedules = defaultScheduleRepository.findAll();
+        List<ScheduleException> exceptionsOfDay = scheduleExceptionRepository.findByDate(date);
+
+        return new DayScheduleView(date, null,
+                expand(date, students, schedules, exceptionsOfDay),
+                cancellations(date, students, schedules, exceptionsOfDay));
+    }
+
+    /**
+     * A expansão propriamente dita, já sem a checagem de feriado — quem chama
+     * resolveu isso antes. Uma implementação só: duas fariam a mesma regra
+     * divergir entre a agenda do ADMIN e a de aluno e professor.
+     */
+    private List<ScheduleEntry> expand(LocalDate date,
+                                       Map<Long, StudentSummary> students,
+                                       List<DefaultSchedule> schedules,
+                                       List<ScheduleException> exceptionsOfDay) {
         List<ScheduleEntry> entries = new ArrayList<>();
 
         if (isWeekday(date)) {
-            Set<Long> excepted = scheduleExceptionRepository.findByDate(date).stream()
+            Set<Long> excepted = exceptionsOfDay.stream()
                     .map(ScheduleException::getStudentId)
                     .collect(Collectors.toSet());
-            for (DefaultSchedule schedule : defaultScheduleRepository.findAll()) {
+            for (DefaultSchedule schedule : schedules) {
                 if (excepted.contains(schedule.getStudentId())) {
                     continue;
                 }
-                entryOf(students, schedule.getStudentId(), schedule.getTime(), ScheduleEntry.Origin.TEMPLATE)
+                entryOf(students, schedule.getStudentId(), schedule.getTime(),
+                        ScheduleEntry.Origin.TEMPLATE, null, null)
                         .ifPresent(entries::add);
             }
         }
 
         for (ScheduleException reschedule : scheduleExceptionRepository.findByNewDate(date)) {
-            entryOf(students, reschedule.getStudentId(), reschedule.getNewTime(), ScheduleEntry.Origin.RESCHEDULED)
+            entryOf(students, reschedule.getStudentId(), reschedule.getNewTime(),
+                    ScheduleEntry.Origin.RESCHEDULED, reschedule.getDate(), reschedule.getId())
                     .ifPresent(entries::add);
         }
 
         entries.sort(Comparator.comparing(ScheduleEntry::time).thenComparing(ScheduleEntry::studentName));
         return entries;
+    }
+
+    /**
+     * Os cancelamentos do dia. Andam ao lado da agenda, não dentro dela: a aula
+     * cancelada não acontece, então incluí-la entre as demais faria a recepção
+     * chamar um aluno que não vem. Fora da agenda e visível, o ADMIN vê o que
+     * cancelou e pode desfazer.
+     *
+     * Fim de semana não tem cancelamento a mostrar: não havia aula para
+     * cancelar, e a exceção registrada nesse dia não muda nada.
+     */
+    private List<CanceledEntry> cancellations(LocalDate date,
+                                              Map<Long, StudentSummary> students,
+                                              List<DefaultSchedule> schedules,
+                                              List<ScheduleException> exceptionsOfDay) {
+        if (!isWeekday(date)) {
+            return List.of();
+        }
+
+        Map<Long, LocalTime> defaultTimes = schedules.stream()
+                .collect(Collectors.toMap(DefaultSchedule::getStudentId, DefaultSchedule::getTime));
+
+        List<CanceledEntry> canceled = new ArrayList<>();
+        for (ScheduleException exception : exceptionsOfDay) {
+            if (exception.getType() != ExceptionType.CANCELED) {
+                continue;
+            }
+            StudentSummary student = students.get(exception.getStudentId());
+            if (student == null) {
+                continue;
+            }
+            canceled.add(new CanceledEntry(exception.getId(), student.studentId(), student.name(),
+                    student.teacherId(), student.teacherName(), defaultTimes.get(student.studentId())));
+        }
+
+        canceled.sort(Comparator.comparing(CanceledEntry::studentName));
+        return canceled;
     }
 
     @Transactional(readOnly = true)
@@ -257,15 +332,17 @@ public class SchedulingService {
     }
 
     private Optional<ScheduleEntry> entryOf(Map<Long, StudentSummary> students,
-                                                      Long studentId,
-                                                      LocalTime time,
-                                                      ScheduleEntry.Origin origin) {
+                                            Long studentId,
+                                            LocalTime time,
+                                            ScheduleEntry.Origin origin,
+                                            LocalDate originDate,
+                                            Long exceptionId) {
         StudentSummary student = students.get(studentId);
         if (student == null) {
             return Optional.empty();
         }
-        return Optional.of(
-                new ScheduleEntry(student.studentId(), student.name(), student.teacherId(), time, origin));
+        return Optional.of(new ScheduleEntry(student.studentId(), student.name(), student.teacherId(),
+                student.teacherName(), time, origin, originDate, exceptionId));
     }
 
     private boolean isWeekday(LocalDate date) {

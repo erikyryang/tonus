@@ -1,4 +1,4 @@
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient, type QueryObserverOptions } from '@tanstack/react-query';
 import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
@@ -6,17 +6,21 @@ import { ROUTER_FUTURE } from '@/app/App';
 import { AppProviders } from '@/app/providers';
 import { AppRoutes } from '@/app/routes';
 
-export function createTestQueryClient() {
+export function createTestQueryClient(queryOverrides: Partial<QueryObserverOptions> = {}) {
   return new QueryClient({
     defaultOptions: {
-      queries: { retry: false, gcTime: 0 },
+      queries: { retry: false, gcTime: 0, ...queryOverrides },
       mutations: { retry: false },
     },
   });
 }
 
-export function renderApp(route = '/') {
-  const queryClient = createTestQueryClient();
+/**
+ * O cliente é injetável porque um teste de invalidação precisa distinguir
+ * "refez a chamada porque foi invalidada" de "refez porque tudo é stale por
+ * padrão" — e isso se faz com staleTime próprio, não mockando o Query.
+ */
+export function renderApp(route = '/', queryClient = createTestQueryClient()) {
   const user = userEvent.setup();
 
   const result = render(

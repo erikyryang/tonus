@@ -4,6 +4,7 @@ import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { LoadingScreen, RequireRole, SessionErrorScreen } from '@/features/auth/components/RequireRole';
 import { LoginPage } from '@/features/auth/pages/LoginPage';
 import { destinationFor, useSessionState } from '@/features/auth/session';
+import { SchedulePage } from '@/features/scheduling/pages/SchedulePage';
 import { setUnauthorizedHandler } from '@/lib/apiClient';
 import { PlaceholderPage } from './PlaceholderPage';
 import { AdminShell } from './shells/AdminShell';
@@ -20,7 +21,7 @@ export function AppRoutes() {
         <Route element={<RequireRole allow={['ADMIN']} />}>
           <Route path="/admin" element={<AdminShell />}>
             <Route index element={<Navigate to="/admin/schedule" replace />} />
-            <Route path="schedule" element={<PlaceholderPage title="Agenda" />} />
+            <Route path="schedule" element={<SchedulePage />} />
             <Route path="students" element={<PlaceholderPage title="Alunos" />} />
             <Route path="teachers" element={<PlaceholderPage title="Professores" />} />
             <Route path="invoices" element={<PlaceholderPage title="Faturas" />} />
