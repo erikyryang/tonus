@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { todayIsoDate } from '@/lib/dates';
 import { formatDate } from '@/lib/formatters';
-import { apiMessage } from '../lib/apiMessage';
+import { apiMessage } from '@/lib/apiError';
 
 /**
  * A validação de data passada é duplicada de propósito — é a única duplicação

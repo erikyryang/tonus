@@ -11,10 +11,15 @@ import br.com.tonus.billing.internal.domain.PaymentRepository;
 import br.com.tonus.billing.internal.domain.Subscription;
 import br.com.tonus.billing.internal.domain.SubscriptionRepository;
 import br.com.tonus.registration.RegistrationFacade;
+import br.com.tonus.registration.StudentContact;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -106,30 +111,49 @@ public class BillingService {
         Page<Invoice> invoices = status == null
                 ? invoiceRepository.findAll(stable)
                 : invoiceRepository.findByStatus(status, stable);
-        return invoices.map(this::toView);
+
+        Map<Long, Long> studentIds = studentIdsBySubscription(invoices.getContent());
+        Map<Long, String> studentNames = registrationFacade.findStudentNames(Set.copyOf(studentIds.values()));
+        Map<Long, LocalDate> paymentDates = paymentDatesOf(invoices.getContent());
+
+        return invoices.map(invoice -> {
+            Long studentId = studentIds.get(invoice.getSubscriptionId());
+            return new InvoiceView(invoice, studentId, studentNames.get(studentId), paymentDates.get(invoice.getId()));
+        });
     }
 
     @Transactional(readOnly = true)
     public Page<InvoiceView> findInvoicesOfStudent(Long studentId, Pageable pageable) {
+        Pageable stable = withStableSort(pageable);
         return subscriptionRepository.findByStudentId(studentId)
-                .map(subscription -> invoiceRepository
-                        .findBySubscriptionId(subscription.getId(), withStableSort(pageable))
-                        .map(invoice -> new InvoiceView(invoice, studentId)))
-                .orElseGet(() -> Page.empty(withStableSort(pageable)));
+                .map(subscription -> {
+                    Page<Invoice> invoices = invoiceRepository.findBySubscriptionId(subscription.getId(), stable);
+                    // Um aluno só: o nome é uma consulta, não uma por linha.
+                    String studentName = studentNameOf(studentId);
+                    Map<Long, LocalDate> paymentDates = paymentDatesOf(invoices.getContent());
+                    return invoices.map(invoice ->
+                            new InvoiceView(invoice, studentId, studentName, paymentDates.get(invoice.getId())));
+                })
+                .orElseGet(() -> Page.empty(stable));
     }
 
     /**
      * Baixa: fatura vira PAGA, pagamento é criado, assinatura recalcula o
      * vencimento para o aniversário do pagamento, evento é publicado. Tudo na
      * mesma transação, como a spec exige.
+     *
+     * A data vem sempre de quem chama — o Clock aqui é a autoridade do "hoje"
+     * que decide se ela está no futuro, não um valor padrão.
      */
     @Transactional
-    public InvoiceView registerPayment(Long invoiceId, Long registeredBy) {
+    public InvoiceView registerPayment(Long invoiceId, Long registeredBy, LocalDate paymentDate) {
         Invoice invoice = requireInvoice(invoiceId);
         if (invoice.getStatus() == InvoiceStatus.PAID) {
             throw new InvoiceAlreadyPaidException(invoiceId);
         }
-        LocalDate paymentDate = LocalDate.now(clock);
+        if (paymentDate.isAfter(LocalDate.now(clock))) {
+            throw new FuturePaymentDateException(paymentDate);
+        }
         invoice.markPaid();
         invoiceRepository.save(invoice);
         paymentRepository.save(new Payment(invoiceId, paymentDate, registeredBy));
@@ -139,7 +163,8 @@ public class BillingService {
         subscriptionRepository.save(subscription);
 
         events.publishEvent(new PaymentRegistered(invoiceId, subscription.getStudentId(), paymentDate, invoice.getAmount()));
-        return new InvoiceView(invoice, subscription.getStudentId());
+        return new InvoiceView(invoice, subscription.getStudentId(),
+                studentNameOf(subscription.getStudentId()), paymentDate);
     }
 
     /**
@@ -182,9 +207,50 @@ public class BillingService {
         }
     }
 
-    private InvoiceView toView(Invoice invoice) {
-        Subscription subscription = requireSubscription(invoice.getSubscriptionId());
-        return new InvoiceView(invoice, subscription.getStudentId());
+    /**
+     * O aluno de cada fatura da página, em UMA consulta.
+     *
+     * invoice.subscription_id tem FK de verdade (V012), então toda fatura da
+     * página tem assinatura e nenhum id fica de fora do mapa.
+     */
+    private Map<Long, Long> studentIdsBySubscription(List<Invoice> invoices) {
+        Set<Long> subscriptionIds = invoices.stream().map(Invoice::getSubscriptionId).collect(Collectors.toSet());
+        if (subscriptionIds.isEmpty()) {
+            return Map.of();
+        }
+        return subscriptionRepository.findAllById(subscriptionIds).stream()
+                .collect(Collectors.toMap(Subscription::getId, Subscription::getStudentId));
+    }
+
+    /**
+     * As datas de baixa da página, em UMA consulta — e só para as faturas PAGAS.
+     *
+     * Fatura que não está PAGA não tem linha em payment: as duas coisas nascem
+     * na mesma transação de {@link #registerPayment}. Consultá-las seria
+     * trabalho garantidamente vazio, justamente no filtro "Atrasadas", que é o
+     * uso mais frequente da tela.
+     */
+    private Map<Long, LocalDate> paymentDatesOf(List<Invoice> invoices) {
+        Set<Long> paidIds = invoices.stream()
+                .filter(invoice -> invoice.getStatus() == InvoiceStatus.PAID)
+                .map(Invoice::getId)
+                .collect(Collectors.toSet());
+        if (paidIds.isEmpty()) {
+            return Map.of();
+        }
+        // uk_payment_invoice garante no máximo uma baixa por fatura: sem colisão.
+        return paymentRepository.findByInvoiceIdIn(paidIds).stream()
+                .collect(Collectors.toMap(Payment::getInvoiceId, Payment::getPaymentDate));
+    }
+
+    /**
+     * Aluno desativado continua com histórico de fatura (SPEC-002: não há
+     * DELETE), então o nome tem de sair mesmo assim.
+     */
+    private String studentNameOf(Long studentId) {
+        return registrationFacade.findStudentContact(studentId)
+                .map(StudentContact::name)
+                .orElse(null);
     }
 
     private void requireActiveStudent(Long studentId) {

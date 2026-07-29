@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogActions } from '@/components/ui/dialog';
-import { apiMessage } from '../lib/apiMessage';
+import { apiMessage } from '@/lib/apiError';
 
 /** Desfazer devolve o dia ao template — é a correção de um registro errado. */
 export function UndoExceptionDialog({

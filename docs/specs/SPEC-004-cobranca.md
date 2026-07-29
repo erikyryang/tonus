@@ -21,6 +21,8 @@ Ciclo assinatura → fatura → pagamento, com job diário e eventos.
       Tudo na MESMA transação.
 - Endpoints: CRUD /assinaturas, GET /faturas (filtros por status, paginado),
   POST /faturas/{id}/pagamento (ADMIN), GET /me/faturas (ALUNO).
+  A baixa passou a exigir corpo `{paymentDate}` em SPEC-008 — a data é do
+  ADMIN, não do Clock. O Clock continua decidindo o que é "futuro".
 - Transições de status de fatura são auditadas.
 
 ## Critérios de aceite

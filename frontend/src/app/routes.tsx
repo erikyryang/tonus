@@ -4,6 +4,7 @@ import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { LoadingScreen, RequireRole, SessionErrorScreen } from '@/features/auth/components/RequireRole';
 import { LoginPage } from '@/features/auth/pages/LoginPage';
 import { destinationFor, useSessionState } from '@/features/auth/session';
+import { InvoicesPage } from '@/features/billing/pages/InvoicesPage';
 import { SchedulePage } from '@/features/scheduling/pages/SchedulePage';
 import { setUnauthorizedHandler } from '@/lib/apiClient';
 import { PlaceholderPage } from './PlaceholderPage';
@@ -24,7 +25,7 @@ export function AppRoutes() {
             <Route path="schedule" element={<SchedulePage />} />
             <Route path="students" element={<PlaceholderPage title="Alunos" />} />
             <Route path="teachers" element={<PlaceholderPage title="Professores" />} />
-            <Route path="invoices" element={<PlaceholderPage title="Faturas" />} />
+            <Route path="invoices" element={<InvoicesPage />} />
             <Route path="holidays" element={<PlaceholderPage title="Feriados" />} />
           </Route>
         </Route>
