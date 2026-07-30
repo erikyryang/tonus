@@ -11,6 +11,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Clock;
+import java.util.Collection;
+import java.util.List;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.UUID;
@@ -152,6 +154,19 @@ public class AuthService {
     @Transactional
     public void revokeAccessOfTeacher(Long teacherId) {
         userRepository.findByTeacherId(teacherId).forEach(this::revokeAccessOf);
+    }
+
+    /**
+     * Os usuários vinculados a um conjunto de alunos. Devolve o que existe: um
+     * aluno sem login simplesmente não aparece, e é essa ausência que a tela lê
+     * como "nunca teve acesso".
+     *
+     * Sem limite de tamanho de propósito — o endpoint é só do ADMIN, e a lista
+     * que ele manda é a página que acabou de receber do próprio backend.
+     */
+    @Transactional(readOnly = true)
+    public List<User> findUsersOfStudents(Collection<Long> studentIds) {
+        return studentIds.isEmpty() ? List.of() : userRepository.findByStudentIdIn(studentIds);
     }
 
     @Transactional

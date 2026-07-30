@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/apiClient';
+import type { Page } from '@/lib/page';
 
 /** De onde a aula veio: do horário recorrente ou de uma remarcação. */
 export type ScheduleOrigin = 'TEMPLATE' | 'RESCHEDULED';
@@ -59,11 +60,88 @@ export interface ScheduleExceptionResponse {
   newTime?: string;
 }
 
+/** Espelha o DTO de /default-schedules. `time` é HH:mm. */
+export interface DefaultSchedule {
+  id: number;
+  studentId: number;
+  time: string;
+}
+
+export interface DefaultScheduleInput {
+  studentId: number;
+  time: string;
+}
+
+/** Espelha o DTO de /holidays. */
+export interface Holiday {
+  id: number;
+  date: string;
+  description: string;
+}
+
+export interface HolidayInput {
+  date: string;
+  description: string;
+}
+
+/**
+ * A grade do professor, já agrupada por hora pelo back (GET /me/grid). O grupo
+ * emerge de professor + hora: não existe turma como entidade, então não há id
+ * de turma para o front agrupar por — e reagrupar aqui duplicaria a regra.
+ *
+ * Só id e nome do aluno: o professor não precisa do telefone para dar aula
+ * (minimização, LGPD).
+ */
+export interface TeacherGridStudent {
+  studentId: number;
+  studentName: string;
+}
+
+export interface TeacherGridSlot {
+  time: string;
+  students: TeacherGridStudent[];
+}
+
+export interface TeacherGrid {
+  date: string;
+  slots: TeacherGridSlot[];
+}
+
 export const dayScheduleKey = (date: string) => ['scheduling', 'day', date] as const;
+
+export const defaultSchedulesKey = (page?: number) =>
+  page === undefined
+    ? (['scheduling', 'default-schedules'] as const)
+    : (['scheduling', 'default-schedules', page] as const);
+
+export const holidaysKey = (page?: number) =>
+  page === undefined ? (['scheduling', 'holidays'] as const) : (['scheduling', 'holidays', page] as const);
+
+export const myScheduleKey = (date: string) => ['scheduling', 'me', 'schedule', date] as const;
+export const myGridKey = (date: string) => ['scheduling', 'me', 'grid', date] as const;
 
 export const schedulingApi = {
   day: (date: string) => apiClient.get<DaySchedule>(`/schedule/day?date=${date}`),
   createException: (request: ScheduleExceptionRequest) =>
     apiClient.post<ScheduleExceptionResponse>('/schedule-exceptions', request),
   deleteException: (id: number) => apiClient.delete<void>(`/schedule-exceptions/${id}`),
+
+  defaultSchedules: (page: number) => apiClient.get<Page<DefaultSchedule>>(`/default-schedules?page=${page}`),
+  createDefaultSchedule: (input: DefaultScheduleInput) =>
+    apiClient.post<DefaultSchedule>('/default-schedules', input),
+  updateDefaultSchedule: (id: number, input: DefaultScheduleInput) =>
+    apiClient.put<DefaultSchedule>(`/default-schedules/${id}`, input),
+  /**
+   * DELETE existe de verdade aqui, diferente de aluno e professor: horário
+   * padrão é configuração corrente, não histórico.
+   */
+  deleteDefaultSchedule: (id: number) => apiClient.delete<void>(`/default-schedules/${id}`),
+
+  holidays: (page: number) => apiClient.get<Page<Holiday>>(`/holidays?page=${page}`),
+  createHoliday: (input: HolidayInput) => apiClient.post<Holiday>('/holidays', input),
+  deleteHoliday: (id: number) => apiClient.delete<void>(`/holidays/${id}`),
+
+  /** O id do aluno e o do professor vêm do token: /me não aceita id nenhum. */
+  mySchedule: (date: string) => apiClient.get<DaySchedule>(`/me/schedule?date=${date}`),
+  myGrid: (date: string) => apiClient.get<TeacherGrid>(`/me/grid?date=${date}`),
 };

@@ -20,6 +20,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 class MyScheduleIT extends AbstractSchedulingIntegrationTest {
 
+    /**
+     * Quarta-feira sem uso em nenhum outro teste. Feriado é global e o banco é
+     * compartilhado pela suíte: cadastrar um em MONDAY/TUESDAY apagaria a
+     * agenda daquele dia para todas as outras classes.
+     */
+    private static final String OWN_HOLIDAY = "2026-08-26";
+
     @Test
     void studentSeesOnlyOwnClasses() throws Exception {
         long teacherId = createTeacher(unique("Professora Do Me"));
@@ -80,6 +87,45 @@ class MyScheduleIT extends AbstractSchedulingIntegrationTest {
 
         assertThat(mySchedule(student, MONDAY).get("entries")).isEmpty();
         assertThat(studentIdsOf(mySchedule(student, WEDNESDAY))).containsOnly(studentId);
+    }
+
+    /**
+     * O aluno precisa saber por que o dia está vazio (SPEC-009). Sem a
+     * descrição do feriado, a tela dele teria de deduzir "está vazio, deve ser
+     * feriado" — inventando um motivo que não tem como conferir.
+     */
+    @Test
+    void holidayExplainsTheEmptyDay() throws Exception {
+        long teacherId = createTeacher(unique("Professor Do Feriado No Me"));
+        long studentId = createStudent(unique("Aluno Do Feriado No Me"), teacherId);
+        createDefaultSchedule(studentId, "07:00");
+        createHoliday(OWN_HOLIDAY, "Feriado do Me");
+
+        JsonNode day = mySchedule(linkedStudentCookie(studentId), OWN_HOLIDAY);
+
+        assertThat(day.get("entries")).isEmpty();
+        assertThat(day.get("holiday").asText()).isEqualTo("Feriado do Me");
+    }
+
+    /**
+     * A aula cancelada some da agenda por definição — e é justamente por isso
+     * que o aluno precisa vê-la em separado: sem o cancelamento na resposta,
+     * "não tem aula hoje" e "sua aula de hoje foi cancelada" ficam idênticos.
+     */
+    @Test
+    void ownCancellationIsVisible() throws Exception {
+        long teacherId = createTeacher(unique("Professor Do Cancelamento No Me"));
+        long mine = createStudent(unique("Aluno Que Ve O Cancelamento"), teacherId);
+        long other = createStudent(unique("Aluno Alheio Cancelado"), teacherId);
+        createDefaultSchedule(mine, "07:00");
+        createDefaultSchedule(other, "08:00");
+        cancelClass(mine, MONDAY);
+        cancelClass(other, MONDAY);
+
+        JsonNode day = mySchedule(linkedStudentCookie(mine), MONDAY);
+
+        assertThat(day.get("cancellations")).hasSize(1);
+        assertThat(day.get("cancellations").get(0).get("studentId").asLong()).isEqualTo(mine);
     }
 
     /**

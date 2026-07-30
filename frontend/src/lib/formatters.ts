@@ -53,3 +53,17 @@ export function toIsoDate(brDate: string): string {
 export function formatMoney(value: number): string {
   return moneyFormatter.format(value);
 }
+
+/**
+ * O que foi digitado no campo de dinheiro, em número.
+ *
+ * Aceita as duas formas que aparecem de verdade: "1.234,50" (pt-BR completo) e
+ * "1234.50" (quem digita no teclado numérico). A vírgula é o desempate — se ela
+ * está lá, o ponto só pode ser separador de milhar. NaN quando não dá para ler,
+ * e é o zod de quem chama que decide o que fazer com isso.
+ */
+export function parseMoney(value: string): number {
+  const trimmed = value.trim();
+  const normalized = trimmed.includes(',') ? trimmed.replace(/\./g, '').replace(',', '.') : trimmed;
+  return normalized.length === 0 ? Number.NaN : Number(normalized);
+}

@@ -303,11 +303,22 @@ public class SchedulingService {
         return canceled;
     }
 
+    /**
+     * O dia do aluno: a fatia dele do dia do estúdio, com o feriado e os
+     * próprios cancelamentos.
+     *
+     * Carrega as três coisas pela mesma razão do painel do ADMIN, e não por
+     * simetria: sem a descrição do feriado o aluno veria um dia vazio sem saber
+     * por quê, e sem o cancelamento "não tem aula hoje" ficaria idêntico a "sua
+     * aula de hoje foi cancelada". Filtrar {@link #dayOf} em vez de expandir de
+     * novo mantém uma implementação só da regra.
+     */
     @Transactional(readOnly = true)
-    public List<ScheduleEntry> scheduleOfStudent(Long studentId, LocalDate date) {
-        return scheduleOf(date).stream()
-                .filter(entry -> entry.studentId().equals(studentId))
-                .toList();
+    public DayScheduleView dayOfStudent(Long studentId, LocalDate date) {
+        DayScheduleView day = dayOf(date);
+        return new DayScheduleView(day.date(), day.holiday(),
+                day.entries().stream().filter(entry -> entry.studentId().equals(studentId)).toList(),
+                day.cancellations().stream().filter(entry -> entry.studentId().equals(studentId)).toList());
     }
 
     /**

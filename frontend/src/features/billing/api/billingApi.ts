@@ -40,6 +40,32 @@ export interface InvoiceQuery {
 export const invoicesKey = (query?: InvoiceQuery) =>
   query ? (['billing', 'invoices', query] as const) : (['billing', 'invoices'] as const);
 
+/** Espelha o DTO de /subscriptions. */
+export interface Subscription {
+  id: number;
+  studentId: number;
+  monthlyAmount: number;
+  /** 1–31; o back ajusta para o último dia em mês que não tem esse dia. */
+  dueDay: number;
+  active: boolean;
+}
+
+export interface SubscriptionInput {
+  studentId: number;
+  monthlyAmount: number;
+  dueDay: number;
+}
+
+export interface SubscriptionQuery {
+  active?: boolean;
+  page: number;
+}
+
+export const subscriptionsKey = (query?: SubscriptionQuery) =>
+  query ? (['billing', 'subscriptions', query] as const) : (['billing', 'subscriptions'] as const);
+
+export const myInvoicesKey = (page: number) => ['billing', 'me', 'invoices', page] as const;
+
 export const billingApi = {
   invoices: ({ status, page }: InvoiceQuery) => {
     const params = new URLSearchParams({ page: String(page) });
@@ -48,4 +74,22 @@ export const billingApi = {
   },
   registerPayment: (id: number, paymentDate: string) =>
     apiClient.post<Invoice>(`/invoices/${id}/payment`, { paymentDate }),
+
+  subscriptions: ({ active, page }: SubscriptionQuery) => {
+    const params = new URLSearchParams({ page: String(page) });
+    if (active !== undefined) params.set('active', String(active));
+    return apiClient.get<Page<Subscription>>(`/subscriptions?${params}`);
+  },
+  createSubscription: (input: SubscriptionInput) => apiClient.post<Subscription>('/subscriptions', input),
+  /**
+   * O aluno vai no corpo mesmo na edição: o back exige o campo, e ignora a
+   * troca — assinatura não muda de dono, cria-se outra.
+   */
+  updateSubscription: (id: number, input: SubscriptionInput) =>
+    apiClient.put<Subscription>(`/subscriptions/${id}`, input),
+  activateSubscription: (id: number) => apiClient.patch<Subscription>(`/subscriptions/${id}/activate`),
+  deactivateSubscription: (id: number) => apiClient.patch<Subscription>(`/subscriptions/${id}/deactivate`),
+
+  /** O id do aluno vem do token: /me/invoices não aceita id nenhum. */
+  myInvoices: (page: number) => apiClient.get<Page<Invoice>>(`/me/invoices?page=${page}`),
 };

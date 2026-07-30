@@ -5,9 +5,16 @@ import { LoadingScreen, RequireRole, SessionErrorScreen } from '@/features/auth/
 import { LoginPage } from '@/features/auth/pages/LoginPage';
 import { destinationFor, useSessionState } from '@/features/auth/session';
 import { InvoicesPage } from '@/features/billing/pages/InvoicesPage';
+import { MyInvoicesPage } from '@/features/billing/pages/MyInvoicesPage';
+import { SubscriptionsPage } from '@/features/billing/pages/SubscriptionsPage';
+import { StudentsPage } from '@/features/registration/pages/StudentsPage';
+import { TeachersPage } from '@/features/registration/pages/TeachersPage';
+import { DefaultSchedulesPage } from '@/features/scheduling/pages/DefaultSchedulesPage';
+import { HolidaysPage } from '@/features/scheduling/pages/HolidaysPage';
+import { MyGridPage } from '@/features/scheduling/pages/MyGridPage';
+import { MySchedulePage } from '@/features/scheduling/pages/MySchedulePage';
 import { SchedulePage } from '@/features/scheduling/pages/SchedulePage';
 import { setUnauthorizedHandler } from '@/lib/apiClient';
-import { PlaceholderPage } from './PlaceholderPage';
 import { AdminShell } from './shells/AdminShell';
 import { MemberShell } from './shells/MemberShell';
 
@@ -23,22 +30,25 @@ export function AppRoutes() {
           <Route path="/admin" element={<AdminShell />}>
             <Route index element={<Navigate to="/admin/schedule" replace />} />
             <Route path="schedule" element={<SchedulePage />} />
-            <Route path="students" element={<PlaceholderPage title="Alunos" />} />
-            <Route path="teachers" element={<PlaceholderPage title="Professores" />} />
+            <Route path="students" element={<StudentsPage />} />
+            <Route path="teachers" element={<TeachersPage />} />
+            <Route path="default-schedules" element={<DefaultSchedulesPage />} />
+            <Route path="holidays" element={<HolidaysPage />} />
+            <Route path="subscriptions" element={<SubscriptionsPage />} />
             <Route path="invoices" element={<InvoicesPage />} />
-            <Route path="holidays" element={<PlaceholderPage title="Feriados" />} />
           </Route>
         </Route>
 
         <Route element={<RequireRole allow={['STUDENT']} />}>
           <Route element={<MemberShell />}>
-            <Route path="/me/schedule" element={<PlaceholderPage title="Minha agenda" />} />
+            <Route path="/me/schedule" element={<MySchedulePage />} />
+            <Route path="/me/invoices" element={<MyInvoicesPage />} />
           </Route>
         </Route>
 
         <Route element={<RequireRole allow={['TEACHER']} />}>
           <Route element={<MemberShell />}>
-            <Route path="/me/grid" element={<PlaceholderPage title="Minha grade" />} />
+            <Route path="/me/grid" element={<MyGridPage />} />
           </Route>
         </Route>
 
