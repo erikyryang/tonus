@@ -8,8 +8,10 @@ const NAV_ITEMS = [
   { to: '/admin/schedule', label: 'Agenda' },
   { to: '/admin/students', label: 'Alunos' },
   { to: '/admin/teachers', label: 'Professores' },
-  { to: '/admin/invoices', label: 'Faturas' },
+  { to: '/admin/default-schedules', label: 'Horários' },
   { to: '/admin/holidays', label: 'Feriados' },
+  { to: '/admin/subscriptions', label: 'Assinaturas' },
+  { to: '/admin/invoices', label: 'Faturas' },
 ];
 
 export function AdminShell() {

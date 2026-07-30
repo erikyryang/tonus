@@ -1,6 +1,14 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isConflict } from '@/lib/apiError';
-import { type InvoiceQuery, billingApi, invoicesKey } from './billingApi';
+import {
+  type InvoiceQuery,
+  type SubscriptionInput,
+  type SubscriptionQuery,
+  billingApi,
+  invoicesKey,
+  myInvoicesKey,
+  subscriptionsKey,
+} from './billingApi';
 
 export function useInvoices(query: InvoiceQuery) {
   return useQuery({
@@ -35,5 +43,64 @@ export function useRegisterPayment() {
     onError: (error) => {
       if (isConflict(error)) return invalidate();
     },
+  });
+}
+
+export function useSubscriptions(query: SubscriptionQuery) {
+  return useQuery({
+    queryKey: subscriptionsKey(query),
+    queryFn: () => billingApi.subscriptions(query),
+    placeholderData: keepPreviousData,
+  });
+}
+
+/**
+ * A invalidação é do prefixo: criar ou desativar assinatura muda a combinação
+ * de filtro e página inteira, não só a linha mexida.
+ */
+function useSubscriptionInvalidation() {
+  const queryClient = useQueryClient();
+  return () => queryClient.invalidateQueries({ queryKey: subscriptionsKey() });
+}
+
+/** 409 é "esse aluno já tem assinatura": a lista na tela já está desatualizada. */
+export function useCreateSubscription() {
+  const invalidate = useSubscriptionInvalidation();
+  return useMutation({
+    mutationFn: (input: SubscriptionInput) => billingApi.createSubscription(input),
+    onSuccess: invalidate,
+    onError: (error) => {
+      if (isConflict(error)) invalidate();
+    },
+  });
+}
+
+export interface UpdateSubscriptionInput {
+  id: number;
+  input: SubscriptionInput;
+}
+
+export function useUpdateSubscription() {
+  const invalidate = useSubscriptionInvalidation();
+  return useMutation({
+    mutationFn: ({ id, input }: UpdateSubscriptionInput) => billingApi.updateSubscription(id, input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSetSubscriptionActive() {
+  const invalidate = useSubscriptionInvalidation();
+  return useMutation({
+    mutationFn: ({ id, active }: { id: number; active: boolean }) =>
+      active ? billingApi.activateSubscription(id) : billingApi.deactivateSubscription(id),
+    onSuccess: invalidate,
+  });
+}
+
+export function useMyInvoices(page: number) {
+  return useQuery({
+    queryKey: myInvoicesKey(page),
+    queryFn: () => billingApi.myInvoices(page),
+    placeholderData: keepPreviousData,
   });
 }

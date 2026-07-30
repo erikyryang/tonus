@@ -22,11 +22,6 @@ public record DayScheduleResponse(LocalDate date,
                                   List<Entry> entries,
                                   List<Cancellation> cancellations) {
 
-    /** Agenda de quem só enxerga a própria fatia: sem feriado e sem cancelamento. */
-    public static DayScheduleResponse of(LocalDate date, List<ScheduleEntry> entries) {
-        return of(new DayScheduleView(date, null, entries, List.of()));
-    }
-
     public static DayScheduleResponse of(DayScheduleView day) {
         return new DayScheduleResponse(day.date(), day.holiday(),
                 day.entries().stream().map(Entry::from).toList(),

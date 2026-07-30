@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.modulith.test.ApplicationModuleTest;
 import org.springframework.modulith.test.AssertablePublishedEvents;
@@ -50,11 +51,18 @@ class SchedulingEventsIT {
      * O bean é necessário para o contexto sequer subir: o AuditListener de
      * shared é entity listener de toda BaseEntity e recebe Clock no construtor,
      * então sem ele o entityManagerFactory não é criado.
+     *
+     * {@code @Primary} não é enfeite: sem ele o Clock de produção continua no
+     * contexto e vence a injeção por coincidência de nome do parâmetro
+     * ({@code clock}), deixando o teste preso ao calendário real — foi assim
+     * que {@code reschedulePublishesClassRescheduled} passou a falhar sozinho
+     * quando 2026-07-29 virou passado.
      */
     @TestConfiguration
     static class FixedClockConfig {
 
         @Bean
+        @Primary
         Clock fixedClock() {
             return Clock.fixed(TestClockConfig.FIXED_INSTANT, ZoneOffset.UTC);
         }

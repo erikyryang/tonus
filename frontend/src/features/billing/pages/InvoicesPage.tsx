@@ -1,5 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { Pagination } from '@/components/Pagination';
+import { Toast, useToast } from '@/components/Toast';
+import { usePageClamp } from '@/components/usePageClamp';
 import { Button } from '@/components/ui/button';
 import { apiMessage } from '@/lib/apiError';
 import { formatDate, formatMoney, formatReferenceMonth } from '@/lib/formatters';
@@ -35,16 +38,10 @@ export function InvoicesPage() {
   const page = parsePage(searchParams.get('page'));
 
   const [pending, setPending] = useState<Invoice | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const toast = useToast();
 
   const invoices = useInvoices({ status, page });
   const registerPayment = useRegisterPayment();
-
-  useEffect(() => {
-    if (!toast) return;
-    const timer = setTimeout(() => setToast(null), 4000);
-    return () => clearTimeout(timer);
-  }, [toast]);
 
   function closeDialog() {
     setPending(null);
@@ -52,26 +49,7 @@ export function InvoicesPage() {
   }
 
   const data = invoices.data;
-
-  /**
-   * A última página some debaixo do ADMIN quando ele dá baixa no único item
-   * dela sob "Atrasadas": a fatura sai do filtro e a página deixa de existir.
-   * Sem recuar, a tela diria "nenhuma fatura atrasada" com a página 1 cheia.
-   * Cobre também `?page=` fora do intervalo digitado na URL.
-   *
-   * O alvo é um número (ou null), e não uma função, para o efeito depender só
-   * de primitivos — `setSearchParams` é estável e nada mais entra na lista.
-   */
-  const clampTo =
-    data != null && data.number > 0 && data.content.length === 0 && data.totalPages > 0
-      ? data.totalPages - 1
-      : null;
-
-  useEffect(() => {
-    // replace: a página inexistente não merece entrada no histórico — voltar
-    // nela só provocaria o mesmo recuo de novo.
-    if (clampTo != null) setSearchParams(queryFor(status, clampTo), { replace: true });
-  }, [clampTo, status, setSearchParams]);
+  const clamping = usePageClamp(data, (next) => setSearchParams(queryFor(status, next), { replace: true }));
 
   return (
     <section className="space-y-4">
@@ -93,11 +71,7 @@ export function InvoicesPage() {
         ))}
       </div>
 
-      <div role="status" aria-live="polite">
-        {toast && (
-          <span className="inline-block rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{toast}</span>
-        )}
-      </div>
+      <Toast message={toast.message} />
 
       {invoices.isPending && <p className="text-sm text-slate-500">Carregando as faturas…</p>}
 
@@ -115,7 +89,7 @@ export function InvoicesPage() {
       )}
 
       {/* Enquanto o recuo não acontece, o vazio da página inexistente mentiria. */}
-      {data && data.content.length === 0 && clampTo == null && (
+      {data && data.content.length === 0 && !clamping && (
         <p className="text-sm text-slate-500">{emptyMessageFor(status)}</p>
       )}
 
@@ -144,7 +118,7 @@ export function InvoicesPage() {
                   // "será avisado", não "recebeu": a entrega do WhatsApp é
                   // assíncrona (evento + reentrega). No instante da resposta
                   // HTTP nada foi entregue ainda, e o toast não pode mentir.
-                  setToast('Baixa registrada. O aluno será avisado por WhatsApp.');
+                  toast.show('Baixa registrada. O aluno será avisado por WhatsApp.');
                   closeDialog();
                 },
               },
@@ -227,32 +201,6 @@ function InvoiceTable({
         ))}
       </tbody>
     </table>
-  );
-}
-
-function Pagination({
-  page,
-  totalPages,
-  onChange,
-}: {
-  page: number;
-  totalPages: number;
-  onChange: (page: number) => void;
-}) {
-  if (totalPages <= 1) return null;
-
-  return (
-    <div className="flex items-center gap-3 text-sm text-slate-600">
-      <Button variant="outline" size="sm" disabled={page === 0} onClick={() => onChange(page - 1)}>
-        Página anterior
-      </Button>
-      <span>
-        Página {page + 1} de {totalPages}
-      </span>
-      <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => onChange(page + 1)}>
-        Próxima página
-      </Button>
-    </div>
   );
 }
 

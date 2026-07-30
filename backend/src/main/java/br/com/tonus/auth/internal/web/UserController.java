@@ -6,15 +6,18 @@ import br.com.tonus.auth.internal.UnknownLinkedPersonException;
 import br.com.tonus.auth.internal.UserNotFoundException;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -40,6 +43,22 @@ class UserController {
         UserResponse response = UserResponse.from(authService.createUser(
                 request.login(), request.password(), request.role(), request.studentId(), request.teacherId()));
         return ResponseEntity.created(URI.create("/users/" + response.id())).body(response);
+    }
+
+    /**
+     * Quem já tem login, entre estes alunos. É a consulta que permite à tela
+     * distinguir "criar acesso" de "reativar acesso" — e sem ela o id do
+     * usuário, que a reativação exige, nunca chegaria ao cliente.
+     *
+     * Em lote e não por aluno: a listagem mostra uma página inteira de alunos
+     * de cada vez, e uma chamada por linha seria absurdo.
+     *
+     * Não é paginado, diferente das outras listagens: o tamanho da resposta já
+     * é limitado pela pergunta — no máximo um usuário por aluno informado.
+     */
+    @GetMapping
+    List<UserResponse> byStudents(@RequestParam List<Long> studentIds) {
+        return authService.findUsersOfStudents(studentIds).stream().map(UserResponse::from).toList();
     }
 
     @PatchMapping("/{id}/activate")

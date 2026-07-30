@@ -2,12 +2,12 @@ import { screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { ADMIN, STUDENT, TEACHER, meOk, meUnauthorized, refreshFails } from '@/test/authHandlers';
 import { renderApp } from '@/test/renderApp';
-import { anyDayEmpty } from '@/test/schedulingHandlers';
+import { anyDayEmpty, anyMyGridEmpty, anyMyScheduleEmpty } from '@/test/schedulingHandlers';
 import { server } from '@/test/server';
 
 describe('guards de rota por papel', () => {
   it('manda o STUDENT que tenta rota de ADMIN para a própria agenda', async () => {
-    server.use(meOk(STUDENT));
+    server.use(meOk(STUDENT), anyMyScheduleEmpty());
     renderApp('/admin/students');
 
     expect(await screen.findByRole('heading', { name: 'Minha agenda' })).toBeInTheDocument();
@@ -15,7 +15,7 @@ describe('guards de rota por papel', () => {
   });
 
   it('manda o TEACHER que tenta rota de ADMIN para a própria grade', async () => {
-    server.use(meOk(TEACHER));
+    server.use(meOk(TEACHER), anyMyGridEmpty());
     renderApp('/admin/invoices');
 
     expect(await screen.findByRole('heading', { name: 'Minha grade' })).toBeInTheDocument();

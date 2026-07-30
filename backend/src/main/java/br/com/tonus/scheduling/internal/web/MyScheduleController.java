@@ -38,7 +38,7 @@ class MyScheduleController {
                                    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         Long studentId = requireLink(user == null ? null : user.studentId(), "aluno");
         LocalDate day = orToday(date);
-        return DayScheduleResponse.of(day, schedulingService.scheduleOfStudent(studentId, day));
+        return DayScheduleResponse.of(schedulingService.dayOfStudent(studentId, day));
     }
 
     @GetMapping("/grid")
