@@ -53,19 +53,34 @@ tela tem de específico.
   usuário-por-vínculo prevista acima: sem ela o front não tem o id do
   usuário, e "Reativar acesso" seria impossível. Em lote e não por aluno
   porque a tela pergunta por uma página inteira de cada vez; não paginado
-  porque o tamanho já está limitado pela pergunta.
+  porque o tamanho já está limitado pela pergunta — com teto de 200 ids
+  por chamada, que é o que transforma esse limite em garantia em vez de
+  confiança no cliente (a lista vira cláusula `IN`, um parâmetro por id).
+  Acima disso é 400, não 500.
 - `GET /me/schedule` passa a devolver o dia do aluno **com** a descrição do
   feriado e os cancelamentos dele (`SchedulingService.dayOfStudent`, que
   filtra `dayOf` em vez de reexpandir). Sem isso a tela do aluno não teria
   como mostrar "os feriados que o afetam" — e "não tem aula hoje" ficaria
   idêntico a "sua aula de hoje foi cancelada".
+- `GET /me/schedule/week?from=&days=` → a janela do aluno numa chamada só,
+  com o mesmo contrato do dia avulso repetido por data
+  (`SchedulingService.weekOfStudent`). A tela mostra sete dias, e pedir dia
+  a dia eram sete requisições — cada uma carregando todos os alunos ativos e
+  todos os horários padrão do estúdio para devolver a linha de um aluno.
+  Agora as consultas são pelo intervalo: 6 no total para 14 dias, e o número
+  não cresce com o tamanho do estúdio (`MyScheduleWeekQueryCountIT` fixa o
+  teto). Teto de 31 dias na janela, porque o custo é proporcional ao pedido.
+  `RegistrationFacade.findStudentSummary` nasceu disso: perguntar por um
+  aluno em vez de listar os ativos e descartar todos menos um.
 
 ## Decisões de UI registradas
-- `/me/schedule` mostra uma janela de 7 dias a partir de hoje, uma chamada
-  por dia (o endpoint responde por dia). O "horário padrão" é derivado das
-  aulas de origem TEMPLATE da janela — o back não expõe campo próprio para
-  ele no contrato /me. O aviso de "sem horário cadastrado" olha só para
-  aulas e exceções: feriado não é evidência de horário.
+- `/me/schedule` mostra uma janela de 7 dias a partir de hoje, numa chamada
+  só (`GET /me/schedule/week`). O "horário padrão" é derivado das aulas de
+  origem TEMPLATE da janela — o back não expõe campo próprio para ele no
+  contrato /me. O aviso de "sem horário cadastrado" olha só para aulas e
+  exceções: feriado não é evidência de horário. Com uma resposta só, ou a
+  janela chegou inteira ou a tela mostra o erro e não conclui nada — não
+  existe mais meia semana para conciliar.
 - Filtro de situação nas listagens vive na URL: ausência de parâmetro é
   "ativos" (o default), `?active=false` é inativos e `?active=all` é todos.
 - Navegação: `/admin/default-schedules` ("Horários") e
@@ -80,6 +95,36 @@ tela tem de específico.
   ("alguém chegou primeiro"), não erro genérico: a tela mostra a mensagem
   do back e refaz a listagem, que já estava desatualizada. No 409 de login
   já em uso o botão continua armado — escolher outro login é a saída.
+
+- A linha de aluno só oferece ação de acesso depois que
+  `GET /users?studentIds=` responde: a tabela chega antes (são duas
+  chamadas), e "ainda não sei" não pode virar "não tem login". O back não
+  impede um segundo usuário para o mesmo aluno — só o login é UNIQUE —,
+  então um clique nesse intervalo criaria conta duplicada.
+- Desativar aluno não refaz a consulta de acesso: a revogação é por evento
+  e chega depois da resposta HTTP, então o refetch traria de volta o
+  `active: true` que está prestes a deixar de valer. A revogação é certa,
+  só não é imediata, e por isso é escrita direto no cache.
+- Campo de dinheiro: sem vírgula, ponto separando grupos de exatamente três
+  dígitos é milhar ("1.500" = mil e quinhentos). Lido como decimal viraria
+  uma assinatura de R$ 1,50 que passa em toda validação. O primeiro grupo não
+  começa em zero — "0.500" é meio real, e lê-lo como quinhentos seria o erro
+  inverso, mil vezes mais caro porque cobra a mais.
+- Falha na consulta de acesso se explica na tela, com "tentar de novo": a
+  ação continua escondida (o risco da conta duplicada é o mesmo do
+  carregamento), mas some com motivo em vez de calada.
+- O aviso de confirmação carrega número de série, usado como `key` do nó:
+  anunciar em leitor de tela depende de mutação dentro da live region, e o
+  mesmo texto no mesmo nó não muda nada no DOM — o segundo aviso passaria
+  em silêncio justo para quem só tem ele.
+- Datas dos testes de agenda são ancoradas na próxima segunda-feira, nunca
+  literais: a validação de data passada no formulário de remarcação faz
+  literal apodrecer no calendário (mesma lição do Clock fixo no back).
+
+- Caminho novo em `/me` entra na lista do `SecurityConfig` por extenso, sem
+  `/**`: `/me/schedule` não cobre `/me/schedule/week`, e sem a linha própria
+  o endpoint cairia no `anyRequest().authenticated()` — aberto a qualquer
+  papel. Foi um teste pedindo 403 e recebendo 404 que mostrou isso.
 
 ## Fora de escopo
 Busca textual, ordenação custom, operações em massa, exportação,

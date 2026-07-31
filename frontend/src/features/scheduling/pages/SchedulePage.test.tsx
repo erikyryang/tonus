@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { DaySchedule, ScheduleExceptionRequest } from '@/features/scheduling/api/schedulingApi';
+import { formatDayMonth } from '@/lib/formatters';
 import { ADMIN, meOk } from '@/test/authHandlers';
 import { createTestQueryClient, renderApp } from '@/test/renderApp';
 import {
@@ -117,7 +118,7 @@ describe('agenda do dia', () => {
 
     renderSchedule(WEDNESDAY);
 
-    expect(await screen.findByText('remarcada de 27/07')).toBeInTheDocument();
+    expect(await screen.findByText(`remarcada de ${formatDayMonth(MONDAY)}`)).toBeInTheDocument();
   });
 });
 
@@ -170,7 +171,7 @@ describe('menu de ações', () => {
 
     expect(await screen.findByRole('button', { name: 'Ações de Ana Alves às 09:00' })).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Ações de Ana Alves às 09:00, remarcada de 27/07' }),
+      screen.getByRole('button', { name: `Ações de Ana Alves às 09:00, remarcada de ${formatDayMonth(MONDAY)}` }),
     ).toBeInTheDocument();
   });
 
@@ -423,7 +424,7 @@ describe('remarcar aula', () => {
     // Destino estava em cache e fresco; só volta à API por ter sido invalidado.
     await user.click(screen.getByRole('button', { name: 'Próximo dia' }));
     await waitFor(() => expect(requested).toEqual([WEDNESDAY, THURSDAY, WEDNESDAY, THURSDAY]));
-    expect(await screen.findByText('remarcada de 29/07')).toBeInTheDocument();
+    expect(await screen.findByText(`remarcada de ${formatDayMonth(WEDNESDAY)}`)).toBeInTheDocument();
   });
 
   /** Desfazer devolve a aula ao dia de origem: as duas agendas mudam de novo. */
@@ -459,11 +460,11 @@ describe('remarcar aula', () => {
 
     const { user } = renderSchedule(THURSDAY, createTestQueryClient({ staleTime: Infinity, gcTime: Infinity }));
 
-    await screen.findByText('remarcada de 29/07');
+    await screen.findByText(`remarcada de ${formatDayMonth(WEDNESDAY)}`);
     await user.click(screen.getByRole('button', { name: 'Dia anterior' }));
     await screen.findByText(/nenhuma aula neste dia/i);
     await user.click(screen.getByRole('button', { name: 'Próximo dia' }));
-    await screen.findByText('remarcada de 29/07');
+    await screen.findByText(`remarcada de ${formatDayMonth(WEDNESDAY)}`);
 
     expect(requested).toEqual([THURSDAY, WEDNESDAY]);
 

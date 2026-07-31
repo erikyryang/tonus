@@ -1,5 +1,5 @@
 import { screen, within } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
 import { addDays, todayIsoDate } from '@/lib/dates';
 import { formatDate } from '@/lib/formatters';
@@ -80,29 +80,71 @@ describe('minha agenda (aluno)', () => {
   });
 
   /**
-   * São sete chamadas independentes: uma pode falhar sozinha. Os dias que
-   * chegaram continuam na tela, o erro aparece com o "tentar de novo", e a
-   * conclusão sobre o conjunto fica suspensa — com um buraco na semana, "você
-   * ainda não tem horário" seria palpite.
+   * Semana de recesso: o feriado suprime o dia para todo mundo, então a janela
+   * inteira vem vazia mesmo para quem tem horário. Concluir "você não tem
+   * horário" daí mandaria o aluno à recepção resolver o que não está quebrado.
    */
-  it('mostra o que carregou quando um dia da semana falha', async () => {
+  it('não conclui que falta horário quando a janela inteira é feriado', async () => {
     server.use(
       meOk(STUDENT),
-      http.get('/api/me/schedule', ({ request }) => {
-        const date = new URL(request.url).searchParams.get('date') ?? '';
-        if (date === TOMORROW) return problem(500, 'Internal Server Error', 'Falhou o dia de amanhã');
-        return HttpResponse.json(
-          date === TODAY ? day(TODAY, { entries: [entry({ studentId: 10, time: '07:00' })] }) : day(date),
-        );
+      myScheduleHandler((date) => day(date, { holiday: 'Recesso' })),
+    );
+
+    renderApp('/me/schedule');
+
+    await screen.findAllByText(/Recesso/);
+    expect(screen.queryByText(/ainda não tem horário cadastrado/i)).not.toBeInTheDocument();
+  });
+
+  /**
+   * A aula de hoje foi cancelada e a de amanhã remarcada para hoje: as duas
+   * coisas no mesmo dia. Mostrar só a aula apagaria justamente o aviso.
+   */
+  it('mostra a aula e o cancelamento quando os dois caem no mesmo dia', async () => {
+    server.use(
+      meOk(STUDENT),
+      scheduleOf({
+        [TODAY]: day(TODAY, {
+          entries: [entry({ studentId: 10, time: '09:00', origin: 'RESCHEDULED', originDate: TOMORROW })],
+          cancellations: [cancellation({ studentId: 10, exceptionId: 1, time: '07:00' })],
+        }),
       }),
     );
 
     renderApp('/me/schedule');
 
     const today = await screen.findByRole('listitem', { name: new RegExp(formatDate(TODAY)) });
-    expect(within(today).getByText('07:00')).toBeInTheDocument();
-    expect(await screen.findByRole('alert')).toHaveTextContent('Falhou o dia de amanhã');
+    expect(within(today).getByText('09:00')).toBeInTheDocument();
+    expect(within(today).getByText(/cancelada/i)).toBeInTheDocument();
+  });
+
+  /**
+   * A janela vem de uma chamada só, então ou ela chega inteira ou não chega.
+   * O que não pode acontecer é a tela concluir alguma coisa sobre a semana que
+   * não recebeu: "você ainda não tem horário" seria palpite, não informação.
+   */
+  it('mostra o erro sem concluir nada quando a janela falha', async () => {
+    server.use(
+      meOk(STUDENT),
+      http.get('/api/me/schedule/week', () => problem(500, 'Internal Server Error', 'Falhou a semana')),
+    );
+
+    renderApp('/me/schedule');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Falhou a semana');
     expect(screen.queryByText(/ainda não tem horário cadastrado/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('listitem')).not.toBeInTheDocument();
+  });
+
+  /** Uma chamada para a janela inteira, e não uma por dia. */
+  it('pede a semana numa chamada só', async () => {
+    const asked: string[] = [];
+    server.use(meOk(STUDENT), myScheduleHandler((date) => day(date), asked));
+
+    renderApp('/me/schedule');
+
+    await screen.findByText(/ainda não tem horário cadastrado/i);
+    expect(asked).toEqual([`${TODAY}:7`]);
   });
 
   /** Guard do papel: a agenda do aluno é só do aluno. */

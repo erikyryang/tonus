@@ -70,6 +70,13 @@ class RegistrationFacadeImpl implements RegistrationFacade {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<StudentSummary> findStudentSummary(Long studentId) {
+        return studentRepository.findById(studentId)
+                .map(student -> toSummaries(List.of(student)).getFirst());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<StudentSummary> findActiveStudents() {
         return toSummaries(studentRepository.findByActiveTrue());
     }

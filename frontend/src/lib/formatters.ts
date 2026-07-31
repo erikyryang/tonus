@@ -55,15 +55,33 @@ export function formatMoney(value: number): string {
 }
 
 /**
+ * "1.234" ou "1.234.567": ponto separando grupos de três, sem decimais.
+ *
+ * O primeiro grupo não começa em zero — "0.500" é meio real, não quinhentos.
+ */
+const DOT_THOUSANDS = /^[1-9]\d{0,2}(\.\d{3})+$/;
+
+/**
  * O que foi digitado no campo de dinheiro, em número.
  *
  * Aceita as duas formas que aparecem de verdade: "1.234,50" (pt-BR completo) e
  * "1234.50" (quem digita no teclado numérico). A vírgula é o desempate — se ela
  * está lá, o ponto só pode ser separador de milhar. NaN quando não dá para ler,
  * e é o zod de quem chama que decide o que fazer com isso.
+ *
+ * Sem vírgula o ponto ainda pode ser milhar: "1.500" é mil e quinhentos para
+ * quem digita em pt-BR, e lê-lo como 1,5 criaria uma assinatura de R$ 1,50
+ * sem que nada reclamasse — o valor passa no mínimo de um centavo e o back
+ * aceita. O desempate é a forma: dinheiro tem duas casas decimais, então
+ * grupos de exatamente três dígitos depois do ponto são milhar, não centavos.
  */
 export function parseMoney(value: string): number {
   const trimmed = value.trim();
-  const normalized = trimmed.includes(',') ? trimmed.replace(/\./g, '').replace(',', '.') : trimmed;
-  return normalized.length === 0 ? Number.NaN : Number(normalized);
+  if (trimmed.length === 0) return Number.NaN;
+  const normalized = trimmed.includes(',')
+    ? trimmed.replace(/\./g, '').replace(',', '.')
+    : DOT_THOUSANDS.test(trimmed)
+      ? trimmed.replace(/\./g, '')
+      : trimmed;
+  return Number(normalized);
 }

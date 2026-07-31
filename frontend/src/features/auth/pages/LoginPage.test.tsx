@@ -3,7 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 import { ADMIN, STUDENT, loginInvalid, loginOk, meOk, meUnauthorized } from '@/test/authHandlers';
 import { renderApp } from '@/test/renderApp';
-import { anyDayEmpty } from '@/test/schedulingHandlers';
+import { anyDayEmpty, anyMyScheduleEmpty } from '@/test/schedulingHandlers';
 import { server } from '@/test/server';
 
 async function submitLogin(user: ReturnType<typeof renderApp>['user']) {
@@ -84,7 +84,7 @@ describe('LoginPage', () => {
   });
 
   it('leva o STUDENT para a própria agenda após o login', async () => {
-    server.use(loginOk(), meOk(STUDENT));
+    server.use(loginOk(), meOk(STUDENT), anyMyScheduleEmpty());
     const { user } = renderApp('/login');
 
     await submitLogin(user);

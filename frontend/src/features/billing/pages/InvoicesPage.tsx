@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { ListFeedback } from '@/components/ListFeedback';
 import { Pagination } from '@/components/Pagination';
 import { Toast, useToast } from '@/components/Toast';
 import { usePageClamp } from '@/components/usePageClamp';
 import { Button } from '@/components/ui/button';
-import { apiMessage } from '@/lib/apiError';
 import { formatDate, formatMoney, formatReferenceMonth } from '@/lib/formatters';
+import { parsePageParam } from '@/lib/listParams';
 import { cn } from '@/lib/utils';
 import type { Invoice, InvoiceStatus } from '../api/billingApi';
 import { useInvoices, useRegisterPayment } from '../api/billingQueries';
@@ -35,7 +36,7 @@ const STATUSES: InvoiceStatus[] = ['OPEN', 'PAID', 'OVERDUE'];
 export function InvoicesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const status = parseStatus(searchParams.get('status'));
-  const page = parsePage(searchParams.get('page'));
+  const page = parsePageParam(searchParams.get('page'));
 
   const [pending, setPending] = useState<Invoice | null>(null);
   const toast = useToast();
@@ -71,27 +72,14 @@ export function InvoicesPage() {
         ))}
       </div>
 
-      <Toast message={toast.message} />
-
-      {invoices.isPending && <p className="text-sm text-slate-500">Carregando as faturas…</p>}
-
-      {!invoices.isPending && invoices.isFetching && <p className="text-sm text-slate-400">Atualizando…</p>}
-
-      {invoices.isError && (
-        <div className="space-y-2">
-          <p role="alert" className="text-sm text-red-600">
-            {apiMessage(invoices.error)}
-          </p>
-          <Button variant="outline" size="sm" onClick={() => void invoices.refetch()}>
-            Tentar de novo
-          </Button>
-        </div>
-      )}
+      <Toast message={toast.message} serial={toast.serial} />
 
       {/* Enquanto o recuo não acontece, o vazio da página inexistente mentiria. */}
-      {data && data.content.length === 0 && !clamping && (
-        <p className="text-sm text-slate-500">{emptyMessageFor(status)}</p>
-      )}
+      <ListFeedback
+        state={invoices}
+        loading="Carregando as faturas…"
+        empty={data && data.content.length === 0 && !clamping ? emptyMessageFor(status) : undefined}
+      />
 
       {data && data.content.length > 0 && (
         <>
@@ -222,9 +210,4 @@ function emptyMessageFor(status: InvoiceStatus | undefined): string {
 
 function parseStatus(value: string | null): InvoiceStatus | undefined {
   return STATUSES.find((status) => status === value);
-}
-
-function parsePage(value: string | null): number {
-  const page = Number(value);
-  return Number.isInteger(page) && page > 0 ? page : 0;
 }

@@ -117,7 +117,8 @@ export const defaultSchedulesKey = (page?: number) =>
 export const holidaysKey = (page?: number) =>
   page === undefined ? (['scheduling', 'holidays'] as const) : (['scheduling', 'holidays', page] as const);
 
-export const myScheduleKey = (date: string) => ['scheduling', 'me', 'schedule', date] as const;
+export const myScheduleWeekKey = (from: string, days: number) =>
+  ['scheduling', 'me', 'schedule', 'week', from, days] as const;
 export const myGridKey = (date: string) => ['scheduling', 'me', 'grid', date] as const;
 
 export const schedulingApi = {
@@ -141,7 +142,13 @@ export const schedulingApi = {
   createHoliday: (input: HolidayInput) => apiClient.post<Holiday>('/holidays', input),
   deleteHoliday: (id: number) => apiClient.delete<void>(`/holidays/${id}`),
 
-  /** O id do aluno e o do professor vêm do token: /me não aceita id nenhum. */
-  mySchedule: (date: string) => apiClient.get<DaySchedule>(`/me/schedule?date=${date}`),
+  /**
+   * O id do aluno e o do professor vêm do token: /me não aceita id nenhum.
+   *
+   * A janela vem numa chamada só. Era uma por dia, e cada uma custava ao back
+   * a expansão da agenda do estúdio inteiro para devolver a linha de um aluno.
+   */
+  myScheduleWeek: (from: string, days: number) =>
+    apiClient.get<DaySchedule[]>(`/me/schedule/week?from=${from}&days=${days}`),
   myGrid: (date: string) => apiClient.get<TeacherGrid>(`/me/grid?date=${date}`),
 };

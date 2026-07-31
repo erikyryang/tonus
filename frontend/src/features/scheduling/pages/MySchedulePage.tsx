@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 import { ListFeedback } from '@/components/ListFeedback';
-import { addDays, formatWeekday, isWeekend, todayIsoDate } from '@/lib/dates';
+import { formatWeekday, isWeekend, todayIsoDate } from '@/lib/dates';
 import { formatDate, formatDayMonth } from '@/lib/formatters';
 import type { DaySchedule } from '../api/schedulingApi';
-import { useMyScheduleDays } from '../api/schedulingQueries';
+import { useMyScheduleWeek } from '../api/schedulingQueries';
 
 /**
  * Uma semana à frente, contando de hoje. É o recorte que responde à pergunta do
@@ -14,21 +14,19 @@ import { useMyScheduleDays } from '../api/schedulingQueries';
 const WINDOW_DAYS = 7;
 
 export function MySchedulePage() {
-  const dates = useMemo(() => {
-    const today = todayIsoDate();
-    return Array.from({ length: WINDOW_DAYS }, (_, offset) => addDays(today, offset));
-  }, []);
+  // Fixado na montagem: a janela não pode escorregar a cada render, senão a
+  // chave da query muda sozinha e a tela volta ao servidor sem ninguém pedir.
+  const from = useMemo(() => todayIsoDate(), []);
 
-  const week = useMyScheduleDays(dates);
-  const days = week.days.filter((day): day is DaySchedule => day != null);
+  const week = useMyScheduleWeek(from, WINDOW_DAYS);
+  const days = week.data ?? [];
   /**
-   * Um dia da janela pode falhar sozinho — são sete chamadas independentes. Os
-   * dias que chegaram continuam sendo mostrados (o erro aparece acima, com o
-   * "tentar de novo"), mas as conclusões sobre o conjunto ficam suspensas: com
-   * um buraco na semana, "você ainda não tem horário cadastrado" seria um
-   * palpite, não uma informação.
+   * As conclusões sobre o conjunto ("você ainda não tem horário") só valem com
+   * a janela inteira em mãos — meia semana faria delas um palpite. Com uma
+   * chamada só, isso é simplesmente ter a resposta: ou ela chegou, ou o erro
+   * aparece acima com o "tentar de novo".
    */
-  const complete = days.length === dates.length && !week.isError;
+  const complete = week.data != null;
 
   /**
    * O horário padrão não vem num campo próprio: /me/schedule devolve o dia já
@@ -46,6 +44,13 @@ export function MySchedulePage() {
    */
   const hasSchedule = days.some((day) => day.entries.length > 0 || day.cancellations.length > 0);
   const hasContent = hasSchedule || days.some((day) => day.holiday);
+  /**
+   * A ausência de aula só significa "não tem horário" se algum dia da janela
+   * pudesse ter mostrado uma. Fim de semana nunca tem, e feriado suprime o dia
+   * para todo mundo — numa semana de recesso o aluno com horário veria os sete
+   * dias vazios e seria mandado à recepção resolver o que não está quebrado.
+   */
+  const couldHaveShownClass = days.some((day) => !day.holiday && !isWeekend(day.date));
 
   return (
     <section className="space-y-4">
@@ -61,7 +66,7 @@ export function MySchedulePage() {
 
       {/* Sem horário e sem exceção: dizer "sem aula" sete vezes esconderia que
           o cadastro do horário é o que está faltando. */}
-      {complete && !hasSchedule && (
+      {complete && couldHaveShownClass && !hasSchedule && (
         <p className="text-sm text-slate-500">
           Você ainda não tem horário cadastrado. Fale com a recepção para marcar o seu.
         </p>
@@ -96,6 +101,11 @@ function DayRow({ day }: { day: DaySchedule }) {
   );
 }
 
+/**
+ * Aula e cancelamento convivem no mesmo dia: a aula de hoje pode ter sido
+ * cancelada e a de amanhã remarcada para hoje. Mostrar só a aula, como fazia a
+ * primeira versão, apagava justamente o aviso que o aluno precisa ver.
+ */
 function DayStatus({ day }: { day: DaySchedule }) {
   if (day.holiday) {
     return (
@@ -103,26 +113,30 @@ function DayStatus({ day }: { day: DaySchedule }) {
     );
   }
 
-  if (day.entries.length > 0) {
-    return (
-      <>
-        {day.entries.map((entry) => (
-          <span key={`${entry.time}-${entry.exceptionId ?? 'template'}`} className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-slate-900">{entry.time}</span>
-            {entry.originDate && (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">
-                remarcada de {formatDayMonth(entry.originDate)}
-              </span>
-            )}
-          </span>
-        ))}
-      </>
-    );
+  if (day.entries.length === 0 && day.cancellations.length === 0) {
+    return <span className="text-sm text-slate-500">{isWeekend(day.date) ? 'Fim de semana' : 'Sem aula'}</span>;
   }
 
-  if (day.cancellations.length > 0) {
-    return <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-800">Aula cancelada</span>;
-  }
-
-  return <span className="text-sm text-slate-500">{isWeekend(day.date) ? 'Fim de semana' : 'Sem aula'}</span>;
+  return (
+    <>
+      {day.entries.map((entry) => (
+        <span key={`${entry.time}-${entry.exceptionId ?? 'template'}`} className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-slate-900">{entry.time}</span>
+          {entry.originDate && (
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">
+              remarcada de {formatDayMonth(entry.originDate)}
+            </span>
+          )}
+        </span>
+      ))}
+      {day.cancellations.map((cancellation) => (
+        <span
+          key={cancellation.exceptionId}
+          className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-800"
+        >
+          {cancellation.time ? `Aula das ${cancellation.time} cancelada` : 'Aula cancelada'}
+        </span>
+      ))}
+    </>
+  );
 }

@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { apiMessage } from '@/lib/apiError';
 
 /** O recorte do resultado do useQuery que as listagens usam para se explicar. */
@@ -33,16 +33,7 @@ export function ListFeedback({
 
       {!state.isPending && state.isFetching && <p className="text-sm text-slate-400">Atualizando…</p>}
 
-      {state.isError && (
-        <div className="space-y-2">
-          <p role="alert" className="text-sm text-red-600">
-            {apiMessage(state.error)}
-          </p>
-          <Button variant="outline" size="sm" onClick={state.refetch}>
-            Tentar de novo
-          </Button>
-        </div>
-      )}
+      {state.isError && <ErrorNotice message={apiMessage(state.error)} onRetry={state.refetch} />}
 
       {empty !== undefined && <p className="text-sm text-slate-500">{empty}</p>}
     </>

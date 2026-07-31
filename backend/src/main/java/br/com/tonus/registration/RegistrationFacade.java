@@ -41,6 +41,22 @@ public interface RegistrationFacade {
      */
     Map<Long, String> findStudentNames(Collection<Long> studentIds);
 
+    /**
+     * Um aluno só, com nome e professor — o que a agenda precisa para montar a
+     * linha de uma aula.
+     *
+     * Existe ao lado de {@link #findActiveStudents()} porque as perguntas são
+     * diferentes: a agenda do estúdio quer todo mundo, a agenda de um aluno
+     * quer um. Responder a segunda com a primeira significa carregar o estúdio
+     * inteiro para descartar tudo menos uma linha, e é o aluno — no celular,
+     * na tela que ele mais abre — quem paga por isso.
+     *
+     * Devolve o aluno inativo também: quem consulta é que decide o que fazer
+     * com {@link StudentSummary#active()}, e some-lo silenciosamente
+     * transformaria "saiu do estúdio" em "não existe".
+     */
+    Optional<StudentSummary> findStudentSummary(Long studentId);
+
     List<StudentSummary> findActiveStudents();
 
     List<StudentSummary> findStudentsByTeacher(Long teacherId);

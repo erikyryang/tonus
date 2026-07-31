@@ -47,7 +47,13 @@ public class SecurityConfig {
 
                         // Endpoints /me: o papel decide o acesso; o id do aluno
                         // ou do professor vem do token, nunca do path.
-                        .requestMatchers("/me/schedule", "/me/invoices").hasRole("STUDENT")
+                        //
+                        // Cada caminho é listado inteiro, sem /**: foi um teste
+                        // pedindo 403 e recebendo 404 que mostrou o risco do
+                        // contrário — /me/schedule não cobre /me/schedule/week,
+                        // e o endpoint novo cairia no anyRequest() abaixo,
+                        // aberto a qualquer papel autenticado.
+                        .requestMatchers("/me/schedule", "/me/schedule/week", "/me/invoices").hasRole("STUDENT")
                         .requestMatchers("/me/grid").hasRole("TEACHER")
 
                         // Cadastro e acesso.

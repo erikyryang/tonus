@@ -218,8 +218,4 @@ class AccessRevocationIT extends AbstractRegistrationIntegrationTest {
                                 """.formatted(login, PASSWORD)))
                 .andExpect(expected);
     }
-
-    private String uniqueLogin(String prefix) {
-        return unique(prefix) + "@tonus.com";
-    }
 }

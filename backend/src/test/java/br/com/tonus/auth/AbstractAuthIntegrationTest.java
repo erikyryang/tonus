@@ -4,6 +4,7 @@ import br.com.tonus.AbstractIntegrationTest;
 import br.com.tonus.auth.internal.domain.Role;
 import br.com.tonus.auth.internal.domain.User;
 import br.com.tonus.auth.internal.domain.UserRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import java.time.Clock;
 import java.util.Map;
@@ -24,6 +25,9 @@ public abstract class AbstractAuthIntegrationTest extends AbstractIntegrationTes
     protected static final String DEFAULT_PASSWORD = "s3cret-pass";
 
     private static final Map<String, Cookie> COOKIE_CACHE = new ConcurrentHashMap<>();
+
+    @Autowired
+    protected ObjectMapper objectMapper;
 
     @Autowired
     protected UserRepository userRepository;
@@ -101,5 +105,54 @@ public abstract class AbstractAuthIntegrationTest extends AbstractIntegrationTes
             throw new IllegalStateException("Cookie ausente na resposta: " + name);
         }
         return cookie;
+    }
+
+    /**
+     * Aluno e professor de verdade, criados pela API do cadastro.
+     *
+     * Moram aqui porque os testes de auth precisam de um vínculo que exista:
+     * criar usuário confere o aluno contra o cadastro. Eram uma cópia por
+     * classe de teste, e uma mudança no contrato de POST /students obrigaria a
+     * caçar todas — a segunda que ficasse para trás falharia por um motivo que
+     * nada tem a ver com o que ela testa.
+     *
+     * O nome carrega System.nanoTime() porque o banco é compartilhado pela
+     * suíte e o telefone tem unicidade própria.
+     */
+    protected long createTeacher(Cookie admin) throws Exception {
+        MvcResult result = mockMvc.perform(post("/teachers")
+                        .cookie(admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Professor De Teste %d","phone":"+5511999990000"}
+                                """.formatted(System.nanoTime())))
+                .andExpect(status().isCreated())
+                .andReturn();
+        return idOf(result);
+    }
+
+    protected long createStudent(Cookie admin) throws Exception {
+        return createStudent(admin, createTeacher(admin));
+    }
+
+    protected long createStudent(Cookie admin, long teacherId) throws Exception {
+        MvcResult result = mockMvc.perform(post("/students")
+                        .cookie(admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Aluno De Teste %d","phone":"+5511988880000","teacherId":%d}
+                                """.formatted(System.nanoTime(), teacherId)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        return idOf(result);
+    }
+
+    protected long idOf(MvcResult result) throws Exception {
+        return objectMapper.readTree(result.getResponse().getContentAsString()).get("id").asLong();
+    }
+
+    /** Login único por chamada: o banco é compartilhado e o login é UNIQUE. */
+    protected String uniqueLogin(String prefix) {
+        return prefix + "-" + System.nanoTime() + "@tonus.com";
     }
 }

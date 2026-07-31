@@ -11,12 +11,12 @@ import {
   unauthorized,
 } from '@/test/authHandlers';
 import { renderApp } from '@/test/renderApp';
-import { anyDayEmpty } from '@/test/schedulingHandlers';
+import { anyDayEmpty, anyMyGridEmpty } from '@/test/schedulingHandlers';
 import { server } from '@/test/server';
 
 describe('sessão', () => {
   it('restaura o usuário no reload sem passar pelo login', async () => {
-    server.use(meOk(TEACHER));
+    server.use(meOk(TEACHER), anyMyGridEmpty());
     renderApp('/');
 
     expect(await screen.findByRole('heading', { name: 'Minha grade' })).toBeInTheDocument();

@@ -4,9 +4,13 @@ import br.com.tonus.scheduling.internal.SchedulingService;
 import br.com.tonus.shared.AuthenticatedUser;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.List;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -24,6 +28,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/me")
 class MyScheduleController {
 
+    /** Um mês. Mais que isso não é a pergunta "quando é a minha próxima aula". */
+    private static final int MAX_WINDOW_DAYS = 31;
+
     private final SchedulingService schedulingService;
     private final Clock clock;
 
@@ -39,6 +46,32 @@ class MyScheduleController {
         Long studentId = requireLink(user == null ? null : user.studentId(), "aluno");
         LocalDate day = orToday(date);
         return DayScheduleResponse.of(schedulingService.dayOfStudent(studentId, day));
+    }
+
+    /**
+     * A janela do aluno numa chamada só.
+     *
+     * A tela dele mostra os próximos dias, e /me/schedule responde por dia: era
+     * uma requisição por data, cada uma expandindo a agenda do estúdio inteiro
+     * para devolver a linha de um aluno. O contrato aqui é o mesmo do dia
+     * avulso, repetido por data — o cliente não recompõe nada.
+     *
+     * O teto de {@value #MAX_WINDOW_DAYS} dias existe porque o custo é
+     * proporcional ao tamanho pedido: sem ele, `days=3650` seria uma expansão
+     * de dez anos que qualquer aluno autenticado poderia disparar.
+     */
+    @GetMapping("/schedule/week")
+    List<DayScheduleResponse> myScheduleWeek(@AuthenticationPrincipal AuthenticatedUser user,
+                                             @RequestParam(required = false)
+                                             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+                                             @RequestParam(defaultValue = "7") int days) {
+        Long studentId = requireLink(user == null ? null : user.studentId(), "aluno");
+        if (days < 1 || days > MAX_WINDOW_DAYS) {
+            throw new InvalidWindowException(days, MAX_WINDOW_DAYS);
+        }
+        return schedulingService.weekOfStudent(studentId, orToday(from), days).stream()
+                .map(DayScheduleResponse::of)
+                .toList();
     }
 
     @GetMapping("/grid")
@@ -71,5 +104,18 @@ class MyScheduleController {
             throw new AccessDeniedException("Usuário autenticado não está vinculado a nenhum " + role);
         }
         return linkedId;
+    }
+
+    /** Janela fora do intervalo aceito é erro de uso do cliente: 400. */
+    static class InvalidWindowException extends RuntimeException {
+
+        InvalidWindowException(int asked, int max) {
+            super("A janela deve ter entre 1 e %d dias; vieram %d".formatted(max, asked));
+        }
+    }
+
+    @ExceptionHandler(InvalidWindowException.class)
+    ProblemDetail handleInvalidWindow(InvalidWindowException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 }

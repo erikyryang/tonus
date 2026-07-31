@@ -17,6 +17,19 @@ public interface ScheduleExceptionRepository
     List<ScheduleException> findByNewDate(LocalDate newDate);
 
     /**
+     * As exceções de um aluno num intervalo — as duas pontas de uma vez.
+     *
+     * `date` é de onde a aula saiu e `newDate` é para onde ela foi, e a janela
+     * do aluno precisa das duas: uma aula pode ter saído de dentro da janela
+     * para fora dela, ou entrado de fora para dentro. Buscar por intervalo em
+     * vez de por dia é o que faz a janela de sete dias custar uma consulta em
+     * vez de sete.
+     */
+    List<ScheduleException> findByStudentIdAndDateBetween(Long studentId, LocalDate from, LocalDate to);
+
+    List<ScheduleException> findByStudentIdAndNewDateBetween(Long studentId, LocalDate from, LocalDate to);
+
+    /**
      * Usado ao apagar o horário padrão do aluno. A exceção é indexada por
      * (student_id, date), sem qualquer vínculo com o id do horário — sem esta
      * limpeza, uma exceção antiga sobreviveria à exclusão e voltaria a

@@ -25,7 +25,7 @@ import {
   createAccessOk,
   noAccessYet,
 } from '@/test/userHandlers';
-import { http } from 'msw';
+import { HttpResponse, delay, http } from 'msw';
 
 const BRUNO = teacher({ id: 10, name: 'Bruno Braga' });
 const CLARA = teacher({ id: 11, name: 'Clara Cruz', active: false });
@@ -345,6 +345,73 @@ describe('acesso do aluno', () => {
 
     expect(await within(dialog).findByText('Login já em uso: ana.alves')).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'Criar acesso' })).toBeEnabled();
+  });
+
+  /**
+   * A tabela chega antes da consulta de acesso — são duas chamadas. Enquanto a
+   * segunda não responde, "não sei" não pode virar "não tem login": o back não
+   * impede um segundo usuário para o mesmo aluno (só o login é único), então um
+   * clique nesse intervalo criaria uma conta duplicada.
+   */
+  it('não oferece ação de acesso enquanto a consulta não responde', async () => {
+    server.use(
+      meOk(ADMIN),
+      teachersList(BRUNO),
+      studentsList(ANA),
+      http.get('/api/users', async () => {
+        await delay('infinite');
+        return HttpResponse.json([]);
+      }),
+    );
+
+    const { user } = renderApp('/admin/students');
+    await user.click(await screen.findByRole('button', { name: 'Ações de Ana Alves' }));
+
+    await screen.findByRole('menuitem', { name: 'Editar' });
+    expect(screen.queryByRole('menuitem', { name: /acesso/i })).not.toBeInTheDocument();
+  });
+
+  /**
+   * Esconder a ação também é o certo quando a consulta falha de vez — o risco
+   * da conta duplicada é o mesmo. O que não pode é sumir calado: sem explicação
+   * o ADMIN vê "Criar acesso" desaparecer da tela e não tem o que fazer.
+   */
+  it('explica quando não consegue carregar a situação de acesso', async () => {
+    server.use(
+      meOk(ADMIN),
+      teachersList(BRUNO),
+      studentsList(ANA),
+      http.get('/api/users', () => HttpResponse.error()),
+    );
+
+    const { user } = renderApp('/admin/students');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/situação de acesso/i);
+
+    await user.click(await screen.findByRole('button', { name: 'Ações de Ana Alves' }));
+    expect(screen.queryByRole('menuitem', { name: /acesso/i })).not.toBeInTheDocument();
+  });
+
+  /** E a saída é tentar de novo: a falha é da consulta, não do cadastro. */
+  it('refaz a consulta de acesso e volta a oferecer a ação', async () => {
+    let calls = 0;
+    server.use(
+      meOk(ADMIN),
+      teachersList(BRUNO),
+      studentsList(ANA),
+      http.get('/api/users', () => {
+        calls += 1;
+        return calls === 1 ? HttpResponse.error() : HttpResponse.json([]);
+      }),
+    );
+
+    const { user } = renderApp('/admin/students');
+
+    await user.click(await screen.findByRole('button', { name: 'Tentar de novo' }));
+
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
+    await user.click(await screen.findByRole('button', { name: 'Ações de Ana Alves' }));
+    expect(await screen.findByRole('menuitem', { name: 'Criar acesso' })).toBeInTheDocument();
   });
 
   /** Uma chamada por página, e não uma por linha. */

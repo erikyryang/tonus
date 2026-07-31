@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { accessKey } from '@/features/auth/api/usersApi';
+import { type AccessUser, accessKey } from '@/features/auth/api/usersApi';
 import {
   type PeopleQuery,
   type Student,
@@ -56,6 +56,24 @@ export function nameById<T extends { id: number; name: string }>(people: T[] | u
   return new Map((people ?? []).map((person) => [person.id, person.name]));
 }
 
+/**
+ * As opções ativas mais a que já está escolhida, mesmo inativa.
+ *
+ * Um select de edição que só oferece ativos apaga a escolha atual quando ela
+ * saiu do estúdio: o campo abre em "Selecione", e ou a tela deixa de dizer de
+ * quem é o registro, ou uma edição de outro campo troca o vínculo sem ninguém
+ * pedir. Quem está lá continua oferecido; quem nunca esteve, não.
+ */
+export function withCurrent<T extends { id: number; active: boolean }>(
+  activeOnes: T[],
+  all: T[] | undefined,
+  currentId: number,
+): T[] {
+  if (activeOnes.some((one) => one.id === currentId)) return activeOnes;
+  const current = all?.find((one) => one.id === currentId);
+  return current ? [...activeOnes, current] : activeOnes;
+}
+
 function useStudentInvalidation() {
   const queryClient = useQueryClient();
   return () => queryClient.invalidateQueries({ queryKey: studentsKey() });
@@ -83,18 +101,25 @@ export function useUpdateStudent() {
 }
 
 /**
- * Desativar o aluno derruba o login dele no back, por evento. A lista de acesso
- * em cache passou a mentir junto com a de alunos, então as duas são
- * invalidadas — mostrar "Reativar acesso" ou não depende disso.
+ * Desativar o aluno derruba o login dele no back — mas por evento, depois da
+ * resposta HTTP. Refetchar a lista de acesso aqui correria contra o listener e
+ * guardaria em cache justamente o `active: true` que está prestes a deixar de
+ * valer; a tela então não ofereceria "Reativar acesso" para um login já
+ * revogado. A revogação é certa, só não é imediata, então ela é escrita direto
+ * no cache em vez de perguntada de novo.
  */
 export function useSetStudentActive() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, active }: { id: number; active: boolean }): Promise<Student> =>
       active ? registrationApi.activateStudent(id) : registrationApi.deactivateStudent(id),
-    onSuccess: async () => {
+    onSuccess: async (_student, { id, active }) => {
+      if (!active) {
+        queryClient.setQueriesData<AccessUser[]>({ queryKey: accessKey }, (users) =>
+          users?.map((user) => (user.studentId === id ? { ...user, active: false } : user)),
+        );
+      }
       await queryClient.invalidateQueries({ queryKey: studentsKey() });
-      await queryClient.invalidateQueries({ queryKey: accessKey });
     },
   });
 }

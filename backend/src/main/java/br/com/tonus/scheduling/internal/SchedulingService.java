@@ -204,7 +204,8 @@ public class SchedulingService {
             return List.of();
         }
         return expand(date, activeStudentsById(), defaultScheduleRepository.findAll(),
-                scheduleExceptionRepository.findByDate(date));
+                scheduleExceptionRepository.findByDate(date),
+                scheduleExceptionRepository.findByNewDate(date));
     }
 
     /**
@@ -227,7 +228,8 @@ public class SchedulingService {
         List<ScheduleException> exceptionsOfDay = scheduleExceptionRepository.findByDate(date);
 
         return new DayScheduleView(date, null,
-                expand(date, students, schedules, exceptionsOfDay),
+                expand(date, students, schedules, exceptionsOfDay,
+                        scheduleExceptionRepository.findByNewDate(date)),
                 cancellations(date, students, schedules, exceptionsOfDay));
     }
 
@@ -235,11 +237,18 @@ public class SchedulingService {
      * A expansão propriamente dita, já sem a checagem de feriado — quem chama
      * resolveu isso antes. Uma implementação só: duas fariam a mesma regra
      * divergir entre a agenda do ADMIN e a de aluno e professor.
+     *
+     * Não consulta nada: recebe tudo pronto. Enquanto ela mesma buscava as
+     * remarcações do dia, expandir uma janela custava uma consulta por data —
+     * quem tem o intervalo inteiro em mãos passa a fatia de cada dia e paga uma
+     * vez só. É o que mantém a regra única sem impor o custo do dia avulso a
+     * quem pergunta por vários.
      */
     private List<ScheduleEntry> expand(LocalDate date,
                                        Map<Long, StudentSummary> students,
                                        List<DefaultSchedule> schedules,
-                                       List<ScheduleException> exceptionsOfDay) {
+                                       List<ScheduleException> exceptionsOfDay,
+                                       List<ScheduleException> reschedulesIntoDay) {
         List<ScheduleEntry> entries = new ArrayList<>();
 
         if (isWeekday(date)) {
@@ -256,7 +265,7 @@ public class SchedulingService {
             }
         }
 
-        for (ScheduleException reschedule : scheduleExceptionRepository.findByNewDate(date)) {
+        for (ScheduleException reschedule : reschedulesIntoDay) {
             entryOf(students, reschedule.getStudentId(), reschedule.getNewTime(),
                     ScheduleEntry.Origin.RESCHEDULED, reschedule.getDate(), reschedule.getId())
                     .ifPresent(entries::add);
@@ -319,6 +328,60 @@ public class SchedulingService {
         return new DayScheduleView(day.date(), day.holiday(),
                 day.entries().stream().filter(entry -> entry.studentId().equals(studentId)).toList(),
                 day.cancellations().stream().filter(entry -> entry.studentId().equals(studentId)).toList());
+    }
+
+    /**
+     * A janela do aluno: um dia por data, com o mesmo conteúdo do dia avulso.
+     *
+     * O custo é por intervalo, não por dia. Cada consulta cobre a janela
+     * inteira — o aluno, o horário padrão dele, os feriados do período e as
+     * exceções das duas pontas — e a expansão de cada data trabalha sobre
+     * fatias em memória. A alternativa óbvia, chamar {@link #dayOfStudent} num
+     * laço, refaria tudo isso por data e ainda carregaria o estúdio inteiro de
+     * cada vez para descartar todo mundo menos um.
+     *
+     * O aluno inativo recebe a janela vazia, e não erro: ele ainda consegue
+     * entrar enquanto o login não é revogado (a revogação é assíncrona), e um
+     * 500 no lugar de "sem aula" seria a pior forma de contar isso.
+     */
+    @Transactional(readOnly = true)
+    public List<DayScheduleView> weekOfStudent(Long studentId, LocalDate from, int days) {
+        LocalDate to = from.plusDays(days - 1L);
+
+        Map<Long, StudentSummary> student = registrationFacade.findStudentSummary(studentId)
+                .filter(StudentSummary::active)
+                .map(summary -> Map.of(summary.studentId(), summary))
+                .orElseGet(Map::of);
+
+        List<DefaultSchedule> schedules = defaultScheduleRepository.findByStudentId(studentId)
+                .map(List::of)
+                .orElseGet(List::of);
+
+        Map<LocalDate, String> holidays = holidayRepository.findByDateBetween(from, to).stream()
+                .collect(Collectors.toMap(Holiday::getDate, Holiday::getDescription));
+
+        Map<LocalDate, List<ScheduleException>> exceptionsByDate =
+                scheduleExceptionRepository.findByStudentIdAndDateBetween(studentId, from, to).stream()
+                        .collect(Collectors.groupingBy(ScheduleException::getDate));
+        Map<LocalDate, List<ScheduleException>> reschedulesByNewDate =
+                scheduleExceptionRepository.findByStudentIdAndNewDateBetween(studentId, from, to).stream()
+                        .collect(Collectors.groupingBy(ScheduleException::getNewDate));
+
+        List<DayScheduleView> week = new ArrayList<>(days);
+        for (int offset = 0; offset < days; offset++) {
+            LocalDate date = from.plusDays(offset);
+            String holiday = holidays.get(date);
+            if (holiday != null) {
+                week.add(new DayScheduleView(date, holiday, List.of(), List.of()));
+                continue;
+            }
+            List<ScheduleException> exceptionsOfDay = exceptionsByDate.getOrDefault(date, List.of());
+            week.add(new DayScheduleView(date, null,
+                    expand(date, student, schedules, exceptionsOfDay,
+                            reschedulesByNewDate.getOrDefault(date, List.of())),
+                    cancellations(date, student, schedules, exceptionsOfDay)));
+        }
+        return week;
     }
 
     /**
