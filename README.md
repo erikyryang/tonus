@@ -82,13 +82,53 @@ npm install
 npm run dev
 ```
 
-Duas ressalvas para o primeiro acesso:
+Uma ressalva para o primeiro acesso: **os cookies de sessão são `Secure`**.
+Chrome e Firefox tratam `localhost` como origem segura e os aceitam; o Safari
+não faz essa exceção, e nele a sessão não persiste em desenvolvimento.
 
-- **Não existe seed de usuário.** `POST /users` exige um ADMIN já autenticado,
-  então o primeiro login só é possível inserindo um ADMIN direto no banco.
-- **Os cookies de sessão são `Secure`.** Chrome e Firefox tratam `localhost`
-  como origem segura e os aceitam; o Safari não faz essa exceção, e nele a
-  sessão não persiste em desenvolvimento.
+## Usuários de desenvolvimento
+
+`POST /users` exige um ADMIN já autenticado, então o primeiro login não tem como
+sair da própria API. Com o Postgres no ar e as migrations já aplicadas (ou seja,
+depois de subir a aplicação ao menos uma vez), o seed abaixo resolve isso: dá a
+todo mundo que está no banco um login com a **mesma senha padrão**, e cria um
+ADMIN se ainda não houver nenhum.
+
+```bash
+cd backend
+docker compose exec -T db psql -U tonus -d tonus < scripts/seed-dev.sql
+```
+
+A senha de todos é **`tonus123`**, e o login é o primeiro nome da pessoa em
+`primeironome@tonus.com`. No banco de desenvolvimento atual isso dá:
+
+| Login | Papel | Pessoa |
+|---|---|---|
+| `admin@tonus.com` | ADMIN | — |
+| `professora@tonus.com` | TEACHER | Professora Demo |
+| `rafael@tonus.com` | TEACHER | Rafael Moreira |
+| `aluna@tonus.com` | STUDENT | Aluna Demo |
+| `beatriz@tonus.com` | STUDENT | Beatriz Lima |
+| `carla@tonus.com` | STUDENT | Carla Nunes |
+| `diego@tonus.com` | STUDENT | Diego Alves |
+| `eduarda@tonus.com` | STUDENT | Eduarda Reis |
+| `felipe@tonus.com` | STUDENT | Felipe Souza |
+| `gabriela@tonus.com` | STUDENT | Gabriela Pinto |
+| `helena@tonus.com` | STUDENT | Helena Castro |
+
+A tabela acima é o retrato de um banco que já tem esses professores e alunos
+cadastrados — o seed não inventa gente, ele deriva os logins de quem está em
+`teacher` e `student`. Num volume recém-criado só nasce o `admin@tonus.com`;
+cadastre as pessoas pela tela ou pela API e rode o seed de novo para dar acesso
+a elas. Ele é idempotente: reexecutar reaplica a senha padrão em todo mundo e
+cria login só para quem ainda não tem. Quem foi desativado no cadastro fica de
+fora, porque o acesso desses cai por evento e recriá-lo aqui contradiria a
+regra.
+
+O arquivo mora em `backend/scripts/` e **não** em `db/migration` de propósito:
+migration roda em todo ambiente, e uma senha conhecida aplicada em produção é
+conta aberta. Isto aqui é ferramenta de desenvolvimento — o dia em que houver
+ambiente de verdade, senha por usuário volta a ser senha de verdade.
 
 ## Como rodar os testes
 

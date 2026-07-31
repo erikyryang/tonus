@@ -1,0 +1,92 @@
+-- Seed de DESENVOLVIMENTO: dá a todo mundo do banco um login com a mesma
+-- senha padrão (`tonus123`).
+--
+-- Não é migration de propósito. Migration roda em todo ambiente, e uma senha
+-- conhecida publicada em produção é conta aberta para qualquer um — este
+-- arquivo mora fora de db/migration justamente para que o Flyway não o aplique
+-- sozinho. Rodar à mão, e só no banco local.
+--
+--   cd backend && docker compose exec -T db psql -U tonus -d tonus < scripts/seed-dev.sql
+--
+-- É idempotente: reexecutar reaplica a senha padrão e cria login apenas para
+-- quem ainda não tem. Rode de novo depois de cadastrar gente nova pela API, ou
+-- depois de recriar o volume `tonus-db-data` — mas aí o ADMIN também some, e
+-- ele é o único que este script não consegue inventar sozinho (não está preso
+-- a nenhum professor nem aluno). O bloco cuida disso criando um se não houver.
+--
+-- Quem foi desativado no cadastro fica de fora: o acesso cai por evento quando
+-- a pessoa sai do estúdio, e ressuscitá-lo aqui contradiria essa regra.
+
+\set ON_ERROR_STOP on
+
+DO $seed$
+DECLARE
+    -- bcrypt de 'tonus123', gerado com: htpasswd -bnBC 10 "" tonus123
+    default_hash CONSTANT text := '$2y$10$y3WnJwQPQ8v4J12NyAP.J.Uli27vdxaxom2rOtudHobYRzl9KDjMy';
+    person RECORD;
+    base text;
+    candidate text;
+    created int := 0;
+BEGIN
+    UPDATE users SET password = default_hash, updated_at = localtimestamp;
+    RAISE NOTICE 'senha padrão aplicada a % usuário(s) existente(s)', (SELECT count(*) FROM users);
+
+    IF NOT EXISTS (SELECT 1 FROM users WHERE role = 'ADMIN') THEN
+        INSERT INTO users (login, password, role, active, created_at, updated_at)
+        VALUES ('admin@tonus.com', default_hash, 'ADMIN', TRUE, localtimestamp, localtimestamp);
+        RAISE NOTICE 'criado ADMIN admin@tonus.com';
+        created := created + 1;
+    END IF;
+
+    FOR person IN
+        SELECT 'TEACHER'::text AS role, t.id, t.name
+          FROM teacher t
+         WHERE t.active
+           AND NOT EXISTS (SELECT 1 FROM users u WHERE u.teacher_id = t.id)
+        UNION ALL
+        SELECT 'STUDENT'::text, s.id, s.name
+          FROM student s
+         WHERE s.active
+           AND NOT EXISTS (SELECT 1 FROM users u WHERE u.student_id = s.id)
+         ORDER BY 1, 2
+    LOOP
+        -- Login = primeiro nome sem acento @tonus.com. Nome não é único no
+        -- cadastro e login é, então o id entra como desempate em vez de deixar
+        -- a UNIQUE derrubar o seed inteiro por causa de duas Marias.
+        base := regexp_replace(
+            lower(translate(split_part(person.name, ' ', 1),
+                            'áàâãäéèêëíìîïóòôõöúùûüçÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇ',
+                            'aaaaaeeeeiiiiooooouuuucAAAAAEEEEIIIIOOOOOUUUUC')),
+            '[^a-z0-9]', '', 'g');
+        candidate := base || '@tonus.com';
+        IF base = '' OR EXISTS (SELECT 1 FROM users WHERE login = candidate) THEN
+            candidate := base || person.id || '@tonus.com';
+        END IF;
+
+        INSERT INTO users (login, password, role, student_id, teacher_id, active, created_at, updated_at)
+        VALUES (candidate,
+                default_hash,
+                person.role,
+                CASE WHEN person.role = 'STUDENT' THEN person.id END,
+                CASE WHEN person.role = 'TEACHER' THEN person.id END,
+                TRUE,
+                localtimestamp,
+                localtimestamp);
+        RAISE NOTICE 'criado % % (%)', person.role, candidate, person.name;
+        created := created + 1;
+    END LOOP;
+
+    RAISE NOTICE '% usuário(s) criado(s)', created;
+END;
+$seed$;
+
+-- O que ficou no banco, para conferir sem abrir outro psql.
+SELECT u.id,
+       u.login,
+       u.role,
+       coalesce(t.name, s.name, '-') AS pessoa,
+       u.active
+  FROM users u
+  LEFT JOIN teacher t ON t.id = u.teacher_id
+  LEFT JOIN student s ON s.id = u.student_id
+ ORDER BY u.role, u.login;
