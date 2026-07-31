@@ -120,10 +120,24 @@ A tabela acima é o retrato de um banco que já tem esses professores e alunos
 cadastrados — o seed não inventa gente, ele deriva os logins de quem está em
 `teacher` e `student`. Num volume recém-criado só nasce o `admin@tonus.com`;
 cadastre as pessoas pela tela ou pela API e rode o seed de novo para dar acesso
-a elas. Ele é idempotente: reexecutar reaplica a senha padrão em todo mundo e
-cria login só para quem ainda não tem. Quem foi desativado no cadastro fica de
-fora, porque o acesso desses cai por evento e recriá-lo aqui contradiria a
-regra.
+a elas. Nomes que disputam o mesmo login (duas Marias) são desempatados pelo id.
+
+O script é idempotente: reexecutar reaplica a senha padrão em todo mundo e cria
+login só para quem ainda não tem. Duas regras que ele respeita, e que são a
+razão de ele não ser um `UPDATE` qualquer:
+
+- **Quem foi desativado no cadastro fica de fora.** O acesso dessas pessoas cai
+  por evento quando elas saem do estúdio, e ressuscitá-lo aqui contradiria a
+  regra.
+- **Quem está ativo no cadastro mas com o login revogado é reativado.** Em
+  produção a reconcessão é manual (`PATCH /users/{id}/activate`); aqui a
+  promessa do script é justamente que todo mundo que está no estúdio entra.
+
+O Flyway roda quando a **aplicação** sobe, não quando o Postgres sobe — rodar o
+seed logo depois de um `docker compose up -d db` em volume novo falha, e a
+mensagem diz o que fazer. `SeedDevScriptIT` executa o arquivo por `psql` contra
+um Postgres real a cada build, então uma migration futura que mude `users`
+quebra no CI, e não no primeiro login de quem clonou o repo.
 
 O arquivo mora em `backend/scripts/` e **não** em `db/migration` de propósito:
 migration roda em todo ambiente, e uma senha conhecida aplicada em produção é
