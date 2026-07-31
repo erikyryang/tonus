@@ -91,36 +91,32 @@ não faz essa exceção, e nele a sessão não persiste em desenvolvimento.
 `POST /users` exige um ADMIN já autenticado, então o primeiro login não tem como
 sair da própria API. Com o Postgres no ar e as migrations já aplicadas (ou seja,
 depois de subir a aplicação ao menos uma vez), o seed abaixo resolve isso: dá a
-todo mundo que está no banco um login com a **mesma senha padrão**, e cria um
-ADMIN se ainda não houver nenhum.
+todo mundo que está no banco um login com a **mesma senha padrão**.
 
 ```bash
 cd backend
 docker compose exec -T db psql -U tonus -d tonus < scripts/seed-dev.sql
 ```
 
-A senha de todos é **`tonus123`**, e o login é o primeiro nome da pessoa em
-`primeironome@tonus.com`. No banco de desenvolvimento atual isso dá:
+A senha de todos é **`tonus123`**. Num banco zerado — o clone recém-feito — o
+script monta o ambiente inteiro, porque só o ADMIN não daria para exercitar as
+telas dos outros dois papéis:
 
 | Login | Papel | Pessoa |
 |---|---|---|
 | `admin@tonus.com` | ADMIN | — |
-| `professora@tonus.com` | TEACHER | Professora Demo |
+| `marina@tonus.com` | TEACHER | Marina Duarte |
 | `rafael@tonus.com` | TEACHER | Rafael Moreira |
-| `aluna@tonus.com` | STUDENT | Aluna Demo |
-| `beatriz@tonus.com` | STUDENT | Beatriz Lima |
-| `carla@tonus.com` | STUDENT | Carla Nunes |
-| `diego@tonus.com` | STUDENT | Diego Alves |
-| `eduarda@tonus.com` | STUDENT | Eduarda Reis |
-| `felipe@tonus.com` | STUDENT | Felipe Souza |
-| `gabriela@tonus.com` | STUDENT | Gabriela Pinto |
-| `helena@tonus.com` | STUDENT | Helena Castro |
+| `beatriz@tonus.com` | STUDENT | Beatriz Lima (Marina) |
+| `carla@tonus.com` | STUDENT | Carla Nunes (Marina) |
+| `diego@tonus.com` | STUDENT | Diego Alves (Rafael) |
+| `helena@tonus.com` | STUDENT | Helena Castro (Rafael) |
 
-A tabela acima é o retrato de um banco que já tem esses professores e alunos
-cadastrados — o seed não inventa gente, ele deriva os logins de quem está em
-`teacher` e `student`. Num volume recém-criado só nasce o `admin@tonus.com`;
-cadastre as pessoas pela tela ou pela API e rode o seed de novo para dar acesso
-a elas. Nomes que disputam o mesmo login (duas Marias) são desempatados pelo id.
+Assim que houver alguém em `teacher`/`student`, o script **para de inventar
+gente** — inventar seria sujar o cadastro de quem já está usando o ambiente — e
+passa a só derivar login de quem está lá, pela regra `primeironome@tonus.com`.
+Cadastrou um aluno pela tela? Rode o seed de novo e ele ganha acesso. Nomes que
+disputam o mesmo login (duas Marias) são desempatados pelo id.
 
 O script é idempotente: reexecutar reaplica a senha padrão em todo mundo e cria
 login só para quem ainda não tem. Duas regras que ele respeita, e que são a
@@ -143,6 +139,10 @@ O arquivo mora em `backend/scripts/` e **não** em `db/migration` de propósito:
 migration roda em todo ambiente, e uma senha conhecida aplicada em produção é
 conta aberta. Isto aqui é ferramenta de desenvolvimento — o dia em que houver
 ambiente de verdade, senha por usuário volta a ser senha de verdade.
+
+O seed cria **pessoas e acessos, não movimento**: horário padrão, assinatura e
+fatura continuam vindo pela API ou pela tela, então a agenda e as faturas nascem
+vazias. Encher essas telas é seed de dados de demonstração, outra ferramenta.
 
 ## Como rodar os testes
 
