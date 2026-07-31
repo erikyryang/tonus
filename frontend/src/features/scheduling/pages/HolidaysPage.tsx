@@ -47,7 +47,7 @@ export function HolidaysPage() {
         <Button onClick={() => setPending({ kind: 'create' })}>Novo feriado</Button>
       </div>
 
-      <Toast message={toast.message} />
+      <Toast message={toast.message} serial={toast.serial} />
 
       <ListFeedback
         state={holidays}

@@ -67,7 +67,7 @@ export function DefaultSchedulesPage() {
         <Button onClick={() => setPending({ kind: 'create' })}>Novo horário</Button>
       </div>
 
-      <Toast message={toast.message} />
+      <Toast message={toast.message} serial={toast.serial} />
 
       <ListFeedback
         state={schedules}

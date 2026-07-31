@@ -11,15 +11,39 @@ import type {
   TeacherGrid,
   TeacherGridSlot,
 } from '@/features/scheduling/api/schedulingApi';
+import { addDays, todayIsoDate } from '@/lib/dates';
 import type { Page } from '@/lib/page';
 import { pageOf } from './pageOf';
 import { problem } from './problem';
 
-export const MONDAY = '2026-07-27';
-export const WEDNESDAY = '2026-07-29';
-export const THURSDAY = '2026-07-30';
-export const SATURDAY = '2026-08-01';
-export const HOLIDAY = '2026-09-07';
+/**
+ * As datas da agenda em teste andam com o calendário: ancoradas na segunda-feira
+ * da próxima semana, nunca em literais.
+ *
+ * Literal apodrece. `RescheduleClassDialog` recusa data passada (a mesma regra
+ * do back, duplicada no formulário), então quando 2026-07-30 virou ontem a
+ * remarcação passou a ser barrada antes da rede e o teste de invalidação
+ * quebrou sozinho — longe de qualquer mudança de código, que é o pior tipo de
+ * quebra para investigar. Mesma lição do Clock fixo no back.
+ *
+ * O dia da semana continua fixo, e é por isso que a âncora é uma segunda: a
+ * expansão da agenda só gera aula de segunda a sexta, e SATURDAY precisa cair
+ * mesmo no fim de semana.
+ */
+function nextMonday(): string {
+  const today = todayIsoDate();
+  // 0 domingo … 6 sábado. O sufixo UTC explícito evita a leitura como local.
+  const weekday = new Date(`${today}T00:00:00Z`).getUTCDay();
+  return addDays(today, (8 - weekday) % 7 || 7);
+}
+
+const ANCHOR_MONDAY = nextMonday();
+
+export const MONDAY = ANCHOR_MONDAY;
+export const WEDNESDAY = addDays(ANCHOR_MONDAY, 2);
+export const THURSDAY = addDays(ANCHOR_MONDAY, 3);
+export const SATURDAY = addDays(ANCHOR_MONDAY, 5);
+export const HOLIDAY = addDays(ANCHOR_MONDAY, 30);
 
 export function entry(overrides: Partial<DayScheduleEntry> & { studentId: number }): DayScheduleEntry {
   return {
@@ -165,12 +189,21 @@ export function deleteHolidayOk(onRequest?: (id: number) => void) {
   });
 }
 
-/** GET /me/schedule — a agenda do aluno logado; o id sai do token, nunca da URL. */
+/**
+ * GET /me/schedule/week — a janela do aluno logado; o id sai do token, nunca
+ * da URL.
+ *
+ * O resolver continua sendo por dia, e não pela janela inteira, porque é assim
+ * que o teste pensa ("neste dia acontece isto"). Quem monta a lista a partir de
+ * `from` e `days` é o handler, como faz o back.
+ */
 export function myScheduleHandler(resolve: (date: string) => DaySchedule, log?: string[]) {
-  return http.get('/api/me/schedule', ({ request }) => {
-    const date = new URL(request.url).searchParams.get('date') ?? '';
-    log?.push(date);
-    return HttpResponse.json(resolve(date));
+  return http.get('/api/me/schedule/week', ({ request }) => {
+    const params = new URL(request.url).searchParams;
+    const from = params.get('from') ?? '';
+    const days = Number(params.get('days') ?? 7);
+    log?.push(`${from}:${days}`);
+    return HttpResponse.json(Array.from({ length: days }, (_, offset) => resolve(addDays(from, offset))));
   });
 }
 

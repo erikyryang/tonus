@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListFeedback } from '@/components/ListFeedback';
 import { Pagination } from '@/components/Pagination';
+import { StatusFilter, type StatusFilterOption, emptyMessageOf } from '@/components/StatusFilter';
 import { Toast, useToast } from '@/components/Toast';
 import { usePageClamp } from '@/components/usePageClamp';
 import { ActionMenu, type MenuAction } from '@/components/ui/actionMenu';
@@ -11,7 +13,7 @@ import { listQuery, parseActiveParam, parsePageParam } from '@/lib/listParams';
 import type { AccessUser } from '@/features/auth/api/usersApi';
 import { useAccessOfStudents, useActivateAccess, useCreateStudentAccess } from '@/features/auth/api/usersQueries';
 import { CreateAccessDialog } from '@/features/auth/components/CreateAccessDialog';
-import type { Student, Teacher } from '../api/registrationApi';
+import type { Student } from '../api/registrationApi';
 import {
   nameById,
   useCreateStudent,
@@ -19,15 +21,11 @@ import {
   useStudents,
   useTeachersLookup,
   useUpdateStudent,
+  withCurrent,
 } from '../api/registrationQueries';
 import { StudentFormDialog } from '../components/StudentFormDialog';
 
-/**
- * O filtro de situação. `active: undefined` é "todos" — o back lê o parâmetro
- * ausente assim. O vazio acompanha o filtro porque "Nenhum aluno" sob
- * "Inativos" leria como "não existe aluno nenhum".
- */
-const FILTERS: Array<{ label: string; active?: boolean; empty: string }> = [
+const FILTERS: StatusFilterOption[] = [
   { label: 'Ativos', active: true, empty: 'Nenhum aluno ativo.' },
   { label: 'Inativos', active: false, empty: 'Nenhum aluno inativo.' },
   { label: 'Todos', empty: 'Nenhum aluno cadastrado.' },
@@ -86,28 +84,28 @@ export function StudentsPage() {
         <Button onClick={() => setPending({ kind: 'create' })}>Novo aluno</Button>
       </div>
 
-      <div role="group" aria-label="Filtrar por situação" className="flex gap-2">
-        {FILTERS.map((filter) => (
-          <Button
-            key={filter.label}
-            size="sm"
-            variant={filter.active === active ? 'default' : 'outline'}
-            aria-pressed={filter.active === active}
-            // Trocar de filtro volta para a primeira página: a página 3 dos
-            // inativos raramente existe quando o filtro era "ativos".
-            onClick={() => setSearchParams(listQuery(filter.active, 0))}
-          >
-            {filter.label}
-          </Button>
-        ))}
-      </div>
+      <StatusFilter
+        filters={FILTERS}
+        active={active}
+        onChange={(next) => setSearchParams(listQuery(next, 0))}
+      />
 
-      <Toast message={toast.message} />
+      <Toast message={toast.message} serial={toast.serial} />
+
+      {/* A consulta de acesso falha sozinha, e a linha esconde as ações quando
+          não sabe — o mesmo cuidado do carregamento. Calado, porém, o ADMIN
+          veria "Criar acesso" sumir da tela sem ter o que fazer. */}
+      {access.isError && (
+        <ErrorNotice
+          message="Não foi possível carregar a situação de acesso dos alunos. As ações de acesso ficam indisponíveis até a consulta responder."
+          onRetry={access.refetch}
+        />
+      )}
 
       <ListFeedback
         state={students}
         loading="Carregando os alunos…"
-        empty={data && data.content.length === 0 && !clamping ? emptyMessageFor(active) : undefined}
+        empty={data && data.content.length === 0 && !clamping ? emptyMessageOf(FILTERS, active) : undefined}
       />
 
       {data && data.content.length > 0 && (
@@ -148,7 +146,7 @@ export function StudentsPage() {
           // O professor atual entra na lista mesmo inativo: sem ele o select
           // abriria em "Selecione" e uma edição de telefone trocaria o
           // professor do aluno sem ninguém pedir.
-          teachers={withCurrentTeacher(activeTeachers, teachers.data, pending.student.teacherId)}
+          teachers={withCurrent(activeTeachers, teachers.data, pending.student.teacherId)}
           defaultValues={{
             name: pending.student.name,
             phone: pending.student.phone,
@@ -286,7 +284,7 @@ function StudentTable({
             <td className="px-3 py-2 text-right">
               <ActionMenu
                 label={`Ações de ${student.name}`}
-                actions={actionsFor(student, access?.get(student.id), {
+                actions={actionsFor(student, access, {
                   onEdit,
                   onToggle,
                   onCreateAccess,
@@ -309,10 +307,17 @@ function StudentTable({
  * Aluno inativo não recebe ação de acesso: o back recusa criar login para quem
  * saiu do estúdio, e reativar o login de quem não está mais na agenda seria
  * conceder acesso a uma conta que a próxima desativação derrubaria de novo.
+ *
+ * `access` só existe depois que a consulta de acesso responde, e é por isso que
+ * ele é um mapa ou nada, e não um mapa vazio: "ainda não sei" e "não tem login"
+ * levariam à mesma oferta de criar acesso. A tabela chega antes dessa resposta
+ * (são duas chamadas), e o back não impede um segundo login para o mesmo aluno
+ * — só o login é único. Sem a distinção, um clique no intervalo entre as duas
+ * respostas criaria uma conta duplicada que ninguém pediu.
  */
 function actionsFor(
   student: Student,
-  user: AccessUser | undefined,
+  access: Map<number, AccessUser> | undefined,
   handlers: {
     onEdit: (student: Student) => void;
     onToggle: (student: Student) => void;
@@ -328,8 +333,9 @@ function actionsFor(
     },
   ];
 
-  if (!student.active) return actions;
+  if (!student.active || access == null) return actions;
 
+  const user = access.get(student.id);
   if (user == null) {
     actions.push({ label: 'Criar acesso', onSelect: () => handlers.onCreateAccess(student) });
   } else if (!user.active) {
@@ -337,18 +343,4 @@ function actionsFor(
   }
 
   return actions;
-}
-
-function withCurrentTeacher(
-  activeTeachers: Teacher[],
-  allTeachers: Teacher[] | undefined,
-  teacherId: number,
-): Teacher[] {
-  if (activeTeachers.some((teacher) => teacher.id === teacherId)) return activeTeachers;
-  const current = allTeachers?.find((teacher) => teacher.id === teacherId);
-  return current ? [...activeTeachers, current] : activeTeachers;
-}
-
-function emptyMessageFor(active: boolean | undefined): string {
-  return FILTERS.find((filter) => filter.active === active)?.empty ?? FILTERS[0]!.empty;
 }

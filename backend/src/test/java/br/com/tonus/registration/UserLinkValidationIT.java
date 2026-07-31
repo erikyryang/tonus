@@ -157,8 +157,4 @@ class UserLinkValidationIT extends AbstractRegistrationIntegrationTest {
                         {"login":"%s","password":"%s","role":"%s"%s}
                         """.formatted(login, PASSWORD, role, link)));
     }
-
-    private String uniqueLogin(String prefix) {
-        return unique(prefix) + "@tonus.com";
-    }
 }

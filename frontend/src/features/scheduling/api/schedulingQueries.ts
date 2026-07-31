@@ -1,4 +1,4 @@
-import { keepPreviousData, useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isConflict } from '@/lib/apiError';
 import {
   type DefaultScheduleInput,
@@ -7,7 +7,7 @@ import {
   defaultSchedulesKey,
   holidaysKey,
   myGridKey,
-  myScheduleKey,
+  myScheduleWeekKey,
   schedulingApi,
 } from './schedulingApi';
 
@@ -163,27 +163,19 @@ export function useDeleteHoliday() {
 }
 
 /**
- * A semana do aluno: um dia por chamada, porque /me/schedule responde por dia.
+ * A semana do aluno numa chamada só.
  *
  * O aluno precisa da semana e não de um dia só — a pergunta dele é "quando é a
  * minha próxima aula", e a resposta pode estar em qualquer dia até o próximo
- * horário. Cada dia vira uma entrada de cache própria, então voltar amanhã
- * reaproveita seis das sete respostas.
+ * horário. Já foram sete chamadas paralelas, uma por dia: além do custo no
+ * back (cada uma expandia a agenda do estúdio inteiro), a tela tinha de
+ * conciliar sete estados independentes e decidir o que dizer com a semana pela
+ * metade. Uma resposta, um estado.
  */
-export function useMyScheduleDays(dates: string[]) {
-  return useQueries({
-    queries: dates.map((date) => ({
-      queryKey: myScheduleKey(date),
-      queryFn: () => schedulingApi.mySchedule(date),
-    })),
-    combine: (results) => ({
-      days: results.map((result) => result.data),
-      isPending: results.some((result) => result.isPending),
-      isFetching: results.some((result) => result.isFetching),
-      isError: results.some((result) => result.isError),
-      error: results.find((result) => result.error != null)?.error,
-      refetch: () => results.forEach((result) => void result.refetch()),
-    }),
+export function useMyScheduleWeek(from: string, days: number) {
+  return useQuery({
+    queryKey: myScheduleWeekKey(from, days),
+    queryFn: () => schedulingApi.myScheduleWeek(from, days),
   });
 }
 

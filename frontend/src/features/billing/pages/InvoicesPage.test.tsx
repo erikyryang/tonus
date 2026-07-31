@@ -7,11 +7,11 @@ import type { Page } from '@/lib/page';
 import { ADMIN, meOk } from '@/test/authHandlers';
 import {
   invoice,
-  invoicePage,
   invoicesHandler,
   registerPaymentConflict,
   registerPaymentOk,
 } from '@/test/billingHandlers';
+import { pageOf } from '@/test/pageOf';
 import { createTestQueryClient, renderApp } from '@/test/renderApp';
 import { server } from '@/test/server';
 
@@ -25,7 +25,7 @@ function renderInvoices(queryClient = createTestQueryClient(), route = '/admin/i
 
 /** Sempre a lista fixa, independente do filtro — para os testes de render. */
 function fixedList(...invoices: Invoice[]) {
-  return invoicesHandler(() => invoicePage(invoices));
+  return invoicesHandler(() => pageOf(invoices));
 }
 
 function rowOf(studentName: string) {
@@ -158,7 +158,7 @@ describe('filtro por status', () => {
       meOk(ADMIN),
       invoicesHandler((params) => {
         const status = params.get('status');
-        return invoicePage(
+        return pageOf(
           [invoice({ ...ANA, status: 'OPEN' }), invoice({ ...BIA, status: 'OVERDUE' })].filter(
             (each) => status == null || each.status === status,
           ),
@@ -203,7 +203,7 @@ describe('dar baixa', () => {
     server.use(
       meOk(ADMIN),
       invoicesHandler(() =>
-        invoicePage([
+        pageOf([
           paid
             ? invoice({ ...ANA, status: 'PAID', paymentDate: '2026-07-20' })
             : invoice({ ...ANA, status: 'OPEN' }),
@@ -274,7 +274,7 @@ describe('dar baixa', () => {
       meOk(ADMIN),
       invoicesHandler(
         () =>
-          invoicePage([
+          pageOf([
             paidByOtherAdmin
               ? invoice({ ...ANA, status: 'PAID', paymentDate: '2026-07-19' })
               : invoice({ ...ANA, status: 'OPEN' }),
@@ -363,8 +363,8 @@ describe('paginação', () => {
   it('navega para a próxima página e leva o filtro junto', async () => {
     const sent: string[] = [];
     const pages: Record<number, Page<Invoice>> = {
-      0: invoicePage([invoice({ ...ANA, status: 'OVERDUE' })], { number: 0, totalElements: 2, totalPages: 2 }),
-      1: invoicePage([invoice({ ...BIA, status: 'OVERDUE' })], { number: 1, totalElements: 2, totalPages: 2 }),
+      0: pageOf([invoice({ ...ANA, status: 'OVERDUE' })], { number: 0, totalElements: 2, totalPages: 2 }),
+      1: pageOf([invoice({ ...BIA, status: 'OVERDUE' })], { number: 1, totalElements: 2, totalPages: 2 }),
     };
 
     server.use(
@@ -403,12 +403,12 @@ describe('paginação', () => {
         if (paid) {
           // Sobrou só a Ana: uma página, e a página 1 não existe mais.
           return page === 0
-            ? invoicePage([invoice({ ...ANA, status: 'OVERDUE' })], { number: 0, totalElements: 1, totalPages: 1 })
-            : invoicePage([], { number: page, totalElements: 1, totalPages: 1 });
+            ? pageOf([invoice({ ...ANA, status: 'OVERDUE' })], { number: 0, totalElements: 1, totalPages: 1 })
+            : pageOf([], { number: page, totalElements: 1, totalPages: 1 });
         }
         return page === 0
-          ? invoicePage([invoice({ ...ANA, status: 'OVERDUE' })], { number: 0, totalElements: 2, totalPages: 2 })
-          : invoicePage([invoice({ ...BIA, status: 'OVERDUE' })], { number: 1, totalElements: 2, totalPages: 2 });
+          ? pageOf([invoice({ ...ANA, status: 'OVERDUE' })], { number: 0, totalElements: 2, totalPages: 2 })
+          : pageOf([invoice({ ...BIA, status: 'OVERDUE' })], { number: 1, totalElements: 2, totalPages: 2 });
       }, sent),
       registerPaymentOk(() => {
         paid = true;

@@ -1,13 +1,10 @@
 package br.com.tonus.auth;
 
 import br.com.tonus.auth.internal.domain.Role;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MvcResult;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -24,9 +21,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AuthUserCreationIT extends AbstractAuthIntegrationTest {
 
     private static final String PASSWORD = "outr4-s3nha";
-
-    @Autowired
-    private ObjectMapper objectMapper;
 
     private Cookie admin;
 
@@ -58,7 +52,7 @@ class AuthUserCreationIT extends AbstractAuthIntegrationTest {
 
     @Test
     void adminCreatesTeacherUser() throws Exception {
-        long teacherId = createTeacher();
+        long teacherId = createTeacher(admin);
         String login = uniqueLogin("professor-novo");
 
         mockMvc.perform(post("/users")
@@ -119,36 +113,7 @@ class AuthUserCreationIT extends AbstractAuthIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
-    private long createTeacher() throws Exception {
-        MvcResult result = mockMvc.perform(post("/teachers")
-                        .cookie(admin)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"name":"Professor Do Auth %d","phone":"+5511999990000"}
-                                """.formatted(System.nanoTime())))
-                .andExpect(status().isCreated())
-                .andReturn();
-        return idOf(result);
-    }
-
     private long createStudent() throws Exception {
-        long teacherId = createTeacher();
-        MvcResult result = mockMvc.perform(post("/students")
-                        .cookie(admin)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"name":"Aluno Do Auth %d","phone":"+5511988880000","teacherId":%d}
-                                """.formatted(System.nanoTime(), teacherId)))
-                .andExpect(status().isCreated())
-                .andReturn();
-        return idOf(result);
-    }
-
-    private long idOf(MvcResult result) throws Exception {
-        return objectMapper.readTree(result.getResponse().getContentAsString()).get("id").asLong();
-    }
-
-    private String uniqueLogin(String prefix) {
-        return prefix + "-" + System.nanoTime() + "@tonus.com";
+        return createStudent(admin);
     }
 }

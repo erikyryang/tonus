@@ -32,6 +32,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/users")
 class UserController {
 
+    /**
+     * Uma página de alunos com folga larga. O cliente pergunta pela página que
+     * o próprio backend acabou de devolver, e nenhuma listagem chega perto
+     * disso — o teto é contra o uso errado, não contra o uso previsto.
+     */
+    private static final int MAX_STUDENT_IDS = 200;
+
     private final AuthService authService;
 
     UserController(AuthService authService) {
@@ -53,11 +60,19 @@ class UserController {
      * Em lote e não por aluno: a listagem mostra uma página inteira de alunos
      * de cada vez, e uma chamada por linha seria absurdo.
      *
-     * Não é paginado, diferente das outras listagens: o tamanho da resposta já
-     * é limitado pela pergunta — no máximo um usuário por aluno informado.
+     * Não é paginado, diferente das outras listagens, e o teto abaixo é o que
+     * torna isso defensável: a regra da raiz existe para que nenhuma resposta
+     * cresça sem limite, e aqui o limite está na pergunta — no máximo um
+     * usuário por aluno informado, no máximo {@value #MAX_STUDENT_IDS} alunos.
+     * Sem o teto a promessa dependeria de boa-fé do cliente, e a lista vira
+     * cláusula IN de um parâmetro por id: o suficiente para estourar o limite
+     * do driver e virar 500 no lugar de um 400 honesto.
      */
     @GetMapping
     List<UserResponse> byStudents(@RequestParam List<Long> studentIds) {
+        if (studentIds.size() > MAX_STUDENT_IDS) {
+            throw new TooManyStudentIdsException(studentIds.size(), MAX_STUDENT_IDS);
+        }
         return authService.findUsersOfStudents(studentIds).stream().map(UserResponse::from).toList();
     }
 
@@ -79,5 +94,18 @@ class UserController {
     @ExceptionHandler(UserNotFoundException.class)
     ProblemDetail handleUserNotFound() {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, "Usuário não encontrado");
+    }
+
+    @ExceptionHandler(TooManyStudentIdsException.class)
+    ProblemDetail handleTooManyStudentIds(TooManyStudentIdsException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    /** Pedido grande demais é erro de uso do cliente, e 400 é o que diz isso. */
+    static class TooManyStudentIdsException extends RuntimeException {
+
+        TooManyStudentIdsException(int asked, int max) {
+            super("A consulta aceita no máximo %d alunos por vez; vieram %d".formatted(max, asked));
+        }
     }
 }

@@ -3,11 +3,12 @@ import { useSearchParams } from 'react-router-dom';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ListFeedback } from '@/components/ListFeedback';
 import { Pagination } from '@/components/Pagination';
+import { StatusFilter, type StatusFilterOption, emptyMessageOf } from '@/components/StatusFilter';
 import { Toast, useToast } from '@/components/Toast';
 import { usePageClamp } from '@/components/usePageClamp';
 import { ActionMenu } from '@/components/ui/actionMenu';
 import { Button } from '@/components/ui/button';
-import { nameById, useStudentsLookup } from '@/features/registration/api/registrationQueries';
+import { nameById, useStudentsLookup, withCurrent } from '@/features/registration/api/registrationQueries';
 import { formatMoney } from '@/lib/formatters';
 import { listQuery, parseActiveParam, parsePageParam } from '@/lib/listParams';
 import type { Subscription } from '../api/billingApi';
@@ -19,7 +20,7 @@ import {
 } from '../api/billingQueries';
 import { SubscriptionFormDialog } from '../components/SubscriptionFormDialog';
 
-const FILTERS: Array<{ label: string; active?: boolean; empty: string }> = [
+const FILTERS: StatusFilterOption[] = [
   { label: 'Ativas', active: true, empty: 'Nenhuma assinatura ativa.' },
   { label: 'Inativas', active: false, empty: 'Nenhuma assinatura inativa.' },
   { label: 'Todas', empty: 'Nenhuma assinatura cadastrada.' },
@@ -70,26 +71,18 @@ export function SubscriptionsPage() {
         <Button onClick={() => setPending({ kind: 'create' })}>Nova assinatura</Button>
       </div>
 
-      <div role="group" aria-label="Filtrar por situação" className="flex gap-2">
-        {FILTERS.map((filter) => (
-          <Button
-            key={filter.label}
-            size="sm"
-            variant={filter.active === active ? 'default' : 'outline'}
-            aria-pressed={filter.active === active}
-            onClick={() => setSearchParams(listQuery(filter.active, 0))}
-          >
-            {filter.label}
-          </Button>
-        ))}
-      </div>
+      <StatusFilter
+        filters={FILTERS}
+        active={active}
+        onChange={(next) => setSearchParams(listQuery(next, 0))}
+      />
 
-      <Toast message={toast.message} />
+      <Toast message={toast.message} serial={toast.serial} />
 
       <ListFeedback
         state={subscriptions}
         loading="Carregando as assinaturas…"
-        empty={data && data.content.length === 0 && !clamping ? emptyMessageFor(active) : undefined}
+        empty={data && data.content.length === 0 && !clamping ? emptyMessageOf(FILTERS, active) : undefined}
       />
 
       {data && data.content.length > 0 && (
@@ -175,7 +168,10 @@ export function SubscriptionsPage() {
       {pending?.kind === 'edit' && (
         <SubscriptionFormDialog
           title="Editar assinatura"
-          students={activeStudents}
+          // O aluno da assinatura entra na lista mesmo inativo: o campo está
+          // travado, e sem a opção correspondente ele abriria em "Selecione" —
+          // a tela deixaria de dizer de quem é a assinatura sendo editada.
+          students={withCurrent(activeStudents, students.data, pending.subscription.studentId)}
           studentLocked
           defaultValues={{
             studentId: pending.subscription.studentId,
@@ -228,8 +224,4 @@ export function SubscriptionsPage() {
       )}
     </section>
   );
-}
-
-function emptyMessageFor(active: boolean | undefined): string {
-  return FILTERS.find((filter) => filter.active === active)?.empty ?? FILTERS[0]!.empty;
 }

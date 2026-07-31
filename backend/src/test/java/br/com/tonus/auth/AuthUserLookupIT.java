@@ -2,12 +2,10 @@ package br.com.tonus.auth;
 
 import br.com.tonus.auth.internal.domain.Role;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import java.util.Arrays;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -34,9 +32,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AuthUserLookupIT extends AbstractAuthIntegrationTest {
 
     private static final String PASSWORD = "s3nha-de-lookup";
-
-    @Autowired
-    private ObjectMapper objectMapper;
 
     private Cookie admin;
 
@@ -106,6 +101,19 @@ class AuthUserLookupIT extends AbstractAuthIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /**
+     * A resposta não é paginada porque o tamanho da pergunta a limita — e é
+     * este teto que faz disso uma promessa, não uma esperança. Sem ele a lista
+     * vira uma cláusula IN de um parâmetro por id, e o excesso volta como 500.
+     */
+    @Test
+    void rejectsMoreStudentsThanAPageCouldHold() throws Exception {
+        String tooMany = String.join(",", java.util.Collections.nCopies(201, "1"));
+
+        mockMvc.perform(get("/users").param("studentIds", tooMany).cookie(admin))
+                .andExpect(status().isBadRequest());
+    }
+
     private JsonNode lookup(long... studentIds) throws Exception {
         String ids = String.join(",", Arrays.stream(studentIds).mapToObj(String::valueOf).toList());
         MvcResult result = mockMvc.perform(get("/users").param("studentIds", ids).cookie(admin))
@@ -127,35 +135,7 @@ class AuthUserLookupIT extends AbstractAuthIntegrationTest {
         return idOf(result);
     }
 
-    private long createTeacher() throws Exception {
-        MvcResult result = mockMvc.perform(post("/teachers")
-                        .cookie(admin)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"name":"Professor Do Lookup %d","phone":"+5511999990000"}
-                                """.formatted(System.nanoTime())))
-                .andExpect(status().isCreated())
-                .andReturn();
-        return idOf(result);
-    }
-
     private long createStudent() throws Exception {
-        MvcResult result = mockMvc.perform(post("/students")
-                        .cookie(admin)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"name":"Aluno Do Lookup %d","phone":"+5511988880000","teacherId":%d}
-                                """.formatted(System.nanoTime(), createTeacher())))
-                .andExpect(status().isCreated())
-                .andReturn();
-        return idOf(result);
-    }
-
-    private long idOf(MvcResult result) throws Exception {
-        return objectMapper.readTree(result.getResponse().getContentAsString()).get("id").asLong();
-    }
-
-    private String uniqueLogin(String prefix) {
-        return prefix + "-" + System.nanoTime() + "@tonus.com";
+        return createStudent(admin);
     }
 }

@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ListFeedback } from '@/components/ListFeedback';
 import { Pagination } from '@/components/Pagination';
+import { StatusFilter, type StatusFilterOption, emptyMessageOf } from '@/components/StatusFilter';
 import { Toast, useToast } from '@/components/Toast';
 import { usePageClamp } from '@/components/usePageClamp';
 import { ActionMenu } from '@/components/ui/actionMenu';
@@ -12,7 +13,7 @@ import type { Teacher } from '../api/registrationApi';
 import { useCreateTeacher, useSetTeacherActive, useTeachers, useUpdateTeacher } from '../api/registrationQueries';
 import { TeacherFormDialog } from '../components/TeacherFormDialog';
 
-const FILTERS: Array<{ label: string; active?: boolean; empty: string }> = [
+const FILTERS: StatusFilterOption[] = [
   { label: 'Ativos', active: true, empty: 'Nenhum professor ativo.' },
   { label: 'Inativos', active: false, empty: 'Nenhum professor inativo.' },
   { label: 'Todos', empty: 'Nenhum professor cadastrado.' },
@@ -55,26 +56,18 @@ export function TeachersPage() {
         <Button onClick={() => setPending({ kind: 'create' })}>Novo professor</Button>
       </div>
 
-      <div role="group" aria-label="Filtrar por situação" className="flex gap-2">
-        {FILTERS.map((filter) => (
-          <Button
-            key={filter.label}
-            size="sm"
-            variant={filter.active === active ? 'default' : 'outline'}
-            aria-pressed={filter.active === active}
-            onClick={() => setSearchParams(listQuery(filter.active, 0))}
-          >
-            {filter.label}
-          </Button>
-        ))}
-      </div>
+      <StatusFilter
+        filters={FILTERS}
+        active={active}
+        onChange={(next) => setSearchParams(listQuery(next, 0))}
+      />
 
-      <Toast message={toast.message} />
+      <Toast message={toast.message} serial={toast.serial} />
 
       <ListFeedback
         state={teachers}
         loading="Carregando os professores…"
-        empty={data && data.content.length === 0 && !clamping ? emptyMessageFor(active) : undefined}
+        empty={data && data.content.length === 0 && !clamping ? emptyMessageOf(FILTERS, active) : undefined}
       />
 
       {data && data.content.length > 0 && (
@@ -188,8 +181,4 @@ export function TeachersPage() {
       )}
     </section>
   );
-}
-
-function emptyMessageFor(active: boolean | undefined): string {
-  return FILTERS.find((filter) => filter.active === active)?.empty ?? FILTERS[0]!.empty;
 }

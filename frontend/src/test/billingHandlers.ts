@@ -2,6 +2,7 @@ import { http, HttpResponse } from 'msw';
 import type { Invoice, Subscription, SubscriptionInput } from '@/features/billing/api/billingApi';
 import type { Page } from '@/lib/page';
 import { pageOf } from './pageOf';
+import { problem } from './problem';
 
 export function invoice(overrides: Partial<Invoice> & { id: number }): Invoice {
   return {
@@ -13,17 +14,6 @@ export function invoice(overrides: Partial<Invoice> & { id: number }): Invoice {
     dueDate: '2026-07-10',
     status: 'OPEN',
     paymentDate: null,
-    ...overrides,
-  };
-}
-
-export function invoicePage(content: Invoice[], overrides: Partial<Page<Invoice>> = {}): Page<Invoice> {
-  return {
-    content,
-    number: 0,
-    size: 20,
-    totalElements: content.length,
-    totalPages: content.length === 0 ? 0 : 1,
     ...overrides,
   };
 }
@@ -122,15 +112,12 @@ export function myInvoicesHandler(resolve: (params: URLSearchParams) => Page<Inv
 }
 
 export function myInvoicesList(...invoices: Invoice[]) {
-  return myInvoicesHandler(() => invoicePage(invoices));
+  return myInvoicesHandler(() => pageOf(invoices));
 }
 
 export function registerPaymentConflict(detail: string, onRequest?: () => void) {
   return http.post('/api/invoices/:id/payment', () => {
     onRequest?.();
-    return HttpResponse.json(
-      { type: 'about:blank', title: 'Conflict', status: 409, detail },
-      { status: 409, headers: { 'Content-Type': 'application/problem+json' } },
-    );
+    return problem(409, 'Conflict', detail);
   });
 }

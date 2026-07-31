@@ -27,6 +27,17 @@ class MyScheduleIT extends AbstractSchedulingIntegrationTest {
      */
     private static final String OWN_HOLIDAY = "2026-08-26";
 
+    /**
+     * Uma janela só desta classe, longe das datas que as outras usam.
+     *
+     * Feriado é global e o banco é compartilhado pela suíte: marcar um feriado
+     * dentro de MONDAY..WEDNESDAY apagaria aquele dia para todo mundo, e
+     * WEDNESDAY é justamente o destino das remarcações dos outros testes.
+     */
+    private static final String WEEK_START = "2026-09-07";
+    private static final String WEEK_SECOND = "2026-09-08";
+    private static final String WEEK_HOLIDAY = "2026-09-09";
+
     @Test
     void studentSeesOnlyOwnClasses() throws Exception {
         long teacherId = createTeacher(unique("Professora Do Me"));
@@ -148,8 +159,95 @@ class MyScheduleIT extends AbstractSchedulingIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    /**
+     * A janela inteira numa chamada só.
+     *
+     * A tela do aluno mostra os próximos dias, e perguntar dia a dia eram sete
+     * requisições — cada uma expandindo a agenda do estúdio inteiro para
+     * devolver a linha de um aluno. O contrato é o mesmo do dia avulso, repetido
+     * por data: o cliente não recompõe nada.
+     */
+    @Test
+    void weekReturnsOneDayPerDateInTheWindow() throws Exception {
+        long teacherId = createTeacher(unique("Professor Da Semana"));
+        long studentId = createStudent(unique("Aluno Da Semana"), teacherId);
+        createDefaultSchedule(studentId, "07:00");
+
+        JsonNode week = myWeek(linkedStudentCookie(studentId), MONDAY, 3);
+
+        assertThat(week).hasSize(3);
+        assertThat(week.findValues("date").stream().map(JsonNode::asText).toList())
+                .containsExactly(MONDAY, TUESDAY, WEDNESDAY);
+        // Segunda, terça e quarta são dias úteis: a aula de 07:00 aparece nos três.
+        assertThat(week.findValues("entries").stream().allMatch(entries -> entries.size() == 1)).isTrue();
+    }
+
+    /** A janela do aluno enxerga a mesma fatia que o dia avulso: só ele. */
+    @Test
+    void weekNeverLeaksAnotherStudent() throws Exception {
+        long teacherId = createTeacher(unique("Professora Da Semana Alheia"));
+        long mine = createStudent(unique("Aluno Dono Da Semana"), teacherId);
+        long other = createStudent(unique("Aluno Alheio Da Semana"), teacherId);
+        createDefaultSchedule(mine, "07:00");
+        createDefaultSchedule(other, "08:00");
+
+        JsonNode week = myWeek(linkedStudentCookie(mine), MONDAY, 2);
+
+        assertThat(week.findValues("studentId").stream().map(JsonNode::asLong).distinct().toList())
+                .containsOnly(mine);
+    }
+
+    /** Feriado e cancelamento explicam o dia vazio também na janela. */
+    @Test
+    void weekCarriesHolidayAndCancellation() throws Exception {
+        long teacherId = createTeacher(unique("Professor Da Semana Cheia"));
+        long studentId = createStudent(unique("Aluno Da Semana Cheia"), teacherId);
+        createDefaultSchedule(studentId, "07:00");
+        cancelClass(studentId, WEEK_SECOND);
+        createHoliday(WEEK_HOLIDAY, "Feriado da Semana");
+
+        JsonNode week = myWeek(linkedStudentCookie(studentId), WEEK_START, 3);
+
+        assertThat(week.get(1).get("cancellations")).hasSize(1);
+        assertThat(week.get(2).get("holiday").asText()).isEqualTo("Feriado da Semana");
+        assertThat(week.get(2).get("entries")).isEmpty();
+    }
+
+    @Test
+    void teacherCannotUseTheStudentWeek() throws Exception {
+        long teacherId = createTeacher(unique("Professor Curioso Da Semana"));
+
+        mockMvc.perform(get("/me/schedule/week")
+                        .param("from", MONDAY)
+                        .cookie(linkedTeacherCookie(teacherId)))
+                .andExpect(status().isForbidden());
+    }
+
+    /** Janela sem teto seria uma expansão sem teto: o custo é por dia pedido. */
+    @Test
+    void weekRefusesAWindowLargerThanTheMaximum() throws Exception {
+        long teacherId = createTeacher(unique("Professor Da Janela Grande"));
+        long studentId = createStudent(unique("Aluno Da Janela Grande"), teacherId);
+
+        mockMvc.perform(get("/me/schedule/week")
+                        .param("from", MONDAY)
+                        .param("days", "32")
+                        .cookie(linkedStudentCookie(studentId)))
+                .andExpect(status().isBadRequest());
+    }
+
     private JsonNode mySchedule(Cookie student, String date) throws Exception {
         MvcResult result = mockMvc.perform(get("/me/schedule").param("date", date).cookie(student))
+                .andExpect(status().isOk())
+                .andReturn();
+        return json(result);
+    }
+
+    private JsonNode myWeek(Cookie student, String from, int days) throws Exception {
+        MvcResult result = mockMvc.perform(get("/me/schedule/week")
+                        .param("from", from)
+                        .param("days", String.valueOf(days))
+                        .cookie(student))
                 .andExpect(status().isOk())
                 .andReturn();
         return json(result);
