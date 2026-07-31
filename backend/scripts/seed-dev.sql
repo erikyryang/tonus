@@ -10,9 +10,14 @@
 --
 -- É idempotente: reexecutar reaplica a senha padrão e cria login apenas para
 -- quem ainda não tem. Rode de novo depois de cadastrar gente nova pela API, ou
--- depois de recriar o volume `tonus-db-data` — mas aí o ADMIN também some, e
--- ele é o único que este script não consegue derivar de ninguém (não está
--- preso a nenhum professor nem aluno). O bloco cuida disso criando um.
+-- depois de recriar o volume `tonus-db-data`.
+--
+-- Num banco zerado ele também monta o mínimo para o ambiente existir: o ADMIN,
+-- que não é derivado de ninguém, e um cadastro de demonstração com dois
+-- professores e quatro alunos — sem isso os papéis TEACHER e STUDENT não teriam
+-- de quem sair, e quem acabou de clonar o repo entraria só como ADMIN. Assim
+-- que houver alguém em teacher/student o script para de inventar gente e passa
+-- a só derivar login de quem já está lá.
 --
 -- Quem foi desativado no cadastro fica de fora: o acesso cai por evento quando
 -- a pessoa sai do estúdio, e ressuscitá-lo aqui contradiria essa regra. Quem
@@ -44,6 +49,32 @@ BEGIN
         RAISE EXCEPTION 'as tabelas ainda não existem neste banco'
             USING HINT = 'suba a aplicação uma vez (cd backend && ./mvnw spring-boot:run) '
                          || 'para o Flyway criar o schema, e rode o seed depois';
+    END IF;
+
+    -- Cadastro vazio é o clone recém-feito. Aí o script só teria de onde tirar
+    -- o ADMIN — os outros dois papéis ele deriva de quem está em teacher e
+    -- student, e não há ninguém —, e as telas /me de professor e de aluno
+    -- ficariam inalcançáveis justamente para quem está montando o ambiente
+    -- pela primeira vez. Num banco que já tem gente ele não inventa ninguém:
+    -- inventar seria sujar o cadastro de quem está trabalhando.
+    IF NOT EXISTS (SELECT 1 FROM teacher) AND NOT EXISTS (SELECT 1 FROM student) THEN
+        INSERT INTO teacher (name, phone, active, created_at, updated_at) VALUES
+            ('Marina Duarte',  '+5511999990001', TRUE, localtimestamp, localtimestamp),
+            ('Rafael Moreira', '+5511999990002', TRUE, localtimestamp, localtimestamp);
+
+        -- Dois alunos por professor: a agenda do dia agrupa por professor, e
+        -- com um só não dá para ver o agrupamento fazendo o que promete.
+        INSERT INTO student (name, phone, teacher_id, active, created_at, updated_at)
+        SELECT demo.name, demo.phone, t.id, TRUE, localtimestamp, localtimestamp
+          FROM (VALUES
+                    ('Beatriz Lima',  '+5511988880001', 'Marina Duarte'),
+                    ('Carla Nunes',   '+5511988880002', 'Marina Duarte'),
+                    ('Diego Alves',   '+5511988880003', 'Rafael Moreira'),
+                    ('Helena Castro', '+5511988880004', 'Rafael Moreira')
+               ) AS demo(name, phone, teacher_name)
+          JOIN teacher t ON t.name = demo.teacher_name;
+
+        RAISE NOTICE 'cadastro vazio: criados 2 professores e 4 alunos de demonstração';
     END IF;
 
     UPDATE users SET password = default_hash, updated_at = localtimestamp;

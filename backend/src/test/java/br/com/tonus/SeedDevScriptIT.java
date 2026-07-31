@@ -81,18 +81,58 @@ class SeedDevScriptIT {
     }
 
     /**
-     * O ADMIN é o único que o script não deriva de ninguém: não está preso a
-     * professor nem a aluno, e é ele que destrava o `POST /users`.
+     * O caso de quem acabou de clonar o repo: banco zerado tem que virar
+     * ambiente utilizável nos três papéis. O ADMIN não é derivado de ninguém —
+     * é ele que destrava o `POST /users` —, e TEACHER e STUDENT não teriam de
+     * quem sair sem um cadastro de demonstração.
      */
     @Test
-    void createsTheAdminOnAnEmptyDatabaseButDoesNotDuplicateIt() throws Exception {
+    void buildsAUsableEnvironmentWithAllThreeRolesOnAnEmptyDatabase() throws Exception {
         String db = freshDatabase();
 
         runSeed(db);
-        assertThat(users(db).keySet()).containsExactly("admin@tonus.com");
+
+        Map<String, Row> users = users(db);
+        assertThat(users.keySet()).containsExactlyInAnyOrder(
+                "admin@tonus.com",
+                "marina@tonus.com", "rafael@tonus.com",
+                "beatriz@tonus.com", "carla@tonus.com", "diego@tonus.com", "helena@tonus.com");
+        assertThat(users.values()).extracting(Row::role)
+                .contains("ADMIN", "TEACHER", "STUDENT");
+        assertThat(users.values()).allSatisfy(user ->
+                assertThat(encoder.matches(SEED_PASSWORD, user.password())).isTrue());
+        // Todo aluno de demonstração tem professor: o vínculo é NOT NULL, e o
+        // seed não pode ser a via que fura uma regra de negócio do cadastro.
+        assertThat(count(db, "SELECT count(*) FROM student WHERE teacher_id IS NULL")).isZero();
+    }
+
+    @Test
+    void doesNotDuplicateTheDemoRegistrationOnRerun() throws Exception {
+        String db = freshDatabase();
 
         runSeed(db);
-        assertThat(users(db).keySet()).containsExactly("admin@tonus.com");
+        runSeed(db);
+
+        assertThat(count(db, "SELECT count(*) FROM teacher")).isEqualTo(2);
+        assertThat(count(db, "SELECT count(*) FROM student")).isEqualTo(4);
+        assertThat(users(db)).hasSize(7);
+    }
+
+    /**
+     * Inventar gente num banco que já tem cadastro seria sujar o trabalho de
+     * quem está usando o ambiente. O gatilho é o cadastro vazio, não a ausência
+     * de usuários.
+     */
+    @Test
+    void doesNotInventPeopleWhenTheRegistrationAlreadyHasSomeone() throws Exception {
+        String db = freshDatabase();
+        insertTeacher(db, "Solange Vieira", true);
+
+        runSeed(db);
+
+        assertThat(count(db, "SELECT count(*) FROM teacher")).isEqualTo(1);
+        assertThat(count(db, "SELECT count(*) FROM student")).isZero();
+        assertThat(users(db).keySet()).containsExactlyInAnyOrder("admin@tonus.com", "solange@tonus.com");
     }
 
     @Test
@@ -244,6 +284,15 @@ class SeedDevScriptIT {
 
     private Connection connect(String database) throws SQLException {
         return DriverManager.getConnection(urlOf(database), POSTGRES.getUsername(), POSTGRES.getPassword());
+    }
+
+    private long count(String database, String sql) throws SQLException {
+        try (Connection connection = connect(database);
+                Statement statement = connection.createStatement();
+                ResultSet rs = statement.executeQuery(sql)) {
+            rs.next();
+            return rs.getLong(1);
+        }
     }
 
     private void execute(String database, String sql) throws SQLException {
