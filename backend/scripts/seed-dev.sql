@@ -11,11 +11,18 @@
 -- É idempotente: reexecutar reaplica a senha padrão e cria login apenas para
 -- quem ainda não tem. Rode de novo depois de cadastrar gente nova pela API, ou
 -- depois de recriar o volume `tonus-db-data` — mas aí o ADMIN também some, e
--- ele é o único que este script não consegue inventar sozinho (não está preso
--- a nenhum professor nem aluno). O bloco cuida disso criando um se não houver.
+-- ele é o único que este script não consegue derivar de ninguém (não está
+-- preso a nenhum professor nem aluno). O bloco cuida disso criando um.
 --
 -- Quem foi desativado no cadastro fica de fora: o acesso cai por evento quando
--- a pessoa sai do estúdio, e ressuscitá-lo aqui contradiria essa regra.
+-- a pessoa sai do estúdio, e ressuscitá-lo aqui contradiria essa regra. Quem
+-- está ativo no cadastro mas com o login revogado é reativado — a reconcessão
+-- é manual em produção, mas aqui a promessa do script é justamente que todo
+-- mundo que está no estúdio entra com a senha padrão.
+--
+-- SeedDevScriptIT roda este arquivo por psql contra um Postgres de verdade a
+-- cada build: se uma migration futura mudar a tabela `users` por baixo, quebra
+-- lá e não no primeiro login de quem clonou o repo.
 
 \set ON_ERROR_STOP on
 
@@ -26,10 +33,35 @@ DECLARE
     person RECORD;
     base text;
     candidate text;
+    attempt int;
     created int := 0;
+    reactivated int;
 BEGIN
+    -- O Flyway roda quando a aplicação sobe, não quando o Postgres sobe. Sem
+    -- este aviso, quem rodasse o seed logo depois do `docker compose up -d db`
+    -- receberia um "relation does not exist" sem pista do que fazer.
+    IF to_regclass('public.users') IS NULL THEN
+        RAISE EXCEPTION 'as tabelas ainda não existem neste banco'
+            USING HINT = 'suba a aplicação uma vez (cd backend && ./mvnw spring-boot:run) '
+                         || 'para o Flyway criar o schema, e rode o seed depois';
+    END IF;
+
     UPDATE users SET password = default_hash, updated_at = localtimestamp;
     RAISE NOTICE 'senha padrão aplicada a % usuário(s) existente(s)', (SELECT count(*) FROM users);
+
+    WITH revived AS (
+        UPDATE users u
+           SET active = TRUE, updated_at = localtimestamp
+         WHERE NOT u.active
+           AND (u.role = 'ADMIN'
+                OR EXISTS (SELECT 1 FROM teacher t WHERE t.id = u.teacher_id AND t.active)
+                OR EXISTS (SELECT 1 FROM student s WHERE s.id = u.student_id AND s.active))
+        RETURNING 1
+    )
+    SELECT count(*) INTO reactivated FROM revived;
+    IF reactivated > 0 THEN
+        RAISE NOTICE 'acesso reativado para % usuário(s) que seguem ativos no cadastro', reactivated;
+    END IF;
 
     IF NOT EXISTS (SELECT 1 FROM users WHERE role = 'ADMIN') THEN
         INSERT INTO users (login, password, role, active, created_at, updated_at)
@@ -50,18 +82,31 @@ BEGIN
            AND NOT EXISTS (SELECT 1 FROM users u WHERE u.student_id = s.id)
          ORDER BY 1, 2
     LOOP
-        -- Login = primeiro nome sem acento @tonus.com. Nome não é único no
-        -- cadastro e login é, então o id entra como desempate em vez de deixar
-        -- a UNIQUE derrubar o seed inteiro por causa de duas Marias.
         base := regexp_replace(
             lower(translate(split_part(person.name, ' ', 1),
                             'áàâãäéèêëíìîïóòôõöúùûüçÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇ',
                             'aaaaaeeeeiiiiooooouuuucAAAAAEEEEIIIIOOOOOUUUUC')),
             '[^a-z0-9]', '', 'g');
+        -- Nome que não sobrevive à normalização ainda precisa de login: sem
+        -- isso o candidato viraria '@tonus.com' e a segunda pessoa nessa
+        -- situação colidiria com a primeira.
+        IF base = '' THEN
+            base := lower(person.role);
+        END IF;
+
+        -- Nome não é único no cadastro e login é. O id desempata, e o laço
+        -- cobre o caso de o próprio desempate já estar ocupado — por um login
+        -- criado à mão pela API, por exemplo. Sem ele a UNIQUE derrubaria o
+        -- seed inteiro por causa de duas Marias.
         candidate := base || '@tonus.com';
-        IF base = '' OR EXISTS (SELECT 1 FROM users WHERE login = candidate) THEN
+        IF EXISTS (SELECT 1 FROM users WHERE login = candidate) THEN
             candidate := base || person.id || '@tonus.com';
         END IF;
+        attempt := 0;
+        WHILE EXISTS (SELECT 1 FROM users WHERE login = candidate) LOOP
+            attempt := attempt + 1;
+            candidate := base || person.id || '-' || attempt || '@tonus.com';
+        END LOOP;
 
         INSERT INTO users (login, password, role, student_id, teacher_id, active, created_at, updated_at)
         VALUES (candidate,
@@ -76,7 +121,7 @@ BEGIN
         created := created + 1;
     END LOOP;
 
-    RAISE NOTICE '% usuário(s) criado(s)', created;
+    RAISE NOTICE '% usuário(s) criado(s); senha de todos: tonus123', created;
 END;
 $seed$;
 

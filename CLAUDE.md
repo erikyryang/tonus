@@ -119,6 +119,10 @@ Se não estiver claro se o pedido é "mínimo pra passar os testes" ou
 - Build + testes: cd backend && ./mvnw clean verify   (requer Docker rodando)
 - Rodar local: cd backend && docker compose up -d db && ./mvnw spring-boot:run
 - Nova migration: criar arquivo em backend/src/main/resources/db/migration/
+- Seed de dev (senha padrão para todos, ver README): cd backend &&
+  docker compose exec -T db psql -U tonus -d tonus < scripts/seed-dev.sql
+  É ferramenta de desenvolvimento, não migration — não versionar seed em
+  db/migration, senha conhecida aplicada em produção é conta aberta.
 
 ## NÃO FAÇA
 - Não adicionar Kafka, Redis, cache, microserviço ou qualquer
