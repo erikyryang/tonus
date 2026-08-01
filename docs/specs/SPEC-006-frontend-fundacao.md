@@ -94,11 +94,19 @@ Rodado contra o backend real, atravessando o proxy do Vite.
   devolve token novo, e o token antigo reusado dá 401.
 
 ## Notas de execução
-- Os cookies de sessão são `Secure`. Em desenvolvimento o front roda em
-  `http://localhost:5173`: Chrome e Firefox tratam localhost como origem
-  segura e aceitam o cookie — **confirmado no Chrome**. Safari não faz essa
-  exceção; em Safari o login não persiste em dev. Usar Chrome ou Firefox
-  localmente.
+- O `Secure` dos cookies de sessão sai do transporte da requisição: em
+  desenvolvimento (`http://localhost:5173` → proxy → API em HTTP) o atributo
+  não aparece; atrás do Caddy, aparece. Não há passo de configuração local.
+
+  Esta nota já disse o contrário — que o cookie era sempre `Secure` e que em
+  Safari o login não persistia em dev, restando usar Chrome ou Firefox. O
+  custo ficou claro depois: o sintoma não aponta para a causa. O
+  `POST /auth/login` devolve 200, o `GET /auth/me` seguinte dá 401 e a tela
+  mostra "Login ou senha inválidos" — o front traduz todo 401 do login assim
+  (mensagem única, para não contar a quem tenta se o login existe). Quem
+  esbarrasse nisso investigaria credencial, não cookie. "Use outro navegador"
+  também não resolvia validar a UI no Safari, nem abrir o ambiente pelo IP da
+  rede local para testar no celular — ali nenhum navegador abre exceção.
 - Não há seed de usuário: para subir o ambiente pela primeira vez é preciso
   inserir um ADMIN direto no banco (o `POST /users` exige um ADMIN logado).
 

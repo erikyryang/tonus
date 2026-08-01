@@ -49,6 +49,11 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
+  # O Caddy termina o TLS e fala HTTP com a aplicação. Sem isto, toda
+  # requisição parece HTTP aqui dentro e o cookie de sessão sairia sem Secure
+  # em produção — ver AuthController.buildCookie, que decide o atributo pelo
+  # transporte da requisição. AuthCookieSecureIT cobre.
+  forward-headers-strategy: framework
 
 shared:
   events:

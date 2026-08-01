@@ -120,6 +120,19 @@ erro, WhatsApp, label — continua em português.
 ## Segurança e privacidade
 
 - JWT em cookie httpOnly `SameSite=Strict`. Token **nunca** no corpo da resposta.
+- O atributo `Secure` do cookie é derivado de `request.isSecure()`, não de
+  configuração por ambiente: HTTPS o exige, HTTP local não. A alternativa —
+  uma flag ligada em produção e desligada em dev — foi descartada porque
+  depende de cada máquina lembrar de aplicá-la, e o esquecimento aparece como
+  "login quebrado no Safari", que é o navegador que descarta cookie `Secure`
+  recebido por HTTP. Isso exige `server.forward-headers-strategy`: o Caddy
+  termina o TLS e repassa HTTP, então sem os forwarded headers a aplicação
+  veria HTTP e produção perderia o `Secure` — o único modo de falha da
+  decisão, coberto por teste em `AuthCookieSecureIT`.
+  Confiar nos forwarded headers não abre superfície aqui: a aplicação não
+  constrói nenhuma URL a partir do request (todo `Location` é caminho
+  relativo montado à mão), então o que um `X-Forwarded-*` forjado alcança é
+  só o `Secure` do cookie — e forjá-lo o deixaria mais restrito, não menos.
 - Refresh token rotacionado a cada uso; reuso de token já usado revoga a família
   inteira. É assim que se detecta token roubado.
 - Endpoints de aluno/professor no padrão `/me/...`, com id vindo do token e

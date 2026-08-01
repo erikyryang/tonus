@@ -82,9 +82,20 @@ npm install
 npm run dev
 ```
 
-Uma ressalva para o primeiro acesso: **os cookies de sessão são `Secure`**.
-Chrome e Firefox tratam `localhost` como origem segura e os aceitam; o Safari
-não faz essa exceção, e nele a sessão não persiste em desenvolvimento.
+Não há passo extra para desenvolver: **o `Secure` do cookie de sessão sai do
+transporte da requisição**, não de configuração. Local é HTTP puro e o cookie
+vem sem o atributo; atrás do Caddy é HTTPS e ele vem com. Nenhuma máquina
+precisa lembrar de ligar nada, e não existe flag para vazar de um ambiente para
+o outro.
+
+Isso importa porque em HTTP o Safari descarta cookie `Secure` — Chrome e
+Firefox abrem exceção para `localhost`, ele não. O sintoma é enganoso: o
+`POST /auth/login` devolve 200, mas o `GET /auth/me` seguinte dá 401 e a tela
+mostra "Login ou senha inválidos" para quem digitou a senha certa.
+
+O que sustenta o lado de produção é `server.forward-headers-strategy`: sem ele,
+o TLS terminado no Caddy ficaria invisível para a aplicação e o cookie sairia
+sem `Secure`. `AuthCookieSecureIT` cobre os dois lados e o caso do proxy.
 
 ## Usuários de desenvolvimento
 

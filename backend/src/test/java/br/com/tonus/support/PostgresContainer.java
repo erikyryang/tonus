@@ -18,7 +18,20 @@ import org.testcontainers.containers.PostgreSQLContainer;
  */
 public final class PostgresContainer {
 
-    public static final PostgreSQLContainer<?> INSTANCE = new PostgreSQLContainer<>("postgres:16");
+    /**
+     * O {@code max_connections} sobe porque o gargalo é do servidor, não dos
+     * pools. O Spring cacheia um ApplicationContext por combinação de
+     * configuração de teste, e cada um abre o seu Hikari de 10 conexões — com o
+     * default de 100 do Postgres, o décimo contexto a subir falha com "sorry,
+     * too many clients already", e falha numa classe qualquer da suíte, sem
+     * relação com a que acrescentou o contexto.
+     *
+     * Apertar o pool em vez disso seria pior: os listeners assíncronos do
+     * Modulith tomam conexão em paralelo com a thread do teste, e um pool curto
+     * troca o erro de subida por timeout de conexão no meio do teste.
+     */
+    public static final PostgreSQLContainer<?> INSTANCE = new PostgreSQLContainer<>("postgres:16")
+            .withCommand("postgres", "-c", "max_connections=300");
 
     static {
         INSTANCE.start();

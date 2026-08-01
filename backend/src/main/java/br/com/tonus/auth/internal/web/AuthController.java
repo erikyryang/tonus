@@ -7,6 +7,7 @@ import br.com.tonus.auth.internal.InvalidRefreshTokenException;
 import br.com.tonus.auth.internal.InvalidSessionException;
 import br.com.tonus.auth.internal.LoginRateLimiter;
 import br.com.tonus.shared.AuthenticatedUser;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import java.time.Duration;
@@ -44,13 +45,15 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Void> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
+    public ResponseEntity<Void> login(@Valid @RequestBody LoginRequest request,
+                                       HttpServletRequest httpRequest,
+                                       HttpServletResponse response) {
         if (!loginRateLimiter.tryConsume(request.login())) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build();
         }
 
         AuthService.AuthTokens tokens = authService.login(request.login(), request.password());
-        setAuthCookies(response, tokens);
+        setAuthCookies(httpRequest, response, tokens);
         return ResponseEntity.ok().build();
     }
 
@@ -83,20 +86,22 @@ public class AuthController {
 
     @PostMapping("/refresh")
     public ResponseEntity<Void> refresh(@CookieValue(value = REFRESH_COOKIE, required = false) String refreshTokenCookie,
+                                         HttpServletRequest httpRequest,
                                          HttpServletResponse response) {
         if (refreshTokenCookie == null) {
             throw new InvalidRefreshTokenException();
         }
         AuthService.AuthTokens tokens = authService.refresh(refreshTokenCookie);
-        setAuthCookies(response, tokens);
+        setAuthCookies(httpRequest, response, tokens);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(@CookieValue(value = REFRESH_COOKIE, required = false) String refreshTokenCookie,
+                                        HttpServletRequest httpRequest,
                                         HttpServletResponse response) {
         authService.logout(refreshTokenCookie);
-        clearAuthCookies(response);
+        clearAuthCookies(httpRequest, response);
         return ResponseEntity.ok().build();
     }
 
@@ -119,22 +124,42 @@ public class AuthController {
         return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, "Refresh token inválido ou reutilizado");
     }
 
-    private void setAuthCookies(HttpServletResponse response, AuthService.AuthTokens tokens) {
+    private void setAuthCookies(HttpServletRequest request, HttpServletResponse response,
+                                 AuthService.AuthTokens tokens) {
         response.addHeader(HttpHeaders.SET_COOKIE,
-                buildCookie(ACCESS_COOKIE, tokens.accessToken(), properties.jwt().accessTokenTtl()).toString());
+                buildCookie(request, ACCESS_COOKIE, tokens.accessToken(), properties.jwt().accessTokenTtl())
+                        .toString());
         response.addHeader(HttpHeaders.SET_COOKIE,
-                buildCookie(REFRESH_COOKIE, tokens.refreshToken(), properties.refreshToken().ttl()).toString());
+                buildCookie(request, REFRESH_COOKIE, tokens.refreshToken(), properties.refreshToken().ttl())
+                        .toString());
     }
 
-    private void clearAuthCookies(HttpServletResponse response) {
-        response.addHeader(HttpHeaders.SET_COOKIE, buildCookie(ACCESS_COOKIE, "", Duration.ZERO).toString());
-        response.addHeader(HttpHeaders.SET_COOKIE, buildCookie(REFRESH_COOKIE, "", Duration.ZERO).toString());
+    private void clearAuthCookies(HttpServletRequest request, HttpServletResponse response) {
+        response.addHeader(HttpHeaders.SET_COOKIE,
+                buildCookie(request, ACCESS_COOKIE, "", Duration.ZERO).toString());
+        response.addHeader(HttpHeaders.SET_COOKIE,
+                buildCookie(request, REFRESH_COOKIE, "", Duration.ZERO).toString());
     }
 
-    private ResponseCookie buildCookie(String name, String value, Duration maxAge) {
+    /**
+     * O {@code Secure} sai do transporte da requisição, não de configuração.
+     *
+     * Sob HTTPS o cookie exige HTTPS; em desenvolvimento, onde tudo é HTTP puro
+     * em localhost, o atributo não aparece — e é isso que faz o Safari guardar
+     * a sessão, já que ele, ao contrário de Chrome e Firefox, não abre exceção
+     * para localhost e simplesmente descarta cookie {@code Secure} recebido por
+     * HTTP. A alternativa era uma flag por ambiente, que só funciona enquanto
+     * todo mundo lembra de aplicá-la em toda máquina.
+     *
+     * Em produção quem responde por essa verdade é
+     * {@code server.forward-headers-strategy}: o Caddy termina o TLS e repassa
+     * HTTP, então sem os forwarded headers isto veria HTTP e o cookie sairia
+     * sem {@code Secure}. É o único modo de falha desta abordagem, e tem teste.
+     */
+    private ResponseCookie buildCookie(HttpServletRequest request, String name, String value, Duration maxAge) {
         return ResponseCookie.from(name, value)
                 .httpOnly(true)
-                .secure(true)
+                .secure(request.isSecure())
                 .sameSite("Strict")
                 .path("/")
                 .maxAge(maxAge)
