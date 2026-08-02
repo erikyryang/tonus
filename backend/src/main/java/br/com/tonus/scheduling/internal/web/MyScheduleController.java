@@ -80,7 +80,7 @@ class MyScheduleController {
                                @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         Long teacherId = requireLink(user == null ? null : user.teacherId(), "professor");
         LocalDate day = orToday(date);
-        return TeacherGridResponse.of(day, schedulingService.scheduleOfTeacher(teacherId, day));
+        return TeacherGridResponse.of(day, schedulingService.gridOfTeacher(teacherId, day));
     }
 
     /**

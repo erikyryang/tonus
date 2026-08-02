@@ -58,12 +58,17 @@ public abstract class AbstractRegistrationIntegrationTest extends AbstractAuthIn
     }
 
     protected long createStudent(String name, long teacherId) throws Exception {
+        return createStudent(name, teacherId, "+5511988880000");
+    }
+
+    /** Telefone próprio quando o teste precisa distinguir o de um aluno do de outro. */
+    protected long createStudent(String name, long teacherId, String phone) throws Exception {
         MvcResult result = mockMvc.perform(post("/students")
                         .cookie(admin)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name":"%s","phone":"+5511988880000","teacherId":%d}
-                                """.formatted(name, teacherId)))
+                                {"name":"%s","phone":"%s","teacherId":%d}
+                                """.formatted(name, phone, teacherId)))
                 .andExpect(status().isCreated())
                 .andReturn();
         return idOf(result);

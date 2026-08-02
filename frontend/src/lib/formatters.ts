@@ -49,6 +49,17 @@ export function toIsoDate(brDate: string): string {
   return `${year}-${month}-${day}`;
 }
 
+/**
+ * Telefone E.164 em link de conversa do WhatsApp.
+ *
+ * O wa.me recebe só dígitos — com o "+" da forma E.164 o link não abre —, e o
+ * que não for dígito cai fora em vez de ser reescrito: número inválido vira
+ * link quebrado visível, não uma conversa aberta com outra pessoa.
+ */
+export function whatsAppLink(phone: string): string {
+  return `https://wa.me/${phone.replace(/\D/g, '')}`;
+}
+
 /** Valor em reais para "R$ 1.234,50". */
 export function formatMoney(value: number): string {
   return moneyFormatter.format(value);

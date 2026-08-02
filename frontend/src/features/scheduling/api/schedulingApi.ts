@@ -89,12 +89,14 @@ export interface HolidayInput {
  * emerge de professor + hora: não existe turma como entidade, então não há id
  * de turma para o front agrupar por — e reagrupar aqui duplicaria a regra.
  *
- * Só id e nome do aluno: o professor não precisa do telefone para dar aula
- * (minimização, LGPD).
+ * O telefone vem por finalidade: quem lê é o professor daquele aluno, e falar
+ * com ele é o atendimento. Nenhum outro caminho da agenda carrega telefone.
  */
 export interface TeacherGridStudent {
   studentId: number;
   studentName: string;
+  /** E.164, como o cadastro guarda: +5511999990000. */
+  studentPhone: string;
 }
 
 export interface TeacherGridSlot {

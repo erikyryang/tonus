@@ -42,6 +42,20 @@ public interface RegistrationFacade {
     Map<Long, String> findStudentNames(Collection<Long> studentIds);
 
     /**
+     * Telefones de vários alunos de uma vez, indexados por id.
+     *
+     * Existe separado de {@link #findStudentNames} porque telefone é dado
+     * pessoal: quem só precisa do nome não deve recebê-lo de brinde. Quem chama
+     * aqui declara a finalidade — a grade do professor, que atende aquele aluno.
+     *
+     * Em lote e não por aluno pela mesma razão dos nomes: a grade é percorrida
+     * inteira de uma vez, e uma consulta por linha seria N+1.
+     *
+     * Nunca logar o valor devolvido.
+     */
+    Map<Long, String> findStudentPhones(Collection<Long> studentIds);
+
+    /**
      * Um aluno só, com nome e professor — o que a agenda precisa para montar a
      * linha de uma aula.
      *

@@ -11,8 +11,8 @@ const TODAY = todayIsoDate();
 const MORNING = {
   time: '07:00',
   students: [
-    { studentId: 1, studentName: 'Ana Alves' },
-    { studentId: 2, studentName: 'Bia Barros' },
+    { studentId: 1, studentName: 'Ana Alves', studentPhone: '+5511911110000' },
+    { studentId: 2, studentName: 'Bia Barros', studentPhone: '+5511922220000' },
   ],
 };
 
@@ -40,6 +40,28 @@ describe('minha grade (professor)', () => {
     await user.click(screen.getByRole('button', { name: 'Próximo dia' }));
 
     await waitFor(() => expect(asked).toEqual([TODAY, addDays(TODAY, 1)]));
+  });
+
+  /**
+   * O professor fala com o aluno da própria aula: o telefone fica visível e o
+   * link abre a conversa no WhatsApp, sem "+" (é o formato que o wa.me aceita).
+   *
+   * O nome acessível carrega o número que está na tela — quem navega por voz
+   * comanda pelo texto visível (WCAG 2.5.3).
+   */
+  it('mostra o telefone do aluno com link para o WhatsApp', async () => {
+    server.use(meOk(TEACHER), myGridHandler((date) => grid(date, [MORNING])));
+
+    renderApp('/me/grid');
+
+    const block = await screen.findByRole('region', { name: 'Aulas das 07:00' });
+    expect(within(block).getByText('+5511911110000')).toBeInTheDocument();
+    expect(
+      within(block).getByRole('link', { name: 'Conversar com Ana Alves no WhatsApp: +5511911110000' }),
+    ).toHaveAttribute('href', 'https://wa.me/5511911110000');
+    expect(
+      within(block).getByRole('link', { name: 'Conversar com Bia Barros no WhatsApp: +5511922220000' }),
+    ).toHaveAttribute('href', 'https://wa.me/5511922220000');
   });
 
   /** A grade do professor é leitura: cancelar e remarcar são do ADMIN. */

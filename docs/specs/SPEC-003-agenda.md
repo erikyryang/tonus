@@ -19,6 +19,8 @@ Valida a decisão de arquitetura central do projeto.
   por isso é aceito no passado — é registro de fato consumado.
 - Sábado/domingo: agenda vazia por definição.
 - Grade do professor = agenda agrupada por hora (grupo emerge de professor+hora).
+  A linha do aluno carrega **telefone**, além de id e nome: o professor atende
+  aquele aluno, e falar com ele é parte do atendimento.
 - Endpoints (ADMIN salvo indicação):
   - `GET /schedule/day?date=` — agenda do dia já expandida. `date` obrigatório.
   - `GET /me/schedule[?date=]` (ALUNO) e `GET /me/grid[?date=]` (PROFESSOR).
@@ -70,6 +72,20 @@ Valida a decisão de arquitetura central do projeto.
 - **Apagar remarcação não publica evento.** O aluno já avisado pode ficar com
   informação desatualizada. Decidido junto com a SPEC-005, quando existir
   consumidor — inventar o contrato agora, sem quem o consuma, seria adivinhação.
+- **Telefone do aluno na grade do professor** (`GET /me/grid`). É finalidade, não
+  conveniência: o professor desmarca, avisa de atraso, combina reposição — sem o
+  telefone, ele pede o número ao ADMIN por fora, e o dado circula igual sem
+  nenhum controle. A minimização continua valendo no que a decisão não mudou:
+  o telefone só existe nesse caminho (`/schedule/day` e `/me/schedule`
+  continuam sem ele, e há teste que falha se algum passar a carregá-lo), e só
+  chega o dos alunos daquele professor, porque o id vem do token. Continua
+  proibido logar telefone.
+- **A grade tem DTO próprio** (`TeacherClassEntry`), em vez de um campo a mais em
+  `ScheduleEntry`. O `ScheduleEntry` alimenta também a agenda do ADMIN e a do
+  aluno: um campo lá levaria telefone para dois caminhos sem finalidade para
+  ele. Os telefones vêm em lote (`RegistrationFacade.findStudentPhones`), e só
+  dos alunos que sobraram depois do filtro por professor — uma consulta, e
+  nenhum telefone de aluno alheio sai do `registration`.
 - **Relógio fixo nos testes de agenda** (`SchedulingClockConfig`): com as regras
   de data passada, teste que usa o relógio do sistema passa hoje e falha sozinho
   quando a data virar passado. Quebra longe da mudança de código é a pior de

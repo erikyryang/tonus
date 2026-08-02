@@ -1,6 +1,6 @@
 package br.com.tonus.scheduling.internal.web;
 
-import br.com.tonus.scheduling.internal.ScheduleEntry;
+import br.com.tonus.scheduling.internal.TeacherClassEntry;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -16,11 +16,11 @@ import java.util.TreeMap;
  */
 public record TeacherGridResponse(LocalDate date, List<Slot> slots) {
 
-    public static TeacherGridResponse of(LocalDate date, List<ScheduleEntry> entries) {
+    public static TeacherGridResponse of(LocalDate date, List<TeacherClassEntry> entries) {
         Map<LocalTime, List<Student>> byTime = new TreeMap<>();
-        for (ScheduleEntry entry : entries) {
+        for (TeacherClassEntry entry : entries) {
             byTime.computeIfAbsent(entry.time(), time -> new ArrayList<>())
-                    .add(new Student(entry.studentId(), entry.studentName()));
+                    .add(new Student(entry.studentId(), entry.studentName(), entry.studentPhone()));
         }
         return new TeacherGridResponse(date, byTime.entrySet().stream()
                 .map(slot -> new Slot(slot.getKey(), slot.getValue()))
@@ -31,9 +31,14 @@ public record TeacherGridResponse(LocalDate date, List<Slot> slots) {
     }
 
     /**
-     * Só id e nome: o professor não precisa do telefone do aluno para dar aula,
-     * e dado que não trafega não vaza (minimização, LGPD).
+     * Id, nome e telefone. O telefone está aqui por finalidade, não por
+     * conveniência: quem lê esta resposta é o professor daquele aluno, e falar
+     * com ele — desmarcar, avisar de atraso — é o atendimento, não um extra.
+     *
+     * A minimização continua valendo no que não mudou: nenhum outro caminho da
+     * agenda carrega telefone, e este só carrega o dos alunos do professor
+     * logado (o id vem do token). Nunca logar o valor.
      */
-    public record Student(Long studentId, String studentName) {
+    public record Student(Long studentId, String studentName, String studentPhone) {
     }
 }

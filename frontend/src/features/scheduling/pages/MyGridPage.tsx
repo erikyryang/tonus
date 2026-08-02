@@ -1,6 +1,7 @@
 import { useSearchParams } from 'react-router-dom';
 import { ListFeedback } from '@/components/ListFeedback';
 import { isIsoDate, todayIsoDate } from '@/lib/dates';
+import { whatsAppLink } from '@/lib/formatters';
 import { useMyGrid } from '../api/schedulingQueries';
 import { DayNavigator } from '../components/DayNavigator';
 
@@ -40,8 +41,27 @@ export function MyGridPage() {
           <h2 className="mb-2 text-base font-semibold text-slate-900">{slot.time}</h2>
           <ul className="divide-y divide-slate-100">
             {slot.students.map((student) => (
-              <li key={student.studentId} className="py-1 text-sm text-slate-900">
-                {student.studentName}
+              <li
+                key={student.studentId}
+                className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2 text-sm text-slate-900"
+              >
+                <span>{student.studentName}</span>
+                {/*
+                 * O número entra no nome acessível junto com "Conversar com
+                 * Fulano": quem navega por voz comanda pelo texto que está
+                 * vendo, e um rótulo que não o contém deixa o link inalcançável
+                 * (WCAG 2.5.3). Sem o nome, quem usa leitor de tela ouviria só
+                 * um número solto, sem saber de quem é.
+                 */}
+                <a
+                  href={whatsAppLink(student.studentPhone)}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`Conversar com ${student.studentName} no WhatsApp: ${student.studentPhone}`}
+                  className="whitespace-nowrap rounded text-slate-600 underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                >
+                  {student.studentPhone}
+                </a>
               </li>
             ))}
           </ul>

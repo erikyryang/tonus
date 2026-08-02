@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDate, formatMoney, parseMoney, toIsoDate } from '@/lib/formatters';
+import { formatDate, formatMoney, parseMoney, toIsoDate, whatsAppLink } from '@/lib/formatters';
 
 describe('formatDate', () => {
   it('converte data ISO para dd/MM/yyyy', () => {
@@ -20,6 +20,25 @@ describe('formatDate', () => {
 describe('toIsoDate', () => {
   it('faz o caminho de volta para o formato da API', () => {
     expect(toIsoDate('28/07/2026')).toBe('2026-07-28');
+  });
+});
+
+describe('whatsAppLink', () => {
+  /** O "+" do E.164 é o que faz o wa.me não abrir a conversa. */
+  it('tira o "+" do E.164', () => {
+    expect(whatsAppLink('+5511911110000')).toBe('https://wa.me/5511911110000');
+  });
+
+  it('descarta o que não é dígito', () => {
+    expect(whatsAppLink('+55 (11) 91111-0000')).toBe('https://wa.me/5511911110000');
+  });
+
+  /**
+   * Sem dígito nenhum o link fica visivelmente quebrado, e é isso que se quer:
+   * inventar um número aqui abriria conversa com outra pessoa.
+   */
+  it('não inventa número quando não há dígito', () => {
+    expect(whatsAppLink('sem telefone')).toBe('https://wa.me/');
   });
 });
 

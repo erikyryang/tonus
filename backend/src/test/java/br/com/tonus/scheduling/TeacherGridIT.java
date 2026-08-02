@@ -2,7 +2,10 @@ package br.com.tonus.scheduling;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.servlet.http.Cookie;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.StreamSupport;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
@@ -93,6 +96,62 @@ class TeacherGridIT extends AbstractSchedulingIntegrationTest {
         assertThat(studentIdsAt(grid(teacher, WEDNESDAY), "21:00")).contains(studentId);
     }
 
+    /**
+     * O professor precisa falar com o aluno da própria aula — desmarcar, avisar
+     * de atraso. O telefone vem na linha dele por essa finalidade, e o telefone
+     * que vem é o daquele aluno, não o de qualquer um.
+     */
+    @Test
+    void gridCarriesThePhoneOfEachStudent() throws Exception {
+        long teacherId = createTeacher(unique("Professora Do Contato"));
+        long first = createStudent(unique("Aluna Do Primeiro Telefone"), teacherId, "+5511911110000");
+        long second = createStudent(unique("Aluno Do Segundo Telefone"), teacherId, "+5511922220000");
+        createDefaultSchedule(first, "07:00");
+        createDefaultSchedule(second, "07:00");
+
+        JsonNode grid = grid(linkedTeacherCookie(teacherId), MONDAY);
+
+        assertThat(phonesById(grid, "07:00"))
+                .containsEntry(first, "+5511911110000")
+                .containsEntry(second, "+5511922220000");
+    }
+
+    /**
+     * A finalidade é o próprio aluno, e ela delimita o dado: o telefone de aluno
+     * de outro professor não pode aparecer em lugar nenhum da resposta.
+     *
+     * {@link #gridShowsOnlyOwnStudents} olha só os ids do horário consultado, e
+     * passaria mesmo se o telefone alheio viesse pendurado em outro campo. Aqui
+     * a asserção é sobre o corpo inteiro.
+     */
+    @Test
+    void gridNeverCarriesThePhoneOfAnotherTeachersStudent() throws Exception {
+        long mine = createTeacher(unique("Professor Da Finalidade"));
+        long other = createTeacher(unique("Professor Vizinho"));
+        long myStudent = createStudent(unique("Aluno Meu Do Contato"), mine, "+5511944440000");
+        long otherStudent = createStudent(unique("Aluno Alheio Do Contato"), other, "+5511955550000");
+        createDefaultSchedule(myStudent, "07:00");
+        createDefaultSchedule(otherStudent, "07:00");
+
+        String grid = grid(linkedTeacherCookie(mine), MONDAY).toString();
+
+        assertThat(grid).contains("+5511944440000").doesNotContain("+5511955550000");
+    }
+
+    /**
+     * O telefone anda pelo caminho que tem finalidade, e só por ele. A agenda do
+     * ADMIN mostra o estúdio inteiro e não é ferramenta de atendimento: dado que
+     * não trafega não vaza (minimização, LGPD).
+     */
+    @Test
+    void adminDayScheduleStillCarriesNoPhone() throws Exception {
+        long teacherId = createTeacher(unique("Professor Do Painel"));
+        long studentId = createStudent(unique("Aluno Do Painel"), teacherId, "+5511933330000");
+        createDefaultSchedule(studentId, "07:00");
+
+        assertThat(daySchedule(MONDAY).toString()).doesNotContain("+5511933330000");
+    }
+
     @Test
     void studentCannotUseTeacherEndpoint() throws Exception {
         long teacherId = createTeacher(unique("Professor Do Bloqueio"));
@@ -111,10 +170,23 @@ class TeacherGridIT extends AbstractSchedulingIntegrationTest {
         return json(result);
     }
 
+    private Map<Long, String> phonesById(JsonNode grid, String time) {
+        Map<Long, String> phones = new HashMap<>();
+        for (JsonNode student : studentsAt(grid, time)) {
+            phones.put(student.get("studentId").asLong(),
+                    student.hasNonNull("studentPhone") ? student.get("studentPhone").asText() : null);
+        }
+        return phones;
+    }
+
     private List<Long> studentIdsAt(JsonNode grid, String time) {
+        return studentsAt(grid, time).stream().map(student -> student.get("studentId").asLong()).toList();
+    }
+
+    private List<JsonNode> studentsAt(JsonNode grid, String time) {
         for (JsonNode slot : grid.get("slots")) {
             if (slot.get("time").asText().equals(time)) {
-                return slot.get("students").findValues("studentId").stream().map(JsonNode::asLong).toList();
+                return StreamSupport.stream(slot.get("students").spliterator(), false).toList();
             }
         }
         return List.of();

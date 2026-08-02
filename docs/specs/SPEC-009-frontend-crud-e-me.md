@@ -38,7 +38,9 @@ tela tem de específico.
 - /me/invoices (STUDENT): lista com competência, valor, vencimento,
   status; OVERDUE em destaque.
 - /me/grid (TEACHER): o dia agrupado por hora com os alunos; mesma
-  navegação de data da SPEC-007, sem nenhuma ação.
+  navegação de data da SPEC-007, sem nenhuma ação sobre a aula. A linha do
+  aluno mostra o telefone, com link `wa.me` que abre a conversa — o
+  professor atende aquele aluno (decisão na SPEC-003).
 
 ## Critérios de aceite (por amostragem — o padrão se testa uma vez)
 - /students cobre o ciclo completo: criar (validação E.164 no zod),
@@ -117,6 +119,18 @@ tela tem de específico.
   anunciar em leitor de tela depende de mutação dentro da live region, e o
   mesmo texto no mesmo nó não muda nada no DOM — o segundo aviso passaria
   em silêncio justo para quem só tem ele.
+- O link de WhatsApp da grade tira o "+" do E.164 (`wa.me` só aceita dígitos) e
+  descarta o que não for dígito, em vez de reescrever: telefone inválido vira
+  link quebrado — visível — e não uma conversa aberta com outra pessoa.
+- O número aparece como o cadastro guarda, em E.164, sem máscara pt-BR. É a
+  mesma grafia das outras telas (`/students`, `/teachers`) e é a que funciona
+  quando o professor copia o número para outro aplicativo — "(11) 91111-0000"
+  colado no WhatsApp não acha ninguém. Quem resolve a leitura é o link, que é
+  a ação de verdade; a máscara só resolveria a soletração.
+- O rótulo do link inclui o número visível ("Conversar com Fulano no WhatsApp:
+  +55…"). Nome acessível que não contém o texto da tela deixa o link
+  inalcançável para quem navega por voz (WCAG 2.5.3); o número sozinho, para
+  quem usa leitor de tela, não diria de quem é.
 - Datas dos testes de agenda são ancoradas na próxima segunda-feira, nunca
   literais: a validação de data passada no formulário de remarcação faz
   literal apodrecer no calendário (mesma lição do Clock fixo no back).

@@ -387,11 +387,24 @@ public class SchedulingService {
     /**
      * A grade do professor. O grupo emerge de professor + hora: não existe
      * turma como entidade, então não há o que manter em sincronia.
+     *
+     * O telefone vem junto porque o professor atende aquele aluno — desmarcar,
+     * avisar de atraso — e é buscado em lote, só para os alunos que ficaram na
+     * grade depois do filtro: uma consulta, e nenhum telefone de aluno de outro
+     * professor sai do registration.
      */
     @Transactional(readOnly = true)
-    public List<ScheduleEntry> scheduleOfTeacher(Long teacherId, LocalDate date) {
-        return scheduleOf(date).stream()
+    public List<TeacherClassEntry> gridOfTeacher(Long teacherId, LocalDate date) {
+        List<ScheduleEntry> entries = scheduleOf(date).stream()
                 .filter(entry -> entry.teacherId().equals(teacherId))
+                .toList();
+
+        Map<Long, String> phones = registrationFacade.findStudentPhones(
+                entries.stream().map(ScheduleEntry::studentId).collect(Collectors.toSet()));
+
+        return entries.stream()
+                .map(entry -> new TeacherClassEntry(entry.studentId(), entry.studentName(),
+                        phones.get(entry.studentId()), entry.time()))
                 .toList();
     }
 
