@@ -123,6 +123,10 @@ telas dos outros dois papéis:
 | `diego@tonus.com` | STUDENT | Diego Alves (Rafael) |
 | `helena@tonus.com` | STUDENT | Helena Castro (Rafael) |
 
+Sofia Ramos entra no cadastro **inativa e sem login**: é ela que dá conteúdo ao
+filtro "Inativos" das listagens, e dar acesso a quem saiu do estúdio
+contradiria a regra que o próprio script respeita.
+
 Assim que houver alguém em `teacher`/`student`, o script **para de inventar
 gente** — inventar seria sujar o cadastro de quem já está usando o ambiente — e
 passa a só derivar login de quem está lá, pela regra `primeironome@tonus.com`.
@@ -151,9 +155,30 @@ migration roda em todo ambiente, e uma senha conhecida aplicada em produção é
 conta aberta. Isto aqui é ferramenta de desenvolvimento — o dia em que houver
 ambiente de verdade, senha por usuário volta a ser senha de verdade.
 
-O seed cria **pessoas e acessos, não movimento**: horário padrão, plano e
-fatura continuam vindo pela API ou pela tela, então a agenda e as faturas nascem
-vazias. Encher essas telas é seed de dados de demonstração, outra ferramenta.
+Num banco zerado o seed também cria **movimento**, para que nenhuma tela nasça
+vazia — tela vazia não exercita interface nenhuma, e é para exercitá-la que o
+ambiente local existe:
+
+| Tela | O que o seed deixa lá |
+|---|---|
+| `/admin/schedule` | quatro horários padrão, dois no mesmo horário (o agrupamento por hora aparece), um cancelamento e uma remarcação |
+| `/admin/default-schedules` | os mesmos quatro horários |
+| `/admin/announcements` | um comunicado que suspende as aulas e um que só avisa |
+| `/admin/plans` | quatro planos, um deles inativo (o filtro de situação tem o que filtrar) |
+| `/admin/students` | matrículas em planos, e um aluno com fatura atrasada (o selo "Atrasado") |
+| `/admin/settings` | desconto de múltiplos planos em 10% |
+| `/admin/invoices` | quatro faturas: uma paga com baixa registrada, duas abertas e uma atrasada |
+| `/me/schedule`, `/me/grid`, `/me/invoices` | os mesmos dados, pelo olho do aluno e do professor |
+
+As datas se ancoram em "hoje", nunca em literal: seed com data fixa apodrece, e
+o ambiente montado em março mostraria uma agenda de janeiro. Se o dia for fim de
+semana, a agenda se ancora na segunda seguinte — sábado não tem aula, e a tela
+do dia nasceria vazia justamente para quem foi conferi-la.
+
+Cada bloco é guardado pela própria tabela estar vazia: reexecutar não duplica
+nada, e **num banco que já tem movimento o script não encosta em nada** — mesma
+regra que vale para não inventar pessoas. Se o cadastro de demonstração não
+estiver lá (porque o banco é de alguém trabalhando), o movimento não é semeado.
 
 ## Como rodar os testes
 

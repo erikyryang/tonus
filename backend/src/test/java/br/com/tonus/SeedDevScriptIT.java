@@ -114,8 +114,99 @@ class SeedDevScriptIT {
         runSeed(db);
 
         assertThat(count(db, "SELECT count(*) FROM teacher")).isEqualTo(2);
-        assertThat(count(db, "SELECT count(*) FROM student")).isEqualTo(4);
+        // Cinco alunos: quatro ativos com login e a inativa, que existe para o
+        // filtro de situação ter o que mostrar e não ganha acesso.
+        assertThat(count(db, "SELECT count(*) FROM student")).isEqualTo(5);
         assertThat(users(db)).hasSize(7);
+    }
+
+    /**
+     * Banco zerado tem que virar ambiente com as telas cheias, não só com
+     * gente: tela vazia não exercita interface nenhuma, e é para exercitá-la
+     * que o ambiente local existe.
+     */
+    @Test
+    void seedsMovementSoEveryScreenHasContent() throws Exception {
+        String db = freshDatabase();
+
+        runSeed(db);
+
+        assertThat(count(db, "SELECT count(*) FROM default_schedule")).isEqualTo(4);
+        assertThat(count(db, "SELECT count(*) FROM schedule_exception WHERE type = 'CANCELED'")).isEqualTo(1);
+        assertThat(count(db, "SELECT count(*) FROM schedule_exception WHERE type = 'RESCHEDULED'")).isEqualTo(1);
+        // Os dois tipos de comunicado: sem o par, a diferença entre suspender e
+        // avisar não aparece em tela nenhuma.
+        assertThat(count(db, "SELECT count(*) FROM announcement WHERE suspends_classes")).isEqualTo(1);
+        assertThat(count(db, "SELECT count(*) FROM announcement WHERE NOT suspends_classes")).isEqualTo(1);
+        assertThat(count(db, "SELECT count(*) FROM plan WHERE active")).isEqualTo(3);
+        assertThat(count(db, "SELECT count(*) FROM plan WHERE NOT active")).isEqualTo(1);
+        // Alguém com dois planos, para o desconto de múltiplos planos sair do
+        // zero na tela de configuração e valer para uma fatura de verdade.
+        assertThat(count(db, """
+                SELECT count(*) FROM (
+                    SELECT student_id FROM plan_enrollment WHERE active
+                     GROUP BY student_id HAVING count(*) > 1
+                ) AS multi
+                """)).isEqualTo(1);
+        assertThat(count(db, "SELECT multi_plan_discount_percent FROM billing_settings")).isEqualTo(10);
+
+        // Uma fatura de cada status: é o que faz o filtro de /invoices e o selo
+        // "Atrasado" de /students terem o que mostrar.
+        assertThat(count(db, "SELECT count(*) FROM invoice WHERE status = 'PAID'")).isEqualTo(1);
+        assertThat(count(db, "SELECT count(*) FROM invoice WHERE status = 'OPEN'")).isEqualTo(2);
+        assertThat(count(db, "SELECT count(*) FROM invoice WHERE status = 'OVERDUE'")).isEqualTo(1);
+        // Fatura paga sem baixa é um estado que o sistema não produz sozinho.
+        assertThat(count(db, """
+                SELECT count(*) FROM invoice i
+                 WHERE i.status = 'PAID'
+                   AND NOT EXISTS (SELECT 1 FROM payment p WHERE p.invoice_id = i.id)
+                """)).isZero();
+    }
+
+    /** A agenda só existe de segunda a sexta — inclusive quando o seed roda no sábado. */
+    @Test
+    void anchorsScheduleExceptionsOnAWeekday() throws Exception {
+        String db = freshDatabase();
+
+        runSeed(db);
+
+        assertThat(count(db, """
+                SELECT count(*) FROM schedule_exception
+                 WHERE extract(isodow FROM date) > 5
+                """)).isZero();
+    }
+
+    @Test
+    void doesNotDuplicateMovementOnRerun() throws Exception {
+        String db = freshDatabase();
+
+        runSeed(db);
+        runSeed(db);
+
+        assertThat(count(db, "SELECT count(*) FROM default_schedule")).isEqualTo(4);
+        assertThat(count(db, "SELECT count(*) FROM schedule_exception")).isEqualTo(2);
+        assertThat(count(db, "SELECT count(*) FROM announcement")).isEqualTo(2);
+        assertThat(count(db, "SELECT count(*) FROM plan")).isEqualTo(4);
+        assertThat(count(db, "SELECT count(*) FROM plan_enrollment")).isEqualTo(4);
+        assertThat(count(db, "SELECT count(*) FROM invoice")).isEqualTo(4);
+        assertThat(count(db, "SELECT count(*) FROM payment")).isEqualTo(1);
+    }
+
+    /**
+     * Num banco em uso o script não inventa movimento, pelo mesmo motivo que
+     * não inventa gente: seria sujar o ambiente de quem está trabalhando.
+     */
+    @Test
+    void doesNotSeedMovementWhenTheRegistrationIsSomeoneElses() throws Exception {
+        String db = freshDatabase();
+        long teacher = insertTeacher(db, "Solange Vieira", true);
+        insertStudent(db, "Aluna De Verdade", teacher, true);
+
+        runSeed(db);
+
+        assertThat(count(db, "SELECT count(*) FROM default_schedule")).isZero();
+        assertThat(count(db, "SELECT count(*) FROM plan")).isZero();
+        assertThat(count(db, "SELECT count(*) FROM invoice")).isZero();
     }
 
     /**
