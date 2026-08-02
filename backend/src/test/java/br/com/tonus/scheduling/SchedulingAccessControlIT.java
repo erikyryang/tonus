@@ -13,7 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * pelos endpoints /me.
  *
  * O caso do professor é o que mais engana: ele é o dono da aula, mas não é
- * quem decide horário nem feriado. Deixá-lo escrever aqui daria a um professor
+ * quem decide horário nem comunicado. Deixá-lo escrever aqui daria a um professor
  * poder sobre a agenda dos alunos de outro.
  */
 class SchedulingAccessControlIT extends AbstractSchedulingIntegrationTest {
@@ -35,14 +35,14 @@ class SchedulingAccessControlIT extends AbstractSchedulingIntegrationTest {
     }
 
     @Test
-    void teacherCannotCreateHoliday() throws Exception {
+    void teacherCannotCreateAnnouncement() throws Exception {
         long teacherId = createTeacher(unique("Professor Do Feriado Negado"));
 
-        mockMvc.perform(post("/holidays")
+        mockMvc.perform(post("/announcements")
                         .cookie(linkedTeacherCookie(teacherId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"date":"2026-12-25","description":"Natal"}
+                                {"date":"2026-12-25","description":"Natal","suspendsClasses":true}
                                 """))
                 .andExpect(status().isForbidden());
     }

@@ -15,7 +15,8 @@ as escolhas de layout feitas durante a implementação entram em
   com professor e seus alunos — o grupo emerge de professor+hora, como
   no domínio. Densidade de painel de recepção: informação primeiro.
 - Estados de dia inteiros, mutuamente exclusivos:
-  - feriado → banner com a descrição, nenhum grupo;
+  - comunicado que suspende → banner com a descrição, nenhum grupo;
+  - comunicado que não suspende → aviso acima da agenda, que segue normal;
   - fim de semana → aviso "sem aulas aos fins de semana";
   - dia útil vazio → vazio explícito ("nenhuma aula neste dia");
   - loading e erro padrão do apiClient.
@@ -29,7 +30,7 @@ as escolhas de layout feitas durante a implementação entram em
     POST /schedule-exceptions {type: CANCELED, date} → invalidar
     ['scheduling','day',date] → toast de sucesso.
   - Remarcar → dialog com nova data + nova hora (zod: data não
-    passada). Erros do back (data no passado, feriado já cadastrado)
+    passada). Erros do back (data no passado, dia com aulas suspensas)
     exibidos como mensagem do Problem Details, não genérica.
     Sucesso → invalidar o dia de ORIGEM e o de DESTINO.
   - Desfazer exceção (aluno cancelado/remarcado no dia) →
@@ -44,10 +45,11 @@ as escolhas de layout feitas durante a implementação entram em
 
 ## Critérios de aceite (Vitest + RTL + MSW)
 - Dia com 2 horas × 2 professores renderiza os grupos corretos.
-- Feriado renderiza o banner e nenhum grupo; sábado renderiza o aviso.
+- Comunicado que suspende renderiza o banner e nenhum grupo; sábado renderiza
+  o aviso; comunicado sem suspensão renderiza o aviso **e** a agenda.
 - Cancelar: confirmação → request correto no MSW → lista atualizada
   (MSW responde o dia sem o aluno após a mutação).
-- Remarcar para data com feriado: MSW responde 400 Problem Details e
+- Remarcar para data com aulas suspensas: MSW responde 400 Problem Details e
   a mensagem do back aparece no dialog.
 - Remarcação bem-sucedida invalida origem e destino (asserção nas
   chamadas refeitas).
@@ -61,8 +63,12 @@ as escolhas de layout feitas durante a implementação entram em
 - **Toque no backend em `GET /schedule/day`** (única parte fora de `frontend/`),
   pelo mesmo motivo do `/auth/me` na SPEC-006: o dia passa a carregar o estado
   inteiro, para a tela não ter de remontar a expansão da agenda no navegador.
-    - `holiday` — descrição do feriado, nula fora dele. Sem ela a tela deduziria
-      "vazio, deve ser feriado", inventando um motivo que não tem como saber.
+    - `announcement` — `{description, suspendsClasses}`, nulo no dia sem
+      comunicado. Sem ele a tela deduziria "vazio, deve ser dia sem aula",
+      inventando um motivo que não tem como saber. O objeto substituiu a
+      `String holiday` quando o feriado virou comunicado (SPEC-003): a tela
+      precisa distinguir "não tem aula porque foi suspenso" de "tem aula, e tem
+      um aviso", e uma string só não carrega essa diferença.
     - `teacherName` em cada entrada, para agrupar por professor com nome e não
       com id. Veio de `StudentSummary.teacherName` no `registration`, resolvido
       em UMA consulta por lista — um id por aluno viraria N+1 na tela mais
@@ -78,7 +84,7 @@ as escolhas de layout feitas durante a implementação entram em
 - **Remarcado não entra em "Cancelamentos".** O desfazer dele mora na entrada do
   dia de DESTINO, onde a aula de fato acontece e onde a badge já explica de onde
   ela veio. Aparecer nos dois lugares daria dois botões para a mesma exceção.
-- **Feriado e fim de semana não listam cancelamento**: não havia aula para
+- **Dia suspenso e fim de semana não listam cancelamento**: não havia aula para
   cancelar, e a exceção registrada nesses dias não muda nada na tela.
 - **O aviso de fim de semana só vale para sábado/domingo *sem nada*.**
   Remarcação pontual para o fim de semana é permitida pelo domínio (SPEC-003);
@@ -116,14 +122,14 @@ as escolhas de layout feitas durante a implementação entram em
   recepção; o indicador evita que a tela minta mostrando o dia velho sob a data
   nova.
 - **`GET /schedule/day` responde por um único `SchedulingService.dayOf(date)`.**
-  Compor três chamadas públicas repetiria a consulta de feriado, a de alunos
+  Compor três chamadas públicas repetiria a consulta de comunicado, a de alunos
   ativos e a de horários padrão a cada abertura da tela mais usada do sistema. A
   expansão continua tendo uma implementação só, compartilhada com `/me/schedule`
   e `/me/grid`.
 - **Validação de data passada duplicada no formulário** (zod), a única
   duplicação que o CLAUDE.md permite. Evita a ida à API por erro de digitação
   óbvio; a autoridade continua sendo o back, e é a mensagem dele (Problem
-  Details) que aparece quando o motivo é outro — feriado, por exemplo.
+  Details) que aparece quando o motivo é outro — dia suspenso, por exemplo.
 - **Invalidação testada por comportamento**: o teste do dia de destino usa um
   QueryClient com `staleTime` infinito, para que uma chamada repetida só possa
   vir de invalidação e não da obsolescência padrão. `renderApp` passou a aceitar
@@ -135,9 +141,10 @@ e oito alunos semeados pela API.
 - Blocos por hora (07/09/10/18), professor como subtítulo do grupo, apenas horas
   com aula. Badge "remarcada de 28/07" e seção "Cancelamentos" com o nome
   riscado, hora e professor.
-- Feriado: banner e nada mais. Sábado: "Sem aulas aos fins de semana."
-- Remarcar para o feriado devolve a mensagem do backend no diálogo: *"Não é
-  possível remarcar para um feriado: 2026-07-31"*. A data aparece em ISO porque
+- Dia suspenso: banner e nada mais. Sábado: "Sem aulas aos fins de semana."
+- Remarcar para um dia suspenso devolve a mensagem do backend no diálogo: *"Não
+  é possível remarcar para um dia com as aulas suspensas: 2026-07-31"*. A data
+  aparece em ISO porque
   é o texto do back — a spec manda exibi-lo fiel, e reescrevê-lo aqui exigiria
   interpretar a mensagem.
 - Ciclo completo remarcar → desfazer conferido nos dois dias: a aula sai da

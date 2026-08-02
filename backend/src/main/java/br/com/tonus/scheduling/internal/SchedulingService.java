@@ -4,12 +4,12 @@ import br.com.tonus.registration.RegistrationFacade;
 import br.com.tonus.registration.StudentSummary;
 import br.com.tonus.scheduling.ClassCanceled;
 import br.com.tonus.scheduling.ClassRescheduled;
-import br.com.tonus.scheduling.HolidayCreated;
+import br.com.tonus.scheduling.AnnouncementCreated;
 import br.com.tonus.scheduling.internal.domain.DefaultSchedule;
 import br.com.tonus.scheduling.internal.domain.DefaultScheduleRepository;
 import br.com.tonus.scheduling.internal.domain.ExceptionType;
-import br.com.tonus.scheduling.internal.domain.Holiday;
-import br.com.tonus.scheduling.internal.domain.HolidayRepository;
+import br.com.tonus.scheduling.internal.domain.Announcement;
+import br.com.tonus.scheduling.internal.domain.AnnouncementRepository;
 import br.com.tonus.scheduling.internal.domain.ScheduleException;
 import br.com.tonus.scheduling.internal.domain.ScheduleExceptionRepository;
 import java.time.Clock;
@@ -38,20 +38,20 @@ public class SchedulingService {
 
     private final DefaultScheduleRepository defaultScheduleRepository;
     private final ScheduleExceptionRepository scheduleExceptionRepository;
-    private final HolidayRepository holidayRepository;
+    private final AnnouncementRepository announcementRepository;
     private final RegistrationFacade registrationFacade;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public SchedulingService(DefaultScheduleRepository defaultScheduleRepository,
                              ScheduleExceptionRepository scheduleExceptionRepository,
-                             HolidayRepository holidayRepository,
+                             AnnouncementRepository announcementRepository,
                              RegistrationFacade registrationFacade,
                              ApplicationEventPublisher events,
                              Clock clock) {
         this.defaultScheduleRepository = defaultScheduleRepository;
         this.scheduleExceptionRepository = scheduleExceptionRepository;
-        this.holidayRepository = holidayRepository;
+        this.announcementRepository = announcementRepository;
         this.registrationFacade = registrationFacade;
         this.events = events;
         this.clock = clock;
@@ -161,28 +161,28 @@ public class SchedulingService {
     }
 
     @Transactional
-    public Holiday createHoliday(LocalDate date, String description) {
-        if (holidayRepository.existsByDate(date)) {
-            throw new HolidayAlreadyExistsException(date);
+    public Announcement createAnnouncement(LocalDate date, String description, boolean suspendsClasses) {
+        if (announcementRepository.existsByDate(date)) {
+            throw new AnnouncementAlreadyExistsException(date);
         }
-        Holiday saved = holidayRepository.save(new Holiday(date, description));
-        events.publishEvent(new HolidayCreated(date));
+        Announcement saved = announcementRepository.save(new Announcement(date, description, suspendsClasses));
+        events.publishEvent(new AnnouncementCreated(date, description, suspendsClasses));
         return saved;
     }
 
     @Transactional(readOnly = true)
-    public Page<Holiday> findHolidays(LocalDate from, LocalDate to, Pageable pageable) {
-        Specification<Holiday> filter = Specification.allOf(
+    public Page<Announcement> findAnnouncements(LocalDate from, LocalDate to, Pageable pageable) {
+        Specification<Announcement> filter = Specification.allOf(
                 from == null ? null : (root, query, cb) -> cb.greaterThanOrEqualTo(root.get("date"), from),
                 to == null ? null : (root, query, cb) -> cb.lessThanOrEqualTo(root.get("date"), to));
-        return holidayRepository.findAll(filter, withStableSort(pageable));
+        return announcementRepository.findAll(filter, withStableSort(pageable));
     }
 
     @Transactional
-    public void deleteHoliday(Long id) {
-        Holiday holiday = holidayRepository.findById(id)
-                .orElseThrow(() -> new SchedulingNotFoundException("Feriado não encontrado: " + id));
-        holidayRepository.delete(holiday);
+    public void deleteAnnouncement(Long id) {
+        Announcement announcement = announcementRepository.findById(id)
+                .orElseThrow(() -> new SchedulingNotFoundException("Comunicado não encontrado: " + id));
+        announcementRepository.delete(announcement);
     }
 
     /**
@@ -200,7 +200,7 @@ public class SchedulingService {
      */
     @Transactional(readOnly = true)
     public List<ScheduleEntry> scheduleOf(LocalDate date) {
-        if (holidayRepository.existsByDate(date)) {
+        if (announcementRepository.existsByDateAndSuspendsClassesTrue(date)) {
             return List.of();
         }
         return expand(date, activeStudentsById(), defaultScheduleRepository.findAll(),
@@ -218,16 +218,18 @@ public class SchedulingService {
      */
     @Transactional(readOnly = true)
     public DayScheduleView dayOf(LocalDate date) {
-        Optional<Holiday> holiday = holidayRepository.findByDate(date);
-        if (holiday.isPresent()) {
-            return new DayScheduleView(date, holiday.get().getDescription(), List.of(), List.of());
+        DayScheduleView.Announcement announcement = announcementRepository.findByDate(date)
+                .map(SchedulingService::viewOf)
+                .orElse(null);
+        if (suspends(announcement)) {
+            return new DayScheduleView(date, announcement, List.of(), List.of());
         }
 
         Map<Long, StudentSummary> students = activeStudentsById();
         List<DefaultSchedule> schedules = defaultScheduleRepository.findAll();
         List<ScheduleException> exceptionsOfDay = scheduleExceptionRepository.findByDate(date);
 
-        return new DayScheduleView(date, null,
+        return new DayScheduleView(date, announcement,
                 expand(date, students, schedules, exceptionsOfDay,
                         scheduleExceptionRepository.findByNewDate(date)),
                 cancellations(date, students, schedules, exceptionsOfDay));
@@ -325,7 +327,7 @@ public class SchedulingService {
     @Transactional(readOnly = true)
     public DayScheduleView dayOfStudent(Long studentId, LocalDate date) {
         DayScheduleView day = dayOf(date);
-        return new DayScheduleView(day.date(), day.holiday(),
+        return new DayScheduleView(day.date(), day.announcement(),
                 day.entries().stream().filter(entry -> entry.studentId().equals(studentId)).toList(),
                 day.cancellations().stream().filter(entry -> entry.studentId().equals(studentId)).toList());
     }
@@ -357,8 +359,9 @@ public class SchedulingService {
                 .map(List::of)
                 .orElseGet(List::of);
 
-        Map<LocalDate, String> holidays = holidayRepository.findByDateBetween(from, to).stream()
-                .collect(Collectors.toMap(Holiday::getDate, Holiday::getDescription));
+        Map<LocalDate, DayScheduleView.Announcement> announcements =
+                announcementRepository.findByDateBetween(from, to).stream()
+                        .collect(Collectors.toMap(Announcement::getDate, SchedulingService::viewOf));
 
         Map<LocalDate, List<ScheduleException>> exceptionsByDate =
                 scheduleExceptionRepository.findByStudentIdAndDateBetween(studentId, from, to).stream()
@@ -370,13 +373,13 @@ public class SchedulingService {
         List<DayScheduleView> week = new ArrayList<>(days);
         for (int offset = 0; offset < days; offset++) {
             LocalDate date = from.plusDays(offset);
-            String holiday = holidays.get(date);
-            if (holiday != null) {
-                week.add(new DayScheduleView(date, holiday, List.of(), List.of()));
+            DayScheduleView.Announcement announcement = announcements.get(date);
+            if (suspends(announcement)) {
+                week.add(new DayScheduleView(date, announcement, List.of(), List.of()));
                 continue;
             }
             List<ScheduleException> exceptionsOfDay = exceptionsByDate.getOrDefault(date, List.of());
-            week.add(new DayScheduleView(date, null,
+            week.add(new DayScheduleView(date, announcement,
                     expand(date, student, schedules, exceptionsOfDay,
                             reschedulesByNewDate.getOrDefault(date, List.of())),
                     cancellations(date, student, schedules, exceptionsOfDay)));
@@ -432,6 +435,19 @@ public class SchedulingService {
                 student.teacherName(), time, origin, originDate, exceptionId));
     }
 
+    /**
+     * Comunicado que não suspende não apaga nada: o dia segue com a agenda de
+     * sempre, e o aviso viaja ao lado dela. Dia sem comunicado nenhum também
+     * não suspende — daí o nulo entrar aqui em vez de virar checagem espalhada.
+     */
+    private static boolean suspends(DayScheduleView.Announcement announcement) {
+        return announcement != null && announcement.suspendsClasses();
+    }
+
+    private static DayScheduleView.Announcement viewOf(Announcement announcement) {
+        return new DayScheduleView.Announcement(announcement.getDescription(), announcement.suspendsClasses());
+    }
+
     private boolean isWeekday(LocalDate date) {
         DayOfWeek day = date.getDayOfWeek();
         return day != DayOfWeek.SATURDAY && day != DayOfWeek.SUNDAY;
@@ -455,8 +471,9 @@ public class SchedulingService {
         if (newDate.isBefore(today)) {
             throw new InvalidRescheduleDateException("Não é possível remarcar para data passada: " + newDate);
         }
-        if (holidayRepository.existsByDate(newDate)) {
-            throw new InvalidRescheduleDateException("Não é possível remarcar para um feriado: " + newDate);
+        if (announcementRepository.existsByDateAndSuspendsClassesTrue(newDate)) {
+            throw new InvalidRescheduleDateException(
+                    "Não é possível remarcar para um dia com as aulas suspensas: " + newDate);
         }
     }
 

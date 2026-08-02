@@ -164,26 +164,40 @@ function DayBody({
   actions: EntryActions;
   onUndo: (exceptionId: number, studentName: string) => void;
 }) {
-  if (day.holiday) {
+  /*
+   * O comunicado que suspende explica o dia vazio e substitui a agenda; o que
+   * só informa aparece acima dela, porque o dia continua tendo aula.
+   */
+  if (day.announcement?.suspendsClasses) {
     return (
       <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-        Feriado: {day.holiday}. O estúdio não abre.
+        Aulas suspensas: {day.announcement.description}.
       </p>
     );
   }
+
+  const notice = day.announcement ? (
+    <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+      Comunicado: {day.announcement.description}.
+    </p>
+  ) : null;
 
   const blocks = groupByHour(day.entries);
 
   if (blocks.length === 0 && day.cancellations.length === 0) {
     return (
-      <p className="text-sm text-slate-500">
-        {isWeekend(date) ? 'Sem aulas aos fins de semana.' : 'Nenhuma aula neste dia.'}
-      </p>
+      <div className="space-y-4">
+        {notice}
+        <p className="text-sm text-slate-500">
+          {isWeekend(date) ? 'Sem aulas aos fins de semana.' : 'Nenhuma aula neste dia.'}
+        </p>
+      </div>
     );
   }
 
   return (
     <div className="space-y-4">
+      {notice}
       {blocks.map((block) => (
         <HourBlockSection key={block.time} block={block} actions={actions} />
       ))}

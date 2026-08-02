@@ -16,20 +16,22 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Feriado é global: uma linha vale para o estúdio inteiro. Data duplicada
- * tornaria ambíguo o "existe feriado em D?" que a expansão da agenda pergunta.
+ * Comunicado é global: uma linha vale para o estúdio inteiro. Data duplicada
+ * tornaria ambíguo o "as aulas de D estão suspensas?" que a expansão da agenda
+ * pergunta — e engoliria o segundo aviso, porque a chave de idempotência do
+ * WhatsApp é a data.
  */
-class HolidayCrudIT extends AbstractSchedulingIntegrationTest {
+class AnnouncementCrudIT extends AbstractSchedulingIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
     @Test
-    void createsAndListsHoliday() throws Exception {
+    void createsAndListsAnnouncement() throws Exception {
         String date = "2026-09-07";
-        createHoliday(date, "Independencia");
+        createAnnouncement(date, "Independencia", true);
 
-        MvcResult result = mockMvc.perform(get("/holidays").param("size", "100").cookie(admin))
+        MvcResult result = mockMvc.perform(get("/announcements").param("size", "100").cookie(admin))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -38,45 +40,45 @@ class HolidayCrudIT extends AbstractSchedulingIntegrationTest {
     }
 
     @Test
-    void duplicatedHolidayDateIsRejected() throws Exception {
+    void duplicatedAnnouncementDateIsRejected() throws Exception {
         String date = "2026-10-12";
-        createHoliday(date, "Nossa Senhora Aparecida");
+        createAnnouncement(date, "Nossa Senhora Aparecida", true);
 
-        postHoliday(date, "Duplicado")
+        postAnnouncement(date, "Duplicado", false)
                 .andExpect(status().isConflict());
     }
 
     @Test
-    void databaseRejectsDuplicatedHolidayDate() throws Exception {
+    void databaseRejectsDuplicatedAnnouncementDate() throws Exception {
         String date = "2026-11-02";
-        createHoliday(date, "Finados");
+        createAnnouncement(date, "Finados", true);
 
         assertThatThrownBy(() -> jdbcTemplate.update("""
-                INSERT INTO holiday (date, description, created_at, updated_at)
-                VALUES (DATE '%s', 'Duplicado no banco', now(), now())
+                INSERT INTO announcement (date, description, suspends_classes, created_at, updated_at)
+                VALUES (DATE '%s', 'Duplicado no banco', TRUE, now(), now())
                 """.formatted(date)))
                 .isInstanceOf(DuplicateKeyException.class);
     }
 
     @Test
-    void deletesHoliday() throws Exception {
-        long id = createHoliday("2026-11-15", "Proclamacao da Republica");
+    void deletesAnnouncement() throws Exception {
+        long id = createAnnouncement("2026-11-15", "Proclamacao da Republica", true);
 
-        mockMvc.perform(delete("/holidays/{id}", id).cookie(admin))
+        mockMvc.perform(delete("/announcements/{id}", id).cookie(admin))
                 .andExpect(status().isNoContent());
     }
 
     /**
-     * O intervalo filtra pelas duas pontas, inclusive. Feriado é justamente o
+     * O intervalo filtra pelas duas pontas, inclusive. O comunicado é justamente o
      * caso em que a borda importa: quem pede "o mês de setembro" espera o dia 1
      * e o dia 30 dentro, não de fora.
      */
     @Test
     void listFiltersByDateRange() throws Exception {
-        createHoliday("2027-03-10", "Dentro do intervalo");
-        createHoliday("2027-04-20", "Depois do intervalo");
+        createAnnouncement("2027-03-10", "Dentro do intervalo", true);
+        createAnnouncement("2027-04-20", "Depois do intervalo", true);
 
-        MvcResult result = mockMvc.perform(get("/holidays")
+        MvcResult result = mockMvc.perform(get("/announcements")
                         .param("from", "2027-03-01")
                         .param("to", "2027-03-31")
                         .param("size", "100")
@@ -92,10 +94,10 @@ class HolidayCrudIT extends AbstractSchedulingIntegrationTest {
 
     @Test
     void rangeBoundsAreInclusive() throws Exception {
-        createHoliday("2027-06-01", "Primeiro dia");
-        createHoliday("2027-06-30", "Ultimo dia");
+        createAnnouncement("2027-06-01", "Primeiro dia", true);
+        createAnnouncement("2027-06-30", "Ultimo dia", false);
 
-        MvcResult result = mockMvc.perform(get("/holidays")
+        MvcResult result = mockMvc.perform(get("/announcements")
                         .param("from", "2027-06-01")
                         .param("to", "2027-06-30")
                         .param("size", "100")
@@ -108,13 +110,28 @@ class HolidayCrudIT extends AbstractSchedulingIntegrationTest {
                 .contains("2027-06-01", "2027-06-30");
     }
 
+    /**
+     * O efeito é obrigatório: sem ele, um comunicado informativo esvaziaria o
+     * dia por engano de digitação, e ninguém saberia por quê.
+     */
     @Test
-    void rejectsHolidayWithoutDate() throws Exception {
-        mockMvc.perform(post("/holidays")
+    void rejectsAnnouncementWithoutSuspendsClasses() throws Exception {
+        mockMvc.perform(post("/announcements")
                         .cookie(admin)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"description":"Sem data"}
+                                {"date":"2027-08-10","description":"Sem efeito declarado"}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void rejectsAnnouncementWithoutDate() throws Exception {
+        mockMvc.perform(post("/announcements")
+                        .cookie(admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"description":"Sem data","suspendsClasses":true}
                                 """))
                 .andExpect(status().isBadRequest());
     }

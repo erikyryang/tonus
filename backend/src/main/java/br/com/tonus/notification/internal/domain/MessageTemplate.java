@@ -21,7 +21,8 @@ public enum MessageTemplate {
 
     CLASS_CANCELED("Olá, %s! Sua aula do dia %s foi cancelada."),
     CLASS_RESCHEDULED("Olá, %s! Sua aula do dia %s foi remarcada para %s às %s."),
-    HOLIDAY_CREATED("Olá, %s! Dia %s é feriado e não teremos aula."),
+    ANNOUNCEMENT_SUSPENSION("Olá, %s! Dia %s não teremos aula: %s."),
+    ANNOUNCEMENT_NOTICE("Olá, %s! Aviso sobre o dia %s: %s. As aulas acontecem normalmente."),
     INVOICE_DUE_SOON("Olá, %s! Sua mensalidade de %s vence em %s."),
     INVOICE_OVERDUE("Olá, %s! Sua mensalidade com vencimento em %s está em aberto."),
     PAYMENT_REGISTERED("Olá, %s! Recebemos seu pagamento de %s em %s. Obrigado!");

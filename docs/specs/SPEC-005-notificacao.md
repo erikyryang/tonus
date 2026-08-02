@@ -20,14 +20,14 @@ duplicar mensagem. Único módulo que fala com o mundo externo.
   chama notification — ele só escuta. Trocar de provedor é um adapter novo,
   sem tocar nos listeners.
 - Um `@ApplicationModuleListener` por evento: `ClassCanceled`,
-  `ClassRescheduled`, `HolidayCreated`, `InvoiceDueSoon`, `InvoiceOverdue`,
+  `ClassRescheduled`, `AnnouncementCreated`, `InvoiceDueSoon`, `InvoiceOverdue`,
   `PaymentRegistered` (contrato em docs/eventos.md).
 - `notification_log`: student_id, template, reference_key, sent_at.
   UNIQUE(template, student_id, reference_key) — a idempotência do
   at-least-once vira constraint, mesmo raciocínio de
   `uk_invoice_subscription_period`. `reference_key` identifica o fato dentro
-  do payload: a data em `ClassCanceled` e `HolidayCreated`, o `invoiceId` nos
-  três de billing, e origem+destino em `ClassRescheduled`.
+  do payload: a data em `ClassCanceled` e `AnnouncementCreated`, o `invoiceId`
+  nos três de billing, e origem+destino em `ClassRescheduled`.
 - `ClassRescheduled` leva o destino na chave, e não só a data original,
   porque a mesma aula pode ser remarcada duas vezes a partir do mesmo dia:
   apagar a exceção e recriá-la republica o evento com `originalDate` igual e
@@ -39,11 +39,30 @@ duplicar mensagem. Único módulo que fala com o mundo externo.
   continua incompleta no registry, que reprocessa. Só existe linha de envio
   bem-sucedido: coluna de status e contador de tentativas não existem porque
   tentativa falha nunca sobrevive ao rollback que a própria falha causa.
-- `HolidayCreated` → uma mensagem para cada aluno **ativo**, via
+- `AnnouncementCreated` → uma mensagem para cada aluno **ativo**, via
   `RegistrationFacade.findActiveStudents()`. Notification não pergunta à
   agenda quem tem aula no dia: `notification → scheduling` é aresta que o
   projeto não abre. O custo assumido é avisar também aluno ativo sem horário
   padrão.
+- **Dois templates, escolhidos pelo `suspendsClasses` do evento**:
+  `ANNOUNCEMENT_SUSPENSION` ("não teremos aula: <motivo>") e
+  `ANNOUNCEMENT_NOTICE` ("aviso sobre o dia: <motivo>. As aulas acontecem
+  normalmente"). São avisos opostos, e mandar o primeiro por um comunicado que
+  não suspende esvaziaria a sala num dia de aula. O template não é só texto:
+  entra na chave de idempotência junto com a data, então os dois avisos são
+  independentes um do outro no log.
+- **A descrição vai no texto da mensagem**, e é por isso que o evento a carrega:
+  "não teremos aula" sem o motivo faz o aluno perguntar. O antigo
+  `HOLIDAY_CREATED` dizia só "é feriado", que era o motivo por definição —
+  comunicado não tem esse luxo. Migration V018 renomeia as linhas antigas para
+  `ANNOUNCEMENT_SUSPENSION` antes de trocar o CHECK, e a chave de idempotência
+  (a data) sobrevive à renomeação: quem já foi avisado não é avisado de novo.
+- **Corrigir um comunicado avisa de novo; repetir o mesmo, não.** Apagar e
+  recriar na mesma data com o outro efeito republica o evento com template
+  diferente, e o aluno recebe a correção — que é o que se quer, porque ele está
+  acreditando no aviso anterior. Recriar com o *mesmo* efeito cai na UNIQUE e
+  não reenvia nada, que também é o que se quer: é a mesma mensagem que ele já
+  leu. Os dois casos têm teste (`AnnouncementFanOutIT`).
 - **Reprocessar é trabalho de alguém.** Deixar a publicação incompleta não
   reentrega nada por si. Quem reentrega é o `EventRepublicationJob` (em
   `shared`, com ShedLock), que varre o registry a cada 5 minutos — e é o
@@ -114,7 +133,7 @@ duplicar mensagem. Único módulo que fala com o mundo externo.
   reprocessamento **entrega o aviso ao aluno**. O critério é o aviso chegar,
   não a linha ficar pendente — pendência é o mecanismo, e afirmar só isso
   deixa passar a versão em que ninguém reprocessa.
-- Feriado com 3 alunos ativos → 3 linhas em `notification_log`; falha no
+- Comunicado com 3 alunos ativos → 3 linhas em `notification_log`; falha no
   segundo aluno preserva a linha do primeiro.
 - Aluno sumido da fachada não recebe mensagem e não deixa evento preso.
 - Adapter testado com `MockRestServiceServer`; listeners com
@@ -154,7 +173,7 @@ duplicar mensagem. Único módulo que fala com o mundo externo.
 - **A republicação de subida do Modulith foi desligada.** Ela faz
   `resubmitIncompletePublications(__ -> true)` — tudo que está incompleto, sem
   olhar idade —, o que furava o teto de `max-age` e, sobretudo, impedia podar
-  `notification_log`: no fan-out de feriado as linhas dos já avisados convivem
+  `notification_log`: no fan-out de comunicado as linhas dos já avisados convivem
   com uma publicação incompleta, e apagá-las com a publicação ainda
   republicável reenviaria a mensagem. Desligada, o teto vale sempre e a poda
   fica segura; a recuperação após restart passa a levar até um tique do cron.

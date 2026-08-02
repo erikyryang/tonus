@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * O que o scheduling promete ao resto do sistema (docs/eventos.md): cancelar,
- * remarcar e cadastrar feriado publicam evento. É o contrato de que a
+ * remarcar e cadastrar comunicado publicam evento. É o contrato de que a
  * notificação vai depender — o scheduling não pode chamar WhatsApp, só avisar
  * que algo aconteceu.
  *
@@ -104,14 +104,16 @@ class SchedulingEventsIT {
     }
 
     @Test
-    void holidayPublishesHolidayCreated(AssertablePublishedEvents events) {
+    void announcementPublishesAnnouncementCreated(AssertablePublishedEvents events) {
         LocalDate date = LocalDate.parse("2026-12-25");
 
-        schedulingService.createHoliday(date, "Natal");
+        schedulingService.createAnnouncement(date, "Natal", true);
 
         assertThat(events)
-                .contains(HolidayCreated.class)
-                .matching(HolidayCreated::date, date);
+                .contains(AnnouncementCreated.class)
+                .matching(AnnouncementCreated::date, date)
+                .matching(AnnouncementCreated::description, "Natal")
+                .matching(AnnouncementCreated::suspendsClasses, true);
     }
 
     /**

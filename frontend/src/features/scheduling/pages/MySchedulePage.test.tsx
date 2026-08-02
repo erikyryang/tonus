@@ -61,13 +61,37 @@ describe('minha agenda (aluno)', () => {
   });
 
   /** Feriado explica por que o dia está vazio; sem a descrição, o aluno adivinharia. */
-  it('mostra o feriado que suprime a aula', async () => {
-    server.use(meOk(STUDENT), scheduleOf({ [TOMORROW]: day(TOMORROW, { holiday: 'Independência' }) }));
+  it('mostra o comunicado que suspende a aula', async () => {
+    server.use(meOk(STUDENT), scheduleOf({ [TOMORROW]: day(TOMORROW, { announcement: { description: 'Independência', suspendsClasses: true } }) }));
 
     renderApp('/me/schedule');
 
     const tomorrow = await screen.findByRole('listitem', { name: new RegExp(formatDate(TOMORROW)) });
     expect(within(tomorrow).getByText(/Independência/)).toBeInTheDocument();
+  });
+
+  /**
+   * O comunicado que não suspende também é do aluno: ele recebe o WhatsApp, e
+   * a agenda é onde ele volta para conferir. Mostrar só os que suspendem
+   * deixaria o aviso existindo em um lugar só — o que já passou.
+   */
+  it('mostra o comunicado que não suspende ao lado da aula', async () => {
+    server.use(
+      meOk(STUDENT),
+      scheduleOf({
+        [TOMORROW]: day(TOMORROW, {
+          announcement: { description: 'Obra na rua, entrada pelos fundos', suspendsClasses: false },
+          entries: [entry({ studentId: 1, time: '07:00' })],
+        }),
+      }),
+    );
+
+    renderApp('/me/schedule');
+
+    const tomorrow = await screen.findByRole('listitem', { name: new RegExp(formatDate(TOMORROW)) });
+    expect(within(tomorrow).getByText(/Obra na rua/)).toBeInTheDocument();
+    expect(within(tomorrow).getByText('07:00')).toBeInTheDocument();
+    expect(within(tomorrow).queryByText(/sem aula/i)).not.toBeInTheDocument();
   });
 
   /** Estado da spec: quem ainda não tem horário não vê uma semana de "sem aula". */
@@ -84,10 +108,10 @@ describe('minha agenda (aluno)', () => {
    * inteira vem vazia mesmo para quem tem horário. Concluir "você não tem
    * horário" daí mandaria o aluno à recepção resolver o que não está quebrado.
    */
-  it('não conclui que falta horário quando a janela inteira é feriado', async () => {
+  it('não conclui que falta horário quando a janela inteira está suspensa', async () => {
     server.use(
       meOk(STUDENT),
-      myScheduleHandler((date) => day(date, { holiday: 'Recesso' })),
+      myScheduleHandler((date) => day(date, { announcement: { description: 'Recesso', suspendsClasses: true } })),
     );
 
     renderApp('/me/schedule');

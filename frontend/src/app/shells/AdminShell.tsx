@@ -9,7 +9,7 @@ const NAV_ITEMS = [
   { to: '/admin/students', label: 'Alunos' },
   { to: '/admin/teachers', label: 'Professores' },
   { to: '/admin/default-schedules', label: 'Horários' },
-  { to: '/admin/holidays', label: 'Feriados' },
+  { to: '/admin/announcements', label: 'Comunicados' },
   { to: '/admin/subscriptions', label: 'Assinaturas' },
   { to: '/admin/invoices', label: 'Faturas' },
 ];

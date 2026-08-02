@@ -5,7 +5,7 @@ import { formatDayMonth } from '@/lib/formatters';
 import { ADMIN, meOk } from '@/test/authHandlers';
 import { createTestQueryClient, renderApp } from '@/test/renderApp';
 import {
-  HOLIDAY,
+  ANNOUNCED_DAY,
   MONDAY,
   SATURDAY,
   THURSDAY,
@@ -68,13 +68,13 @@ describe('agenda do dia', () => {
     expect(screen.getAllByRole('region')).toHaveLength(2);
   });
 
-  it('mostra o banner do feriado e nenhum grupo', async () => {
+  it('mostra o banner da suspensão e nenhum grupo', async () => {
     server.use(
       meOk(ADMIN),
-      dayScheduleHandler(() => day(HOLIDAY, { holiday: 'Independência do Brasil' })),
+      dayScheduleHandler(() => day(ANNOUNCED_DAY, { announcement: { description: 'Independência do Brasil', suspendsClasses: true } })),
     );
 
-    renderSchedule(HOLIDAY);
+    renderSchedule(ANNOUNCED_DAY);
 
     expect(await screen.findByText(/Independência do Brasil/)).toBeInTheDocument();
     expect(screen.queryByRole('region')).not.toBeInTheDocument();
@@ -341,7 +341,7 @@ describe('remarcar aula', () => {
     await user.click(await screen.findByRole('menuitem', { name: 'Remarcar' }));
 
     const dialog = await screen.findByRole('dialog');
-    fireEvent.change(within(dialog).getByLabelText('Nova data'), { target: { value: HOLIDAY } });
+    fireEvent.change(within(dialog).getByLabelText('Nova data'), { target: { value: ANNOUNCED_DAY } });
     fireEvent.change(within(dialog).getByLabelText('Nova hora'), { target: { value: '09:00' } });
     await user.click(within(dialog).getByRole('button', { name: 'Remarcar' }));
 

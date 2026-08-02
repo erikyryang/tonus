@@ -10,7 +10,7 @@ import { SubscriptionsPage } from '@/features/billing/pages/SubscriptionsPage';
 import { StudentsPage } from '@/features/registration/pages/StudentsPage';
 import { TeachersPage } from '@/features/registration/pages/TeachersPage';
 import { DefaultSchedulesPage } from '@/features/scheduling/pages/DefaultSchedulesPage';
-import { HolidaysPage } from '@/features/scheduling/pages/HolidaysPage';
+import { AnnouncementsPage } from '@/features/scheduling/pages/AnnouncementsPage';
 import { MyGridPage } from '@/features/scheduling/pages/MyGridPage';
 import { MySchedulePage } from '@/features/scheduling/pages/MySchedulePage';
 import { SchedulePage } from '@/features/scheduling/pages/SchedulePage';
@@ -33,7 +33,7 @@ export function AppRoutes() {
             <Route path="students" element={<StudentsPage />} />
             <Route path="teachers" element={<TeachersPage />} />
             <Route path="default-schedules" element={<DefaultSchedulesPage />} />
-            <Route path="holidays" element={<HolidaysPage />} />
+            <Route path="announcements" element={<AnnouncementsPage />} />
             <Route path="subscriptions" element={<SubscriptionsPage />} />
             <Route path="invoices" element={<InvoicesPage />} />
           </Route>

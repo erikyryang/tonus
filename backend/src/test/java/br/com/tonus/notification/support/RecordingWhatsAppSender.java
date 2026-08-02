@@ -48,6 +48,20 @@ public class RecordingWhatsAppSender implements WhatsAppSender {
     }
 
     /**
+     * A última mensagem que chegou a um telefone. O fan-out avisa todo aluno
+     * ativo do banco, então {@code sent().getLast()} pode ser de um aluno que
+     * outra classe deixou para trás — quem quer conferir o texto precisa dizer
+     * de quem ele é.
+     */
+    public String lastMessageTo(String phone) {
+        return sent.stream()
+                .filter(s -> s.phone().equals(phone))
+                .map(Sent::message)
+                .reduce((first, second) -> second)
+                .orElse(null);
+    }
+
+    /**
      * Tentativas, inclusive as que falharam. É o único sinal de que o listener
      * chegou a rodar quando o envio quebra — o registro em banco é desfeito
      * pelo rollback, então contar linha não serve para esperar por esse caso.

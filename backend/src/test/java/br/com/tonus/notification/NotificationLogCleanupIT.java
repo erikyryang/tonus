@@ -24,12 +24,12 @@ class NotificationLogCleanupIT extends AbstractNotificationIntegrationTest {
         // O relógio do teste é fixo; as datas são relativas a ele, e a retenção
         // padrão é de 180 dias.
         insertNotice(student.id(), "CLASS_CANCELED", "antigo", "'2025-01-10'");
-        insertNotice(student.id(), "HOLIDAY_CREATED", "recente", "now()");
+        insertNotice(student.id(), "ANNOUNCEMENT_SUSPENSION", "recente", "now()");
 
         cleanupJob.deleteOldNotices();
 
         assertThat(countLogs(student.id(), "CLASS_CANCELED")).isZero();
-        assertThat(countLogs(student.id(), "HOLIDAY_CREATED")).isEqualTo(1);
+        assertThat(countLogs(student.id(), "ANNOUNCEMENT_SUSPENSION")).isEqualTo(1);
     }
 
     /**

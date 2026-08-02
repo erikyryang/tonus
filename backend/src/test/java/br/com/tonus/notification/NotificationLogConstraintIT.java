@@ -36,7 +36,7 @@ class NotificationLogConstraintIT extends AbstractNotificationIntegrationTest {
         Student student = seedStudent("Aluno Dois Avisos");
         insertLog(student.id(), "CLASS_CANCELED", "2026-07-27");
 
-        assertThatCode(() -> insertLog(student.id(), "HOLIDAY_CREATED", "2026-07-27"))
+        assertThatCode(() -> insertLog(student.id(), "ANNOUNCEMENT_SUSPENSION", "2026-07-27"))
                 .doesNotThrowAnyException();
     }
 
@@ -44,9 +44,9 @@ class NotificationLogConstraintIT extends AbstractNotificationIntegrationTest {
     void sameNoticeForDifferentStudentsIsAllowed() {
         Student first = seedStudent("Aluno Feriado A");
         Student second = seedStudent("Aluno Feriado B");
-        insertLog(first.id(), "HOLIDAY_CREATED", "2026-12-25");
+        insertLog(first.id(), "ANNOUNCEMENT_SUSPENSION", "2026-12-25");
 
-        assertThatCode(() -> insertLog(second.id(), "HOLIDAY_CREATED", "2026-12-25"))
+        assertThatCode(() -> insertLog(second.id(), "ANNOUNCEMENT_SUSPENSION", "2026-12-25"))
                 .doesNotThrowAnyException();
     }
 

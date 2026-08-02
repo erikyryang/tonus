@@ -9,7 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * acontecer.
  *
  * Nenhuma das duas regras é constraint de banco, e nem poderia ser: as duas
- * dependem de estado fora da linha — a data de hoje e a tabela `holiday`. Por
+ * dependem de estado fora da linha — a data de hoje e a tabela `announcement`. Por
  * isso vivem no serviço, e por isso têm teste próprio.
  *
  * "Hoje" aqui é sempre {@link #MONDAY}, fixado por {@link SchedulingClockConfig}.
@@ -46,9 +46,9 @@ class RescheduleDateRulesIT extends AbstractSchedulingIntegrationTest {
     }
 
     @Test
-    void rescheduleOntoRegisteredHolidayIsRejected() throws Exception {
+    void rescheduleOntoSuspendedDayIsRejected() throws Exception {
         long studentId = seedStudent("Aluno Remarcado Pro Feriado");
-        createHoliday("2026-09-21", "Feriado que bloqueia remarcacao");
+        createAnnouncement("2026-09-21", "Feriado que bloqueia remarcacao", true);
 
         postException("""
                 {"studentId":%d,"date":"%s","type":"RESCHEDULED","newDate":"2026-09-21","newTime":"08:00"}
@@ -57,17 +57,33 @@ class RescheduleDateRulesIT extends AbstractSchedulingIntegrationTest {
     }
 
     /**
-     * A invariante é assumidamente parcial: o feriado cadastrado **depois** da
+     * O comunicado que não suspende não bloqueia nada: o dia continua tendo
+     * aula, e recusar a remarcação por causa de um aviso confundiria "avisei
+     * algo sobre esse dia" com "esse dia não existe".
+     */
+    @Test
+    void rescheduleOntoAnnouncedButWorkingDayIsAllowed() throws Exception {
+        long studentId = seedStudent("Aluno Remarcado Pro Dia Avisado");
+        createAnnouncement("2026-09-23", "Reforma da recepcao", false);
+
+        postException("""
+                {"studentId":%d,"date":"%s","type":"RESCHEDULED","newDate":"2026-09-23","newTime":"08:00"}
+                """.formatted(studentId, MONDAY))
+                .andExpect(status().isCreated());
+    }
+
+    /**
+     * A invariante é assumidamente parcial: a suspensão cadastrada **depois** da
      * remarcação não desfaz nada — a aula só some da agenda daquele dia, porque
      * a expansão suprime o dia inteiro. A checagem serve para o ADMIN descobrir
      * na hora, não para garantir consistência que este modelo não tem como dar.
      */
     @Test
-    void holidayRegisteredAfterRescheduleIsNotRejectedRetroactively() throws Exception {
+    void suspensionRegisteredAfterRescheduleIsNotRejectedRetroactively() throws Exception {
         long studentId = seedStudent("Aluno Do Feriado Posterior");
         rescheduleClass(studentId, MONDAY, "2026-09-22", "08:00");
 
-        createHoliday("2026-09-22", "Feriado cadastrado depois");
+        createAnnouncement("2026-09-22", "Feriado cadastrado depois", true);
     }
 
     /**

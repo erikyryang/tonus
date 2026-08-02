@@ -21,7 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class MyScheduleIT extends AbstractSchedulingIntegrationTest {
 
     /**
-     * Quarta-feira sem uso em nenhum outro teste. Feriado é global e o banco é
+     * Quarta-feira sem uso em nenhum outro teste. Comunicado é global e o banco é
      * compartilhado pela suíte: cadastrar um em MONDAY/TUESDAY apagaria a
      * agenda daquele dia para todas as outras classes.
      */
@@ -30,7 +30,7 @@ class MyScheduleIT extends AbstractSchedulingIntegrationTest {
     /**
      * Uma janela só desta classe, longe das datas que as outras usam.
      *
-     * Feriado é global e o banco é compartilhado pela suíte: marcar um feriado
+     * Comunicado é global e o banco é compartilhado pela suíte: suspender um dia
      * dentro de MONDAY..WEDNESDAY apagaria aquele dia para todo mundo, e
      * WEDNESDAY é justamente o destino das remarcações dos outros testes.
      */
@@ -102,20 +102,20 @@ class MyScheduleIT extends AbstractSchedulingIntegrationTest {
 
     /**
      * O aluno precisa saber por que o dia está vazio (SPEC-009). Sem a
-     * descrição do feriado, a tela dele teria de deduzir "está vazio, deve ser
-     * feriado" — inventando um motivo que não tem como conferir.
+     * descrição do comunicado, a tela dele teria de deduzir "está vazio, deve ser
+     * dia sem aula" — inventando um motivo que não tem como conferir.
      */
     @Test
-    void holidayExplainsTheEmptyDay() throws Exception {
+    void suspendedDayExplainsTheEmptyDay() throws Exception {
         long teacherId = createTeacher(unique("Professor Do Feriado No Me"));
         long studentId = createStudent(unique("Aluno Do Feriado No Me"), teacherId);
         createDefaultSchedule(studentId, "07:00");
-        createHoliday(OWN_HOLIDAY, "Feriado do Me");
+        createAnnouncement(OWN_HOLIDAY, "Feriado do Me", true);
 
         JsonNode day = mySchedule(linkedStudentCookie(studentId), OWN_HOLIDAY);
 
         assertThat(day.get("entries")).isEmpty();
-        assertThat(day.get("holiday").asText()).isEqualTo("Feriado do Me");
+        assertThat(day.get("announcement").get("description").asText()).isEqualTo("Feriado do Me");
     }
 
     /**
@@ -197,19 +197,19 @@ class MyScheduleIT extends AbstractSchedulingIntegrationTest {
                 .containsOnly(mine);
     }
 
-    /** Feriado e cancelamento explicam o dia vazio também na janela. */
+    /** Comunicado e cancelamento explicam o dia vazio também na janela. */
     @Test
-    void weekCarriesHolidayAndCancellation() throws Exception {
+    void weekCarriesAnnouncementAndCancellation() throws Exception {
         long teacherId = createTeacher(unique("Professor Da Semana Cheia"));
         long studentId = createStudent(unique("Aluno Da Semana Cheia"), teacherId);
         createDefaultSchedule(studentId, "07:00");
         cancelClass(studentId, WEEK_SECOND);
-        createHoliday(WEEK_HOLIDAY, "Feriado da Semana");
+        createAnnouncement(WEEK_HOLIDAY, "Feriado da Semana", true);
 
         JsonNode week = myWeek(linkedStudentCookie(studentId), WEEK_START, 3);
 
         assertThat(week.get(1).get("cancellations")).hasSize(1);
-        assertThat(week.get(2).get("holiday").asText()).isEqualTo("Feriado da Semana");
+        assertThat(week.get(2).get("announcement").get("description").asText()).isEqualTo("Feriado da Semana");
         assertThat(week.get(2).get("entries")).isEmpty();
     }
 

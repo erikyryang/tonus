@@ -87,11 +87,21 @@ Entrega concluída é apagada depois de `shared.events.retention` (7 dias), pelo
   exceção e recriá-la republica o evento com `originalDate` igual e destino
   diferente —, e chavear só pela origem engoliria o segundo aviso.
 
-### `HolidayCreated(LocalDate date)`
+### `AnnouncementCreated(LocalDate date, String description, boolean suspendsClasses)`
 
-- **Publica:** `scheduling`, em `SchedulingService.createHoliday`.
-- **Significa:** o dia inteiro deixou de ter aula, para todo mundo.
+- **Publica:** `scheduling`, em `SchedulingService.createAnnouncement`.
+- **Significa:** o estúdio tem um aviso sobre aquele dia. Com
+  `suspendsClasses`, o dia inteiro deixou de ter aula para todo mundo; sem ele,
+  é só informação e a agenda segue.
 - **Consome:** `notification` (SPEC-005) — avisa cada aluno por WhatsApp.
+- **Carrega descrição e efeito** porque a mensagem depende dos dois: "não
+  teremos aula" e "as aulas acontecem normalmente" são avisos opostos, e o
+  motivo é o que faz o aviso valer alguma coisa. Sem eles o consumidor teria de
+  perguntar à agenda para montar o texto, e `notification` não pergunta nada a
+  `scheduling` — a dependência é só de compilação, num sentido só.
+- **O template escolhido faz parte da idempotência:** `ANNOUNCEMENT_SUSPENSION`
+  e `ANNOUNCEMENT_NOTICE` são chaves diferentes em `notification_log`, com a
+  data como `reference_key` nas duas.
 - **Não carrega a lista de alunos afetados:** quem são eles é pergunta que o
   consumidor faz no momento do consumo, porque a resposta muda entre a
   publicação e o consumo.

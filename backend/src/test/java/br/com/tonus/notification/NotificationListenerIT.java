@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Os critérios de aceite da SPEC-005 que valem para um aluno só. O fan-out de
- * feriado tem classe própria (HolidayFanOutIT).
+ * comunicado tem classe própria (AnnouncementFanOutIT).
  *
  * Os eventos entram por publicação direta, e não chamando SchedulingService ou
  * BillingService: o que está sob teste é o consumo, e amarrar cada caso à

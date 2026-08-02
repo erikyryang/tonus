@@ -1,7 +1,7 @@
 package br.com.tonus.scheduling.internal.web;
 
 import br.com.tonus.scheduling.internal.ExceptionAlreadyExistsException;
-import br.com.tonus.scheduling.internal.HolidayAlreadyExistsException;
+import br.com.tonus.scheduling.internal.AnnouncementAlreadyExistsException;
 import br.com.tonus.scheduling.internal.InvalidExceptionTargetException;
 import br.com.tonus.scheduling.internal.InvalidRescheduleDateException;
 import br.com.tonus.scheduling.internal.ScheduleAlreadyExistsException;
@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice(assignableTypes = {
         DefaultScheduleController.class,
         ScheduleExceptionController.class,
-        HolidayController.class,
+        AnnouncementController.class,
         DayScheduleController.class,
         MyScheduleController.class})
 class SchedulingExceptionHandler {
@@ -28,7 +28,7 @@ class SchedulingExceptionHandler {
 
     @ExceptionHandler({ScheduleAlreadyExistsException.class,
             ExceptionAlreadyExistsException.class,
-            HolidayAlreadyExistsException.class})
+            AnnouncementAlreadyExistsException.class})
     ProblemDetail handleConflict(RuntimeException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
     }

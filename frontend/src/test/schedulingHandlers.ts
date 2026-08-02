@@ -5,8 +5,8 @@ import type {
   DayScheduleEntry,
   DefaultSchedule,
   DefaultScheduleInput,
-  Holiday,
-  HolidayInput,
+  Announcement,
+  AnnouncementInput,
   ScheduleExceptionRequest,
   TeacherGrid,
   TeacherGridSlot,
@@ -43,7 +43,7 @@ export const MONDAY = ANCHOR_MONDAY;
 export const WEDNESDAY = addDays(ANCHOR_MONDAY, 2);
 export const THURSDAY = addDays(ANCHOR_MONDAY, 3);
 export const SATURDAY = addDays(ANCHOR_MONDAY, 5);
-export const HOLIDAY = addDays(ANCHOR_MONDAY, 30);
+export const ANNOUNCED_DAY = addDays(ANCHOR_MONDAY, 30);
 
 export function entry(overrides: Partial<DayScheduleEntry> & { studentId: number }): DayScheduleEntry {
   return {
@@ -119,8 +119,8 @@ export function defaultSchedule(overrides: Partial<DefaultSchedule> & { id: numb
   return { studentId: 100 + overrides.id, time: '07:00', ...overrides };
 }
 
-export function holiday(overrides: Partial<Holiday> & { id: number }): Holiday {
-  return { date: HOLIDAY, description: 'Independência', ...overrides };
+export function announcement(overrides: Partial<Announcement> & { id: number }): Announcement {
+  return { date: ANNOUNCED_DAY, description: 'Independência', suspendsClasses: true, ...overrides };
 }
 
 export function defaultSchedulesHandler(
@@ -162,28 +162,31 @@ export function deleteDefaultScheduleOk(onRequest?: (id: number) => void) {
   });
 }
 
-export function holidaysHandler(resolve: (params: URLSearchParams) => Page<Holiday>, log?: string[]) {
-  return http.get('/api/holidays', ({ request }) => {
+export function announcementsHandler(
+  resolve: (params: URLSearchParams) => Page<Announcement>,
+  log?: string[],
+) {
+  return http.get('/api/announcements', ({ request }) => {
     const url = new URL(request.url);
     log?.push(url.search);
     return HttpResponse.json(resolve(url.searchParams));
   });
 }
 
-export function holidaysList(...holidays: Holiday[]) {
-  return holidaysHandler(() => pageOf(holidays));
+export function announcementsList(...announcements: Announcement[]) {
+  return announcementsHandler(() => pageOf(announcements));
 }
 
-export function createHolidayOk(onRequest?: (body: HolidayInput) => void, id = 80) {
-  return http.post('/api/holidays', async ({ request }) => {
-    const body = (await request.json()) as HolidayInput;
+export function createAnnouncementOk(onRequest?: (body: AnnouncementInput) => void, id = 80) {
+  return http.post('/api/announcements', async ({ request }) => {
+    const body = (await request.json()) as AnnouncementInput;
     onRequest?.(body);
-    return HttpResponse.json(holiday({ id, ...body }), { status: 201 });
+    return HttpResponse.json(announcement({ id, ...body }), { status: 201 });
   });
 }
 
-export function deleteHolidayOk(onRequest?: (id: number) => void) {
-  return http.delete('/api/holidays/:id', ({ params }) => {
+export function deleteAnnouncementOk(onRequest?: (id: number) => void) {
+  return http.delete('/api/announcements/:id', ({ params }) => {
     onRequest?.(Number(params.id));
     return new HttpResponse(null, { status: 204 });
   });

@@ -28,8 +28,14 @@ tela tem de específico.
 - /default-schedules: aluno (select de ativos) + hora (HH:mm).
   Excluir avisa: "todas as exceções deste aluno serão apagadas junto"
   (decisão da SPEC-003 refletida na UI).
-- /holidays: data + descrição; criar avisa: "todos os alunos ativos
-  serão notificados por WhatsApp". Excluir com confirmação.
+- /announcements: data + descrição + caixa "suspende as aulas do dia"
+  (desmarcada por padrão — suprimir o dia é o efeito caro, e efeito caro não
+  acontece por omissão). Criar avisa: "todos os alunos ativos serão
+  notificados por WhatsApp", com o texto mudando conforme a caixa, porque as
+  duas mensagens são opostas. A lista mostra o efeito numa coluna própria
+  ("Aulas suspensas" / "Aulas normais"): sem ela, dois comunicados pareceriam
+  a mesma coisa e um deles apaga o dia. Excluir com confirmação, e só promete
+  a volta das aulas quando elas estavam suspensas.
 - /subscriptions: aluno (select de ativos) e valor mensal (R$). Sem campo de
   vencimento: ele é o dia do cadastro do aluno (SPEC-004), e o formulário só
   diz de onde vem, com o hint do ajuste para fim de mês. A coluna da tabela
@@ -37,7 +43,10 @@ tela tem de específico.
 
 ## Telas /me (mobile-first, read-only)
 - /me/schedule (STUDENT): o horário padrão + as próximas exceções e
-  feriados que o afetam; estado "sem horário cadastrado".
+  comunicados que o afetam; estado "sem horário cadastrado". O comunicado que
+  suspende substitui a linha do dia ("Sem aula — <motivo>"); o que não suspende
+  aparece **ao lado** da hora, porque o dia continua tendo aula e o aluno volta
+  aqui para conferir o que recebeu por WhatsApp.
 - /me/invoices (STUDENT): lista com competência, valor, vencimento,
   status; OVERDUE em destaque.
 - /me/grid (TEACHER): o dia agrupado por hora com os alunos; mesma
@@ -79,9 +88,9 @@ tela tem de específico.
   (não há DELETE de aluno, para o histórico de cobrança não sumir), e filtrá-lo
   esconderia o caso mais caro que existe: quem foi embora devendo.
 - `GET /me/schedule` passa a devolver o dia do aluno **com** a descrição do
-  feriado e os cancelamentos dele (`SchedulingService.dayOfStudent`, que
+  comunicado e os cancelamentos dele (`SchedulingService.dayOfStudent`, que
   filtra `dayOf` em vez de reexpandir). Sem isso a tela do aluno não teria
-  como mostrar "os feriados que o afetam" — e "não tem aula hoje" ficaria
+  como mostrar "os comunicados que o afetam" — e "não tem aula hoje" ficaria
   idêntico a "sua aula de hoje foi cancelada".
 - `GET /me/schedule/week?from=&days=` → a janela do aluno numa chamada só,
   com o mesmo contrato do dia avulso repetido por data
@@ -99,20 +108,21 @@ tela tem de específico.
   só (`GET /me/schedule/week`). O "horário padrão" é derivado das aulas de
   origem TEMPLATE da janela — o back não expõe campo próprio para ele no
   contrato /me. O aviso de "sem horário cadastrado" olha só para aulas e
-  exceções: feriado não é evidência de horário. Com uma resposta só, ou a
+  exceções: comunicado não é evidência de horário. Com uma resposta só, ou a
   janela chegou inteira ou a tela mostra o erro e não conclui nada — não
   existe mais meia semana para conciliar.
 - Filtro de situação nas listagens vive na URL: ausência de parâmetro é
   "ativos" (o default), `?active=false` é inativos e `?active=all` é todos.
 - Navegação: `/admin/default-schedules` ("Horários") e
   `/admin/subscriptions` ("Assinaturas") entram no menu do ADMIN;
+  `/admin/holidays` virou `/admin/announcements` ("Comunicados");
   `/me/invoices` entra na barra do aluno (o professor, com uma tela só,
   não ganha navegação).
 - O recuo da página que deixou de existir (nascido na SPEC-008) virou o
   hook `usePageClamp` e vale para todas as listagens: desativar o único
   registro da última página não pode deixar a tela dizendo "nenhum aluno
   ativo" com a página 1 cheia.
-- 409 na criação de horário, feriado e assinatura é estado legítimo
+- 409 na criação de horário, comunicado e assinatura é estado legítimo
   ("alguém chegou primeiro"), não erro genérico: a tela mostra a mensagem
   do back e refaz a listagem, que já estava desatualizada. No 409 de login
   já em uso o botão continua armado — escolher outro login é a saída.

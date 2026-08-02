@@ -34,11 +34,20 @@ export interface DayScheduleCancellation {
   time?: string;
 }
 
+/** O comunicado do dia, quando existe. */
+export interface DayAnnouncement {
+  description: string;
+  suspendsClasses: boolean;
+}
+
 /** Espelha o DTO de GET /schedule/day. */
 export interface DaySchedule {
   date: string;
-  /** Descrição do feriado; ausente quando o dia não é feriado. */
-  holiday?: string;
+  /**
+   * Ausente no dia sem comunicado. Quando ele suspende as aulas, `entries` e
+   * `cancellations` vêm vazios — o dia inteiro está suprimido.
+   */
+  announcement?: DayAnnouncement | null;
   entries: DayScheduleEntry[];
   cancellations: DayScheduleCancellation[];
 }
@@ -72,16 +81,23 @@ export interface DefaultScheduleInput {
   time: string;
 }
 
-/** Espelha o DTO de /holidays. */
-export interface Holiday {
+/**
+ * Espelha o DTO de /announcements.
+ *
+ * `suspendsClasses` separa avisar de cancelar: com ele o dia some da agenda
+ * (era o antigo feriado); sem ele o comunicado só informa e a agenda segue.
+ */
+export interface Announcement {
   id: number;
   date: string;
   description: string;
+  suspendsClasses: boolean;
 }
 
-export interface HolidayInput {
+export interface AnnouncementInput {
   date: string;
   description: string;
+  suspendsClasses: boolean;
 }
 
 /**
@@ -116,8 +132,10 @@ export const defaultSchedulesKey = (page?: number) =>
     ? (['scheduling', 'default-schedules'] as const)
     : (['scheduling', 'default-schedules', page] as const);
 
-export const holidaysKey = (page?: number) =>
-  page === undefined ? (['scheduling', 'holidays'] as const) : (['scheduling', 'holidays', page] as const);
+export const announcementsKey = (page?: number) =>
+  page === undefined
+    ? (['scheduling', 'announcements'] as const)
+    : (['scheduling', 'announcements', page] as const);
 
 export const myScheduleWeekKey = (from: string, days: number) =>
   ['scheduling', 'me', 'schedule', 'week', from, days] as const;
@@ -140,9 +158,9 @@ export const schedulingApi = {
    */
   deleteDefaultSchedule: (id: number) => apiClient.delete<void>(`/default-schedules/${id}`),
 
-  holidays: (page: number) => apiClient.get<Page<Holiday>>(`/holidays?page=${page}`),
-  createHoliday: (input: HolidayInput) => apiClient.post<Holiday>('/holidays', input),
-  deleteHoliday: (id: number) => apiClient.delete<void>(`/holidays/${id}`),
+  announcements: (page: number) => apiClient.get<Page<Announcement>>(`/announcements?page=${page}`),
+  createAnnouncement: (input: AnnouncementInput) => apiClient.post<Announcement>('/announcements', input),
+  deleteAnnouncement: (id: number) => apiClient.delete<void>(`/announcements/${id}`),
 
   /**
    * O id do aluno e o do professor vêm do token: /me não aceita id nenhum.

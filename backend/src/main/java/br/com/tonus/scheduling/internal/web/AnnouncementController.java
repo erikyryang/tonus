@@ -19,38 +19,38 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/holidays")
-class HolidayController {
+@RequestMapping("/announcements")
+class AnnouncementController {
 
     private final SchedulingService schedulingService;
 
-    HolidayController(SchedulingService schedulingService) {
+    AnnouncementController(SchedulingService schedulingService) {
         this.schedulingService = schedulingService;
     }
 
     @PostMapping
-    ResponseEntity<HolidayResponse> create(@Valid @RequestBody HolidayRequest request) {
-        HolidayResponse response = HolidayResponse.from(
-                schedulingService.createHoliday(request.date(), request.description()));
-        return ResponseEntity.created(URI.create("/holidays/" + response.id())).body(response);
+    ResponseEntity<AnnouncementResponse> create(@Valid @RequestBody AnnouncementRequest request) {
+        AnnouncementResponse response = AnnouncementResponse.from(
+                schedulingService.createAnnouncement(request.date(), request.description(), request.suspendsClasses()));
+        return ResponseEntity.created(URI.create("/announcements/" + response.id())).body(response);
     }
 
     /**
      * Intervalo opcional: a lista cresce um punhado de linhas por ano e nunca
-     * é grande, mas "os feriados deste semestre" é a pergunta real de quem
+     * é grande, mas "os comunicados deste semestre" é a pergunta real de quem
      * monta a agenda.
      */
     @GetMapping
-    Page<HolidayResponse> list(
+    Page<AnnouncementResponse> list(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @PageableDefault Pageable pageable) {
-        return schedulingService.findHolidays(from, to, pageable).map(HolidayResponse::from);
+        return schedulingService.findAnnouncements(from, to, pageable).map(AnnouncementResponse::from);
     }
 
     @DeleteMapping("/{id}")
     ResponseEntity<Void> delete(@PathVariable Long id) {
-        schedulingService.deleteHoliday(id);
+        schedulingService.deleteAnnouncement(id);
         return ResponseEntity.noContent().build();
     }
 }

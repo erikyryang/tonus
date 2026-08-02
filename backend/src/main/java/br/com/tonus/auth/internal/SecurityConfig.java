@@ -63,7 +63,7 @@ public class SecurityConfig {
                         // aula, mas não decide horário nem feriado — deixá-lo
                         // escrever aqui lhe daria poder sobre alunos de outro.
                         .requestMatchers("/schedule/**", "/schedule-exceptions/**",
-                                "/default-schedules/**", "/holidays/**").hasRole("ADMIN")
+                                "/default-schedules/**", "/announcements/**").hasRole("ADMIN")
 
                         // Cobrança.
                         .requestMatchers("/subscriptions/**", "/invoices/**").hasRole("ADMIN")

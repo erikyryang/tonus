@@ -5,7 +5,7 @@ import br.com.tonus.registration.RegistrationFacade;
 import br.com.tonus.registration.StudentSummary;
 import br.com.tonus.scheduling.ClassCanceled;
 import br.com.tonus.scheduling.ClassRescheduled;
-import br.com.tonus.scheduling.HolidayCreated;
+import br.com.tonus.scheduling.AnnouncementCreated;
 import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
@@ -58,7 +58,7 @@ class SchedulingNotificationListener {
     }
 
     /**
-     * Feriado é o único evento que vira N mensagens.
+     * Comunicado é o único evento que vira N mensagens.
      *
      * Quem são os avisados vem do registration, não da agenda: o consumidor
      * natural seria quem sabe quem tem aula no dia, mas notification não
@@ -77,23 +77,33 @@ class SchedulingNotificationListener {
      * republicação tenta de novo depois — sem pagar o pedágio.
      */
     @ApplicationModuleListener
-    public void on(HolidayCreated event) {
+    public void on(AnnouncementCreated event) {
         String reference = event.date().toString();
+        /*
+         * O template é escolhido pelo efeito, e não é só o texto que muda: ele
+         * entra na chave de idempotência junto com a data. "Não teremos aula" e
+         * "as aulas acontecem normalmente" são avisos opostos, e mandar o
+         * primeiro por um comunicado que não suspende esvaziaria a sala num dia
+         * de aula.
+         */
+        MessageTemplate template = event.suspendsClasses()
+                ? MessageTemplate.ANNOUNCEMENT_SUSPENSION
+                : MessageTemplate.ANNOUNCEMENT_NOTICE;
         int limit = properties.consecutiveFailureLimit();
         List<Long> failed = new ArrayList<>();
         int consecutiveFailures = 0;
 
         for (StudentSummary student : registration.findActiveStudents()) {
             try {
-                notifications.notifyStudent(student.studentId(), MessageTemplate.HOLIDAY_CREATED,
-                        reference, MessageTemplate.date(event.date()));
+                notifications.notifyStudent(student.studentId(), template,
+                        reference, MessageTemplate.date(event.date()), event.description());
                 consecutiveFailures = 0;
             } catch (RuntimeException e) {
-                log.warn("Falha ao avisar o aluno {} do feriado {}", student.studentId(), reference, e);
+                log.warn("Falha ao avisar o aluno {} do comunicado {}", student.studentId(), reference, e);
                 failed.add(student.studentId());
                 if (++consecutiveFailures >= limit) {
                     throw new WhatsAppDeliveryException(
-                            "Feriado %s abortado após %d falhas seguidas; pendentes a partir de %s"
+                            "Comunicado %s abortado após %d falhas seguidas; pendentes a partir de %s"
                                     .formatted(reference, consecutiveFailures, failed));
                 }
             }
@@ -101,7 +111,7 @@ class SchedulingNotificationListener {
 
         if (!failed.isEmpty()) {
             throw new WhatsAppDeliveryException(
-                    "Feriado %s não avisado aos alunos %s".formatted(reference, failed));
+                    "Comunicado %s não avisado aos alunos %s".formatted(reference, failed));
         }
     }
 }

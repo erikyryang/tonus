@@ -6,7 +6,7 @@ import { Dialog, DialogActions } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { apiMessage } from '@/lib/apiError';
-import type { HolidayInput } from '../api/schedulingApi';
+import type { AnnouncementInput } from '../api/schedulingApi';
 
 const schema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Informe a data.'),
@@ -15,11 +15,12 @@ const schema = z.object({
     .trim()
     .min(1, 'Informe a descrição.')
     .max(255, 'A descrição pode ter no máximo 255 caracteres.'),
+  suspendsClasses: z.boolean(),
 });
 
-type HolidayForm = z.infer<typeof schema>;
+type AnnouncementForm = z.infer<typeof schema>;
 
-export function HolidayFormDialog({
+export function AnnouncementFormDialog({
   pending,
   error,
   onSubmit,
@@ -27,20 +28,25 @@ export function HolidayFormDialog({
 }: {
   pending: boolean;
   error: unknown;
-  onSubmit: (values: HolidayInput) => void;
+  onSubmit: (values: AnnouncementInput) => void;
   onClose: () => void;
 }) {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
-  } = useForm<HolidayForm>({
+  } = useForm<AnnouncementForm>({
     resolver: zodResolver(schema),
-    defaultValues: { date: '', description: '' },
+    // Desmarcado por padrão: suprimir o dia é o efeito caro, e efeito caro não
+    // acontece por omissão.
+    defaultValues: { date: '', description: '', suspendsClasses: false },
   });
 
+  const suspends = watch('suspendsClasses');
+
   return (
-    <Dialog title="Novo feriado" onClose={onClose} busy={pending}>
+    <Dialog title="Novo comunicado" onClose={onClose} busy={pending}>
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
         <div className="space-y-1">
           <Label htmlFor="date">Data</Label>
@@ -58,10 +64,25 @@ export function HolidayFormDialog({
           {errors.description && <p className="text-sm text-red-600">{errors.description.message}</p>}
         </div>
 
+        <div className="flex items-center gap-2">
+          <input
+            id="suspendsClasses"
+            type="checkbox"
+            className="h-4 w-4 rounded border-slate-300"
+            {...register('suspendsClasses')}
+          />
+          <Label htmlFor="suspendsClasses">Suspende as aulas do dia</Label>
+        </div>
+
         {/* O efeito real, e não "tem certeza?": a descrição vai no texto da
-            mensagem, e mensagem enviada não volta atrás. */}
+            mensagem, e mensagem enviada não volta atrás. O texto muda com a
+            caixa porque as duas mensagens são opostas — quem avisa precisa
+            saber qual delas o aluno vai ler. */}
         <p className="text-sm font-medium text-slate-900">
-          Ao salvar, todos os alunos ativos serão notificados por WhatsApp de que não haverá aula.
+          Ao salvar, todos os alunos ativos serão notificados por WhatsApp
+          {suspends
+            ? ' de que não haverá aula nesse dia.'
+            : '. A mensagem diz que as aulas acontecem normalmente.'}
         </p>
 
         {error != null && (

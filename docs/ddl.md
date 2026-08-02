@@ -36,6 +36,8 @@ Toda mudança entra como migration nova; migration aplicada não se edita.
 | V014 | shared | `shedlock` (tabela de lock do ShedLock) |
 | V015 | notification | `notification_log` |
 | V016 | billing | realinha `subscription.due_day` para o dia do cadastro do aluno (dado, não schema) |
+| V017 | scheduling | `announcement` (substitui `holiday`, que é copiado e removido) |
+| V018 | notification | templates de comunicado no CHECK de `notification_log` |
 
 ---
 
@@ -127,17 +129,24 @@ Toda mudança entra como migration nova; migration aplicada não se edita.
   expansão da agenda pergunta duas coisas por dia: quem tem exceção em D (para
   subtrair) e quem foi remarcado para D (para somar).
 
-## `holiday` (scheduling)
+## `announcement` (scheduling)
 
-`id`, `date`, `description`, timestamps.
+`id`, `date`, `description`, `suspends_classes`, timestamps.
 
-- `uk_holiday_date` — feriado é global, uma linha por data. Duplicata tornaria
-  ambíguo o "existe feriado em D?" que a expansão da agenda pergunta.
-- Não existe feriado por professor ou por turma: se existisse, a pergunta
+- Substituiu `holiday` na V017: o conceito precisava cobrir o aviso que **não**
+  cancela aula, e o feriado era o caso particular com `suspends_classes = true`.
+  Cada linha antiga foi copiada assim, e a tabela morreu depois da cópia.
+- `uk_announcement_date` — comunicado é global, uma linha por data. Duplicata
+  tornaria ambíguo o "as aulas de D estão suspensas?" que a expansão da agenda
+  pergunta, e engoliria o segundo aviso: a chave de idempotência em
+  `notification_log` é a data.
+- `suspends_classes NOT NULL`, sem default — a diferença entre avisar e
+  cancelar não pode ser preenchida por omissão.
+- Não existe comunicado por professor ou por turma: se existisse, a pergunta
   deixaria de ter resposta única.
 
 Nenhuma tabela de agenda guarda aula materializada: a agenda de um dia é
-derivada a cada consulta (template − feriado − exceções + remarcações).
+derivada a cada consulta (template − suspensão − exceções + remarcações).
 Materializar obrigaria a gerar linhas para o futuro inteiro e a reconciliar
 tudo a cada troca de horário.
 
@@ -230,7 +239,7 @@ timestamps.
   SELECT e o envio. Mesmo raciocínio de `uk_invoice_subscription_period`.
 - `reference_key` é `VARCHAR` e não uma coluna por tipo de evento: cada
   template deriva sua chave do próprio payload (a data em `CLASS_CANCELED` e
-  `HOLIDAY_CREATED`, o id da fatura nos três de cobrança, origem+destino em
+  os dois de comunicado, o id da fatura nos três de cobrança, origem+destino em
   `CLASS_RESCHEDULED`) e não há formato comum entre eles.
 - `ck_notification_log_template CHECK (template IN (...))` — mesma razão do
   CHECK de `invoice.status`.
@@ -245,7 +254,7 @@ timestamps.
 - **Podada por `notification.log-retention` (180 dias), e isso só é seguro
   porque a reentrega tem teto.** A linha é a chave de idempotência: apagá-la
   enquanto a publicação correspondente ainda puder ser reentregue faz o aluno
-  receber a mensagem de novo — e no fan-out de feriado as linhas dos já
+  receber a mensagem de novo — e no fan-out de comunicado as linhas dos já
   avisados convivem com uma publicação incompleta, então o caso não é
   hipotético. O teto é `shared.events.max-age` (24h) somado a
   `republish-outstanding-events-on-restart=false`; ligado, o Modulith

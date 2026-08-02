@@ -43,14 +43,14 @@ export function MySchedulePage() {
    * aquele dia está vazio, e some junto com a lista se ela não aparecer.
    */
   const hasSchedule = days.some((day) => day.entries.length > 0 || day.cancellations.length > 0);
-  const hasContent = hasSchedule || days.some((day) => day.holiday);
+  const hasContent = hasSchedule || days.some((day) => day.announcement);
   /**
    * A ausência de aula só significa "não tem horário" se algum dia da janela
    * pudesse ter mostrado uma. Fim de semana nunca tem, e feriado suprime o dia
    * para todo mundo — numa semana de recesso o aluno com horário veria os sete
    * dias vazios e seria mandado à recepção resolver o que não está quebrado.
    */
-  const couldHaveShownClass = days.some((day) => !day.holiday && !isWeekend(day.date));
+  const couldHaveShownClass = days.some((day) => !day.announcement?.suspendsClasses && !isWeekend(day.date));
 
   return (
     <section className="space-y-4">
@@ -107,18 +107,38 @@ function DayRow({ day }: { day: DaySchedule }) {
  * primeira versão, apagava justamente o aviso que o aluno precisa ver.
  */
 function DayStatus({ day }: { day: DaySchedule }) {
-  if (day.holiday) {
+  if (day.announcement?.suspendsClasses) {
     return (
-      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">Feriado — {day.holiday}</span>
+      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">
+        Sem aula — {day.announcement.description}
+      </span>
     );
   }
 
+  /*
+   * O comunicado que não suspende acompanha a aula em vez de substituí-la: o
+   * aluno recebeu o WhatsApp e volta aqui para conferir, e mostrar o aviso sem
+   * a hora — ou a hora sem o aviso — deixaria metade da informação fora da
+   * única tela que ele abre.
+   */
+  const notice = day.announcement ? (
+    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
+      {day.announcement.description}
+    </span>
+  ) : null;
+
   if (day.entries.length === 0 && day.cancellations.length === 0) {
-    return <span className="text-sm text-slate-500">{isWeekend(day.date) ? 'Fim de semana' : 'Sem aula'}</span>;
+    return (
+      <>
+        {notice}
+        <span className="text-sm text-slate-500">{isWeekend(day.date) ? 'Fim de semana' : 'Sem aula'}</span>
+      </>
+    );
   }
 
   return (
     <>
+      {notice}
       {day.entries.map((entry) => (
         <span key={`${entry.time}-${entry.exceptionId ?? 'template'}`} className="flex items-center gap-2">
           <span className="text-sm font-semibold text-slate-900">{entry.time}</span>

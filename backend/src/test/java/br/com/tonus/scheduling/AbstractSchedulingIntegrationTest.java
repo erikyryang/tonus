@@ -56,19 +56,20 @@ abstract class AbstractSchedulingIntegrationTest extends AbstractRegistrationInt
                         """.formatted(studentId, time)));
     }
 
-    protected long createHoliday(String date, String description) throws Exception {
-        return idOf(postHoliday(date, description)
+    protected long createAnnouncement(String date, String description, boolean suspendsClasses) throws Exception {
+        return idOf(postAnnouncement(date, description, suspendsClasses)
                 .andExpect(status().isCreated())
                 .andReturn());
     }
 
-    protected ResultActions postHoliday(String date, String description) throws Exception {
-        return mockMvc.perform(post("/holidays")
+    protected ResultActions postAnnouncement(String date, String description, boolean suspendsClasses)
+            throws Exception {
+        return mockMvc.perform(post("/announcements")
                 .cookie(admin)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"date":"%s","description":"%s"}
-                        """.formatted(date, description)));
+                        {"date":"%s","description":"%s","suspendsClasses":%b}
+                        """.formatted(date, description, suspendsClasses)));
     }
 
     protected long cancelClass(long studentId, String date) throws Exception {

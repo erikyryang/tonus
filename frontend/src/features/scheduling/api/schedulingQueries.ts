@@ -2,10 +2,10 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { isConflict } from '@/lib/apiError';
 import {
   type DefaultScheduleInput,
-  type HolidayInput,
+  type AnnouncementInput,
   dayScheduleKey,
   defaultSchedulesKey,
-  holidaysKey,
+  announcementsKey,
   myGridKey,
   myScheduleWeekKey,
   schedulingApi,
@@ -30,7 +30,7 @@ export function useDaySchedule(date: string) {
  *
  * Na escala do estúdio o refetch é instantâneo, e escrever o resultado à mão no
  * cache exigiria reimplementar no front a expansão da agenda (template −
- * feriado − exceções + remarcações) só para desfazê-la se a chamada falhasse.
+ * comunicado − exceções + remarcações) só para desfazê-la se a chamada falhasse.
  */
 function useDayInvalidation() {
   const queryClient = useQueryClient();
@@ -79,8 +79,8 @@ export function useUndoException(date: string) {
 }
 
 /**
- * Configuração da agenda (horário padrão e feriado) muda a expansão de
- * qualquer dia: o feriado apaga o dia inteiro, e apagar um horário leva junto
+ * Configuração da agenda (horário padrão e comunicado) muda a expansão de
+ * qualquer dia: o comunicado apaga o dia inteiro, e apagar um horário leva junto
  * as exceções do aluno. Invalidar só a própria listagem deixaria a agenda do
  * ADMIN mostrando aula que não vai acontecer.
  */
@@ -134,19 +134,19 @@ export function useDeleteDefaultSchedule() {
   });
 }
 
-export function useHolidays(page: number) {
+export function useAnnouncements(page: number) {
   return useQuery({
-    queryKey: holidaysKey(page),
-    queryFn: () => schedulingApi.holidays(page),
+    queryKey: announcementsKey(page),
+    queryFn: () => schedulingApi.announcements(page),
     placeholderData: keepPreviousData,
   });
 }
 
-/** 409 aqui é "esse feriado já está cadastrado" — mesma leitura do horário. */
-export function useCreateHoliday() {
+/** 409 aqui é "esse comunicado já está cadastrado" — mesma leitura do horário. */
+export function useCreateAnnouncement() {
   const invalidate = useSchedulingInvalidation();
   return useMutation({
-    mutationFn: (input: HolidayInput) => schedulingApi.createHoliday(input),
+    mutationFn: (input: AnnouncementInput) => schedulingApi.createAnnouncement(input),
     onSuccess: invalidate,
     onError: (error) => {
       if (isConflict(error)) invalidate();
@@ -154,10 +154,10 @@ export function useCreateHoliday() {
   });
 }
 
-export function useDeleteHoliday() {
+export function useDeleteAnnouncement() {
   const invalidate = useSchedulingInvalidation();
   return useMutation({
-    mutationFn: (id: number) => schedulingApi.deleteHoliday(id),
+    mutationFn: (id: number) => schedulingApi.deleteAnnouncement(id),
     onSuccess: invalidate,
   });
 }

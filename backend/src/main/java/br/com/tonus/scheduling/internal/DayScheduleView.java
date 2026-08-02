@@ -6,15 +6,24 @@ import java.util.List;
 /**
  * O estado completo de um dia para quem enxerga o estúdio inteiro.
  *
- * Feriado, agenda e cancelamentos andam juntos porque só juntos explicam o dia:
- * uma lista vazia sozinha não distingue "é feriado", "é sábado" e "ninguém tem
- * aula marcada", e quem recebesse só a lista teria de adivinhar qual dos três.
+ * Comunicado, agenda e cancelamentos andam juntos porque só juntos explicam o
+ * dia: uma lista vazia sozinha não distingue "as aulas estão suspensas", "é
+ * sábado" e "ninguém tem aula marcada", e quem recebesse só a lista teria de
+ * adivinhar qual dos três.
  *
- * {@code holiday} é nulo fora de feriado; num feriado as duas listas são vazias,
- * porque o dia inteiro está suprimido.
+ * {@code announcement} é nulo no dia sem comunicado. Quando ele suspende as
+ * aulas, as duas listas vêm vazias — o dia inteiro está suprimido. Quando não
+ * suspende, ele é só informação ao lado de uma agenda normal.
  */
 public record DayScheduleView(LocalDate date,
-                              String holiday,
+                              Announcement announcement,
                               List<ScheduleEntry> entries,
                               List<CanceledEntry> cancellations) {
+
+    /**
+     * O comunicado como o dia o enxerga: o que dizer e se some com as aulas.
+     * Não é a entidade — a agenda não expõe linha de banco (ver CLAUDE.md).
+     */
+    public record Announcement(String description, boolean suspendsClasses) {
+    }
 }

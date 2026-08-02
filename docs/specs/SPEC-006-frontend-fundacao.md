@@ -58,7 +58,7 @@ do frontend: tudo que as telas de negócio vão assumir como dado.
   /login. Cache sujo de um usuário não pode vazar para o próximo login.
 - Rotas protegidas por papel:
     - ADMIN → shell desktop com sidebar (Agenda, Alunos, Professores,
-      Faturas, Feriados — links podem apontar para placeholder).
+      Faturas, Comunicados — links podem apontar para placeholder).
     - STUDENT → shell mobile-first, destino /me/schedule (placeholder).
     - TEACHER → shell mobile-first, destino /me/grid (placeholder).
     - Papel sem acesso à rota → redirect para o destino do próprio papel,

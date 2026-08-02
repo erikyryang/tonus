@@ -43,7 +43,7 @@ describe('LoginPage', () => {
     expect(await screen.findByRole('link', { name: 'Alunos' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Professores' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Faturas' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Feriados' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Comunicados' })).toBeInTheDocument();
     expect(screen.getByText('Ana Admin')).toBeInTheDocument();
   });
 

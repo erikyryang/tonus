@@ -9,10 +9,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * O que a agenda do dia precisa carregar para o painel de recepção da SPEC-007.
  *
  * A tela não pode remontar a regra do dia por conta própria: se ela cruzasse
- * feriado, exceção e template no navegador, existiriam duas implementações da
+ * comunicado, exceção e template no navegador, existiriam duas implementações da
  * mesma expansão e uma delas ficaria para trás. Então o dia já vem com nome do
  * professor (para agrupar), origem da remarcação (para a badge), id da exceção
- * (para desfazer), descrição do feriado (para o banner) e os cancelamentos —
+ * (para desfazer), o comunicado do dia (para o banner) e os cancelamentos —
  * que a agenda esconde por definição e o ADMIN precisa ver para poder desfazer.
  */
 class DayScheduleForAdminPanelIT extends AbstractSchedulingIntegrationTest {
@@ -69,25 +69,25 @@ class DayScheduleForAdminPanelIT extends AbstractSchedulingIntegrationTest {
     }
 
     /**
-     * Data exclusiva deste teste. {@code holiday.date} é UNIQUE e o banco é
+     * Data exclusiva deste teste. {@code announcement.date} é UNIQUE e o banco é
      * compartilhado por toda a execução: reaproveitar a data de outro IT faz o
      * segundo a rodar receber 409 — e qual dos dois quebra depende da ordem.
      */
     @Test
-    void holidayDayCarriesItsDescription() throws Exception {
+    void suspendedDayCarriesItsAnnouncement() throws Exception {
         String date = "2026-10-28";
-        createHoliday(date, "Feriado do painel");
+        createAnnouncement(date, "Feriado do painel", true);
 
         JsonNode day = daySchedule(date);
 
-        assertThat(day.get("holiday").asText()).isEqualTo("Feriado do painel");
+        assertThat(day.get("announcement").get("description").asText()).isEqualTo("Feriado do painel");
         assertThat(day.get("entries")).isEmpty();
         assertThat(day.get("cancellations")).isEmpty();
     }
 
     @Test
-    void ordinaryDayHasNoHoliday() throws Exception {
-        assertThat(daySchedule(TUESDAY).get("holiday").isNull()).isTrue();
+    void ordinaryDayHasNoAnnouncement() throws Exception {
+        assertThat(daySchedule(TUESDAY).get("announcement").isNull()).isTrue();
     }
 
     /**

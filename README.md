@@ -207,7 +207,8 @@ Backend e frontend completos até a SPEC-007.
   `POST /users`. Quem é desativado no cadastro tem o acesso revogado
   automaticamente, por evento.
 - **SPEC-003 (`scheduling`)** — agenda recorrente seg–sex por horário padrão,
-  com exceções pontuais (cancelamento e remarcação) e feriados. A agenda de um
+  com exceções pontuais (cancelamento e remarcação) e comunicados do estúdio,
+  que podem ou não suspender as aulas do dia. A agenda de um
   dia é derivada a cada consulta, nunca materializada. Endpoints
   `/schedule/day` (ADMIN), `/me/schedule` (aluno) e `/me/grid` (professor).
 - **SPEC-004 (`billing`)** — ciclo assinatura → fatura → pagamento, com job
