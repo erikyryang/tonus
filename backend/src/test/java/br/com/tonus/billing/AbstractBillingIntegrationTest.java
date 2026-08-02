@@ -31,19 +31,23 @@ abstract class AbstractBillingIntegrationTest extends AbstractRegistrationIntegr
     @Autowired
     protected JdbcTemplate jdbcTemplate;
 
-    protected long createSubscription(long studentId, String monthlyAmount, int dueDay) throws Exception {
-        return idOf(postSubscription(studentId, monthlyAmount, dueDay)
+    /**
+     * Sem dia de vencimento: ele vem do dia do cadastro do aluno, e não do
+     * corpo da requisição (SPEC-004).
+     */
+    protected long createSubscription(long studentId, String monthlyAmount) throws Exception {
+        return idOf(postSubscription(studentId, monthlyAmount)
                 .andExpect(status().isCreated())
                 .andReturn());
     }
 
-    protected ResultActions postSubscription(long studentId, String monthlyAmount, int dueDay) throws Exception {
+    protected ResultActions postSubscription(long studentId, String monthlyAmount) throws Exception {
         return mockMvc.perform(post("/subscriptions")
                 .cookie(admin)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"studentId":%d,"monthlyAmount":%s,"dueDay":%d}
-                        """.formatted(studentId, monthlyAmount, dueDay)));
+                        {"studentId":%d,"monthlyAmount":%s}
+                        """.formatted(studentId, monthlyAmount)));
     }
 
     protected long seedInvoice(long subscriptionId, String referenceMonth, String amount, String dueDate, String status) {

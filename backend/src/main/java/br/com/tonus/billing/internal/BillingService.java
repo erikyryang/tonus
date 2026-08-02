@@ -55,19 +55,24 @@ public class BillingService {
         this.billingProperties = billingProperties;
     }
 
+    /**
+     * O dia de vencimento vem do cadastro do aluno, não do pedido: é o dia do
+     * mês em que ele entrou no estúdio (SPEC-004).
+     */
     @Transactional
-    public Subscription createSubscription(Long studentId, BigDecimal monthlyAmount, int dueDay) {
+    public Subscription createSubscription(Long studentId, BigDecimal monthlyAmount) {
         requireActiveStudent(studentId);
         if (subscriptionRepository.existsByStudentId(studentId)) {
             throw new SubscriptionAlreadyExistsException(studentId);
         }
-        return subscriptionRepository.save(new Subscription(studentId, monthlyAmount, dueDay));
+        return subscriptionRepository.save(
+                new Subscription(studentId, monthlyAmount, dueDayOfRegistration(studentId)));
     }
 
     @Transactional
-    public Subscription updateSubscription(Long id, BigDecimal monthlyAmount, int dueDay) {
+    public Subscription updateSubscription(Long id, BigDecimal monthlyAmount) {
         Subscription subscription = requireSubscription(id);
-        subscription.update(monthlyAmount, dueDay);
+        subscription.update(monthlyAmount);
         return subscriptionRepository.save(subscription);
     }
 
@@ -158,9 +163,12 @@ public class BillingService {
     }
 
     /**
-     * Baixa: fatura vira PAGA, pagamento é criado, assinatura recalcula o
-     * vencimento para o aniversário do pagamento, evento é publicado. Tudo na
+     * Baixa: fatura vira PAGA, pagamento é criado, evento é publicado. Tudo na
      * mesma transação, como a spec exige.
+     *
+     * O vencimento da assinatura <strong>não</strong> se mexe. Mexia — virava o
+     * aniversário do pagamento —, e pagar em atraso empurrava a mensalidade para
+     * o dia do atraso, mês após mês. Ver SPEC-004.
      *
      * A data vem sempre de quem chama — o Clock aqui é a autoridade do "hoje"
      * que decide se ela está no futuro, não um valor padrão.
@@ -179,9 +187,6 @@ public class BillingService {
         paymentRepository.save(new Payment(invoiceId, paymentDate, registeredBy));
 
         Subscription subscription = requireSubscription(invoice.getSubscriptionId());
-        subscription.realignDueDayTo(paymentDate);
-        subscriptionRepository.save(subscription);
-
         events.publishEvent(new PaymentRegistered(invoiceId, subscription.getStudentId(), paymentDate, invoice.getAmount()));
         return new InvoiceView(invoice, subscription.getStudentId(),
                 studentNameOf(subscription.getStudentId()), paymentDate);
@@ -271,6 +276,18 @@ public class BillingService {
         return registrationFacade.findStudentContact(studentId)
                 .map(StudentContact::name)
                 .orElse(null);
+    }
+
+    /**
+     * O dia do mês do cadastro. O aluno já foi conferido como ativo antes daqui,
+     * então "não achei a data" é inconsistência de verdade, não caso de borda —
+     * e vira o mesmo erro de aluno desconhecido em vez de um vencimento
+     * inventado.
+     */
+    private int dueDayOfRegistration(Long studentId) {
+        return registrationFacade.findRegistrationDate(studentId)
+                .orElseThrow(() -> new UnknownStudentException(studentId))
+                .getDayOfMonth();
     }
 
     private void requireActiveStudent(Long studentId) {

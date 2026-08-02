@@ -194,7 +194,7 @@ describe('dar baixa', () => {
 
   /**
    * Critério de aceite: o fluxo inteiro. É a ação de maior consequência da UI —
-   * dispara recibo real por WhatsApp e mexe no vencimento da assinatura.
+   * dispara recibo real por WhatsApp.
    */
   it('confirma, envia a data escolhida e a lista volta com a fatura paga', async () => {
     const sent: Array<{ id: number; paymentDate: string }> = [];
@@ -222,7 +222,8 @@ describe('dar baixa', () => {
     expect(within(dialog).getByText(/receberá a confirmação por WhatsApp/i)).toBeInTheDocument();
 
     fireEvent.change(within(dialog).getByLabelText('Data do pagamento'), { target: { value: '2026-07-20' } });
-    expect(within(dialog).getByText(/vencimento da assinatura será recalculado para o dia 20/i)).toBeInTheDocument();
+    // A baixa não mexe mais no vencimento (SPEC-004): prometer isso seria mentir.
+    expect(within(dialog).queryByText(/vencimento da assinatura/i)).not.toBeInTheDocument();
 
     await user.click(within(dialog).getByRole('button', { name: 'Dar baixa' }));
 

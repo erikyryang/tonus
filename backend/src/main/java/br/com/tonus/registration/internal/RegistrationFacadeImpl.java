@@ -7,6 +7,8 @@ import br.com.tonus.registration.internal.domain.Student;
 import br.com.tonus.registration.internal.domain.StudentRepository;
 import br.com.tonus.registration.internal.domain.Teacher;
 import br.com.tonus.registration.internal.domain.TeacherRepository;
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -21,10 +23,12 @@ class RegistrationFacadeImpl implements RegistrationFacade {
 
     private final StudentRepository studentRepository;
     private final TeacherRepository teacherRepository;
+    private final Clock clock;
 
-    RegistrationFacadeImpl(StudentRepository studentRepository, TeacherRepository teacherRepository) {
+    RegistrationFacadeImpl(StudentRepository studentRepository, TeacherRepository teacherRepository, Clock clock) {
         this.studentRepository = studentRepository;
         this.teacherRepository = teacherRepository;
+        this.clock = clock;
     }
 
     @Override
@@ -76,6 +80,19 @@ class RegistrationFacadeImpl implements RegistrationFacade {
         }
         return studentRepository.findAllById(studentIds).stream()
                 .collect(Collectors.toMap(Student::getId, Student::getPhone));
+    }
+
+    /**
+     * O instante do cadastro vira dia no fuso do estúdio, e não em UTC: o
+     * cadastro feito às 21h30 de Brasília é do dia 5 para quem estava lá, e em
+     * UTC seria dia 6 — a mensalidade venceria um dia depois do que deveria,
+     * para todo aluno cadastrado no fim da noite.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<LocalDate> findRegistrationDate(Long studentId) {
+        return studentRepository.findById(studentId)
+                .map(student -> LocalDate.ofInstant(student.getCreatedAt(), clock.getZone()));
     }
 
     @Override

@@ -30,7 +30,7 @@ class SubscriptionController {
     @PostMapping
     ResponseEntity<SubscriptionResponse> create(@Valid @RequestBody SubscriptionRequest request) {
         SubscriptionResponse response = SubscriptionResponse.from(
-                billingService.createSubscription(request.studentId(), request.monthlyAmount(), request.dueDay()));
+                billingService.createSubscription(request.studentId(), request.monthlyAmount()));
         return ResponseEntity.created(URI.create("/subscriptions/" + response.id())).body(response);
     }
 
@@ -47,7 +47,7 @@ class SubscriptionController {
     @PutMapping("/{id}")
     SubscriptionResponse update(@PathVariable Long id, @Valid @RequestBody SubscriptionRequest request) {
         return SubscriptionResponse.from(
-                billingService.updateSubscription(id, request.monthlyAmount(), request.dueDay()));
+                billingService.updateSubscription(id, request.monthlyAmount()));
     }
 
     @PatchMapping("/{id}/activate")

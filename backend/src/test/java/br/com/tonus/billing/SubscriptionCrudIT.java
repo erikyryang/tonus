@@ -19,7 +19,7 @@ class SubscriptionCrudIT extends AbstractBillingIntegrationTest {
         long teacherId = createTeacher(unique("Professor Da Assinatura"));
         long studentId = createStudent(unique("Aluno Da Assinatura"), teacherId);
 
-        long id = createSubscription(studentId, "250.00", 10);
+        long id = createSubscription(studentId, "250.00");
 
         MvcResult result = mockMvc.perform(get("/subscriptions").param("size", "100").cookie(admin))
                 .andExpect(status().isOk())
@@ -32,7 +32,7 @@ class SubscriptionCrudIT extends AbstractBillingIntegrationTest {
     void getsSubscriptionById() throws Exception {
         long teacherId = createTeacher(unique("Professor Do Get"));
         long studentId = createStudent(unique("Aluno Do Get"), teacherId);
-        long id = createSubscription(studentId, "250.00", 10);
+        long id = createSubscription(studentId, "250.00");
 
         mockMvc.perform(get("/subscriptions/{id}", id).cookie(admin))
                 .andExpect(status().isOk())
@@ -50,24 +50,23 @@ class SubscriptionCrudIT extends AbstractBillingIntegrationTest {
     void updatesSubscription() throws Exception {
         long teacherId = createTeacher(unique("Professor Da Troca"));
         long studentId = createStudent(unique("Aluno Da Troca"), teacherId);
-        long id = createSubscription(studentId, "200.00", 5);
+        long id = createSubscription(studentId, "200.00");
 
         mockMvc.perform(put("/subscriptions/{id}", id)
                         .cookie(admin)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"studentId":%d,"monthlyAmount":"300.00","dueDay":20}
+                                {"studentId":%d,"monthlyAmount":"300.00"}
                                 """.formatted(studentId)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.monthlyAmount").value(300.00))
-                .andExpect(jsonPath("$.dueDay").value(20));
+                .andExpect(jsonPath("$.monthlyAmount").value(300.00));
     }
 
     @Test
     void activatesAndDeactivatesSubscription() throws Exception {
         long teacherId = createTeacher(unique("Professor Do Ciclo"));
         long studentId = createStudent(unique("Aluno Do Ciclo"), teacherId);
-        long id = createSubscription(studentId, "200.00", 5);
+        long id = createSubscription(studentId, "200.00");
 
         mockMvc.perform(patch("/subscriptions/{id}/deactivate", id).cookie(admin))
                 .andExpect(status().isOk())
@@ -86,15 +85,15 @@ class SubscriptionCrudIT extends AbstractBillingIntegrationTest {
     void secondSubscriptionForSameStudentIsRejected() throws Exception {
         long teacherId = createTeacher(unique("Professor Da Duplicata"));
         long studentId = createStudent(unique("Aluno Duplicado"), teacherId);
-        createSubscription(studentId, "200.00", 5);
+        createSubscription(studentId, "200.00");
 
-        postSubscription(studentId, "999.00", 15)
+        postSubscription(studentId, "999.00")
                 .andExpect(status().isConflict());
     }
 
     @Test
     void unknownStudentIsRejected() throws Exception {
-        postSubscription(999_999L, "200.00", 5)
+        postSubscription(999_999L, "200.00")
                 .andExpect(status().isBadRequest());
     }
 
@@ -105,7 +104,7 @@ class SubscriptionCrudIT extends AbstractBillingIntegrationTest {
         mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin))
                 .andExpect(status().isOk());
 
-        postSubscription(studentId, "200.00", 5)
+        postSubscription(studentId, "200.00")
                 .andExpect(status().isBadRequest());
     }
 
@@ -114,7 +113,7 @@ class SubscriptionCrudIT extends AbstractBillingIntegrationTest {
         long teacherId = createTeacher(unique("Professor Do Valor Invalido"));
         long studentId = createStudent(unique("Aluno Do Valor Invalido"), teacherId);
 
-        postSubscription(studentId, "0.00", 5)
+        postSubscription(studentId, "0.00")
                 .andExpect(status().isBadRequest());
     }
 
@@ -128,7 +127,7 @@ class SubscriptionCrudIT extends AbstractBillingIntegrationTest {
     void reactivatingSubscriptionOfInactiveStudentIsRejected() throws Exception {
         long teacherId = createTeacher(unique("Professor Da Reativacao"));
         long studentId = createStudent(unique("Aluno Da Reativacao"), teacherId);
-        long id = createSubscription(studentId, "200.00", 5);
+        long id = createSubscription(studentId, "200.00");
         mockMvc.perform(patch("/subscriptions/{id}/deactivate", id).cookie(admin))
                 .andExpect(status().isOk());
         mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin))

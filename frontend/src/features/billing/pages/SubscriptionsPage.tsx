@@ -177,7 +177,6 @@ export function SubscriptionsPage() {
             studentId: pending.subscription.studentId,
             // O campo é de texto e em pt-BR: 350.5 vira "350,50".
             monthlyAmount: pending.subscription.monthlyAmount.toFixed(2).replace('.', ','),
-            dueDay: pending.subscription.dueDay,
           }}
           pending={updateSubscription.isPending}
           error={updateSubscription.error}

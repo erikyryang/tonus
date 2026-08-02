@@ -213,7 +213,8 @@ Backend e frontend completos até a SPEC-007.
 - **SPEC-004 (`billing`)** — ciclo assinatura → fatura → pagamento, com job
   diário (`@Scheduled` + ShedLock) que gera faturas e marca atrasos. A
   idempotência do job é uma constraint do banco, não uma checagem em código.
-  Dar baixa recalcula o vencimento da assinatura na mesma transação.
+  O vencimento da mensalidade é o dia do mês em que o aluno se cadastrou, fixo:
+  dar baixa não o move (regra substituída, ver SPEC-004).
 - **SPEC-005 (`notification`)** — consome os seis eventos do catálogo e avisa o
   aluno por WhatsApp (Evolution API). Único módulo que fala com o mundo
   externo. `notification_log` com UNIQUE por (template, aluno, referência):

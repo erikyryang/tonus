@@ -12,9 +12,13 @@ import { parseMoney } from '@/lib/formatters';
 import type { SubscriptionInput } from '../api/billingApi';
 
 /**
- * Os limites espelham o back: valor mínimo de um centavo e dia entre 1 e 31.
- * O valor entra como texto porque é assim que se digita dinheiro em pt-BR —
- * "350,50" — e sai número, que é o que a API espera.
+ * Só aluno e valor: o dia de vencimento é o dia do mês em que o aluno se
+ * cadastrou (SPEC-004), e o back nem aceita mais o campo. Oferecê-lo aqui
+ * prometeria uma escolha que não existe.
+ *
+ * O limite espelha o back: valor mínimo de um centavo. O valor entra como texto
+ * porque é assim que se digita dinheiro em pt-BR — "350,50" — e sai número, que
+ * é o que a API espera.
  */
 const schema = z.object({
   studentId: z.coerce.number().int().positive('Selecione o aluno.'),
@@ -28,7 +32,6 @@ const schema = z.object({
       const amount = parseMoney(value);
       return Number.isFinite(amount) && amount >= 0.01;
     }, 'O valor precisa ser maior que zero.'),
-  dueDay: z.coerce.number().int().min(1, 'O dia deve estar entre 1 e 31.').max(31, 'O dia deve estar entre 1 e 31.'),
 });
 
 type SubscriptionFormValues = z.infer<typeof schema>;
@@ -60,7 +63,7 @@ export function SubscriptionFormDialog({
     formState: { errors },
   } = useForm<SubscriptionFormValues>({
     resolver: zodResolver(schema),
-    defaultValues: defaultValues ?? { studentId: 0, monthlyAmount: '', dueDay: 5 },
+    defaultValues: defaultValues ?? { studentId: 0, monthlyAmount: '' },
   });
 
   return (
@@ -100,23 +103,14 @@ export function SubscriptionFormDialog({
           {errors.monthlyAmount && <p className="text-sm text-red-600">{errors.monthlyAmount.message}</p>}
         </div>
 
-        <div className="space-y-1">
-          <Label htmlFor="dueDay">Dia de vencimento</Label>
-          <Input
-            id="dueDay"
-            type="number"
-            min={1}
-            max={31}
-            aria-invalid={errors.dueDay ? true : undefined}
-            {...register('dueDay')}
-          />
-          {errors.dueDay && <p className="text-sm text-red-600">{errors.dueDay.message}</p>}
-          {/* O ajuste é do back e é silencioso: sem o aviso, quem escolhe 31
-              descobriria só em fevereiro que a fatura venceu no dia 28. */}
-          <p className="text-sm text-slate-600">
-            Em mês que não tem o dia escolhido, a fatura vence no último dia do mês.
-          </p>
-        </div>
+        {/* De onde vem o vencimento, já que não há campo para ele: sem essa
+            frase, o ADMIN procuraria o campo que sumiu. O ajuste de fim de mês
+            é do back e é silencioso — quem se cadastrou dia 31 descobriria só
+            em fevereiro que a fatura venceu no dia 28. */}
+        <p className="text-sm text-slate-600">
+          O vencimento é o dia do cadastro do aluno, e não muda. Em mês que não tem esse dia, a fatura vence
+          no último dia do mês.
+        </p>
 
         {error != null && (
           <p role="alert" className="text-sm text-red-600">

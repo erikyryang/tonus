@@ -23,7 +23,7 @@ class BillingAccessControlIT extends AbstractBillingIntegrationTest {
                         .cookie(linkedStudentCookie(studentId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"studentId":%d,"monthlyAmount":"200.00","dueDay":10}
+                                {"studentId":%d,"monthlyAmount":"200.00"}
                                 """.formatted(studentId)))
                 .andExpect(status().isForbidden());
     }

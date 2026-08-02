@@ -45,15 +45,18 @@ export interface Subscription {
   id: number;
   studentId: number;
   monthlyAmount: number;
-  /** 1–31; o back ajusta para o último dia em mês que não tem esse dia. */
+  /**
+   * Só leitura: é o dia do cadastro do aluno, definido pelo back (SPEC-004). O
+   * ajuste para o último dia em mês curto é dele também, por competência.
+   */
   dueDay: number;
   active: boolean;
 }
 
+/** Sem dueDay: o back o resolve pelo cadastro do aluno e ignora o que vier daqui. */
 export interface SubscriptionInput {
   studentId: number;
   monthlyAmount: number;
-  dueDay: number;
 }
 
 export interface SubscriptionQuery {

@@ -30,8 +30,10 @@ tela tem de específico.
   (decisão da SPEC-003 refletida na UI).
 - /holidays: data + descrição; criar avisa: "todos os alunos ativos
   serão notificados por WhatsApp". Excluir com confirmação.
-- /subscriptions: aluno (select de ativos), valor mensal (R$),
-  dia de vencimento (1–31, hint do ajuste para fim de mês).
+- /subscriptions: aluno (select de ativos) e valor mensal (R$). Sem campo de
+  vencimento: ele é o dia do cadastro do aluno (SPEC-004), e o formulário só
+  diz de onde vem, com o hint do ajuste para fim de mês. A coluna da tabela
+  continua mostrando o dia, que é leitura.
 
 ## Telas /me (mobile-first, read-only)
 - /me/schedule (STUDENT): o horário padrão + as próximas exceções e

@@ -42,14 +42,11 @@ export function RegisterPaymentDialog({
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors },
   } = useForm<PaymentForm>({
     resolver: zodResolver(schema),
     defaultValues: { paymentDate: todayIsoDate() },
   });
-
-  const newDueDay = dayOf(watch('paymentDate'));
 
   /**
    * O 409 daqui é "outro admin já deu a baixa" — não é transitório, e a lista
@@ -77,13 +74,9 @@ export function RegisterPaymentDialog({
           {errors.paymentDate && <p className="text-sm text-red-600">{errors.paymentDate.message}</p>}
         </div>
 
-        {/* O efeito real, não "tem certeza?": o WhatsApp sai e não há como desavisar. */}
-        <p className="text-sm font-medium text-slate-900">
-          O aluno receberá a confirmação por WhatsApp
-          {newDueDay == null
-            ? '.'
-            : ` e o vencimento da assinatura será recalculado para o dia ${newDueDay}.`}
-        </p>
+        {/* O efeito real, não "tem certeza?": o WhatsApp sai e não há como desavisar.
+            O vencimento não entra mais aqui: a baixa não o move (SPEC-004). */}
+        <p className="text-sm font-medium text-slate-900">O aluno receberá a confirmação por WhatsApp.</p>
 
         {error != null && (
           <p role="alert" className="text-sm text-red-600">
@@ -102,10 +95,4 @@ export function RegisterPaymentDialog({
       </form>
     </Dialog>
   );
-}
-
-/** Dia do mês, sem zero à esquerda: "dia 5" é como se escreve, "dia 05" não. */
-function dayOf(isoDate: string | undefined): number | null {
-  const match = /^\d{4}-\d{2}-(\d{2})$/.exec(isoDate ?? '');
-  return match ? Number(match[1]) : null;
 }

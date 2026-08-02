@@ -1,5 +1,6 @@
 package br.com.tonus.registration;
 
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -54,6 +55,19 @@ public interface RegistrationFacade {
      * Nunca logar o valor devolvido.
      */
     Map<Long, String> findStudentPhones(Collection<Long> studentIds);
+
+    /**
+     * O dia em que o aluno entrou no estúdio.
+     *
+     * A cobrança precisa disso para fixar o vencimento da mensalidade no dia do
+     * mês em que ele se cadastrou (SPEC-004). É data, não instante: quem
+     * pergunta quer o dia do calendário no fuso do estúdio, e o horário do
+     * cadastro não significa nada para uma mensalidade.
+     *
+     * Vazio quando o aluno não existe — a decisão do que fazer com isso é de
+     * quem chama.
+     */
+    Optional<LocalDate> findRegistrationDate(Long studentId);
 
     /**
      * Um aluno só, com nome e professor — o que a agenda precisa para montar a

@@ -35,6 +35,7 @@ Toda mudança entra como migration nova; migration aplicada não se edita.
 | V013 | billing | `payment` |
 | V014 | shared | `shedlock` (tabela de lock do ShedLock) |
 | V015 | notification | `notification_log` |
+| V016 | billing | realinha `subscription.due_day` para o dia do cadastro do aluno (dado, não schema) |
 
 ---
 
@@ -161,6 +162,12 @@ não fechou — é isso que sustenta o at-least-once. Ver `docs/eventos.md`.
 - `ck_subscription_due_day CHECK (due_day BETWEEN 1 AND 31)` — dia de mês
   válido; a resolução para o último dia do mês (31 em fevereiro) é lógica de
   domínio (`Subscription.dueDateFor`), não do banco.
+- `due_day` é **cópia do dia do mês de `student.created_at`**, gravada na
+  criação da assinatura (SPEC-004). Não vem do cliente e não muda — a baixa de
+  fatura, que antes o realinhava para o dia do pagamento, não o toca mais.
+  Continua sendo coluna daqui, e não uma leitura do `registration` a cada
+  fatura, porque o job diário não pode depender de outro módulo para resolver a
+  data do que gera; é cópia de um valor que não retroage.
 
 ## `invoice` (billing)
 

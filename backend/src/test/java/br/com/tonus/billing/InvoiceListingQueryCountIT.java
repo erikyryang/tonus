@@ -44,7 +44,7 @@ class InvoiceListingQueryCountIT extends AbstractBillingIntegrationTest {
             // Alunos distintos de propósito: o cache de primeiro nível do
             // Hibernate esconderia o N+1 se todas as faturas fossem do mesmo.
             long studentId = createStudent(marker + "-aluno-" + i, createTeacher(marker + "-prof-" + i));
-            long subscriptionId = createSubscription(studentId, "200.00", 10);
+            long subscriptionId = createSubscription(studentId, "200.00");
             String month = "2026-%02d".formatted(i + 1);
             long invoiceId = seedInvoice(subscriptionId, month + "-01", "200.00", month + "-10",
                     i % 2 == 0 ? "OVERDUE" : "PAID");

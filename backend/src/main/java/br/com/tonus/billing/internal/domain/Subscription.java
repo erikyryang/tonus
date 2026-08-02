@@ -11,6 +11,12 @@ import java.time.YearMonth;
 /**
  * Assinatura mensal de um aluno: valor e dia de vencimento.
  *
+ * O dia de vencimento é o dia do mês em que o aluno se cadastrou. Fica copiado
+ * aqui, e não é lido do cadastro a cada uso, porque a assinatura é quem responde
+ * "quando vence" — e billing não pode depender do registration para resolver a
+ * data de cada fatura que gera. É cópia de um valor que não muda: o cadastro do
+ * aluno não retroage.
+ *
  * studentId sem FK, mesma decisão de default_schedule.studentId (ver
  * docs/ddl.md): a integridade é garantida em código, via RegistrationFacade.
  */
@@ -40,9 +46,12 @@ public class Subscription extends BaseEntity {
         this.active = true;
     }
 
-    public void update(BigDecimal monthlyAmount, int dueDay) {
+    /**
+     * O dia de vencimento não entra aqui: ele vem do dia do cadastro do aluno e
+     * não muda enquanto a assinatura for do mesmo aluno (SPEC-004).
+     */
+    public void update(BigDecimal monthlyAmount) {
         this.monthlyAmount = monthlyAmount;
-        this.dueDay = dueDay;
     }
 
     public void deactivate() {
@@ -54,16 +63,12 @@ public class Subscription extends BaseEntity {
     }
 
     /**
-     * "Aniversário do pagamento": a data em que a baixa aconteceu vira o novo
-     * dia de vencimento da assinatura.
-     */
-    public void realignDueDayTo(LocalDate paymentDate) {
-        this.dueDay = paymentDate.getDayOfMonth();
-    }
-
-    /**
      * Resolve o vencimento para uma competência. dia_vencimento inexistente no
      * mês (31 em fevereiro) cai no último dia do mês.
+     *
+     * O ajuste é feito aqui, e o dia guardado continua sendo o do cadastro:
+     * gravar 28 para quem se cadastrou no dia 31 perderia a informação em
+     * março, que tem 31.
      */
     public LocalDate dueDateFor(YearMonth referenceMonth) {
         int day = Math.min(dueDay, referenceMonth.lengthOfMonth());

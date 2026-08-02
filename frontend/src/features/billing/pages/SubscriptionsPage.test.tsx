@@ -56,16 +56,17 @@ describe('cadastro de assinatura', () => {
 
     await user.selectOptions(within(dialog).getByLabelText('Aluno'), '1');
     await user.type(within(dialog).getByLabelText(/valor mensal/i), '350,50');
-    await user.clear(within(dialog).getByLabelText(/dia de vencimento/i));
-    await user.type(within(dialog).getByLabelText(/dia de vencimento/i), '10');
     await user.click(within(dialog).getByRole('button', { name: 'Salvar' }));
 
-    await waitFor(() => expect(sent).toEqual([{ studentId: 1, monthlyAmount: 350.5, dueDay: 10 }]));
+    await waitFor(() => expect(sent).toEqual([{ studentId: 1, monthlyAmount: 350.5 }]));
     expect(await screen.findByRole('row', { name: /Ana Alves/ })).toBeInTheDocument();
   });
 
-  /** O back ajusta o dia 31 para o último dia do mês; a tela conta isso antes. */
-  it('explica o ajuste de fim de mês', async () => {
+  /**
+   * O dia de vencimento deixou de ser escolha: é o dia do mês em que o aluno se
+   * cadastrou (SPEC-004). Um campo aqui prometeria uma edição que o back não faz.
+   */
+  it('não pede dia de vencimento e explica de onde ele vem', async () => {
     server.use(meOk(ADMIN), studentsList(ANA), subscriptionsList());
 
     const { user } = renderApp('/admin/subscriptions');
@@ -73,6 +74,8 @@ describe('cadastro de assinatura', () => {
     await user.click(await screen.findByRole('button', { name: 'Nova assinatura' }));
     const dialog = await screen.findByRole('dialog');
 
+    expect(within(dialog).queryByLabelText(/dia de vencimento/i)).not.toBeInTheDocument();
+    expect(within(dialog).getByText(/dia do cadastro do aluno/i)).toBeInTheDocument();
     expect(within(dialog).getByText(/último dia do mês/i)).toBeInTheDocument();
   });
 
@@ -95,7 +98,7 @@ describe('edição de assinatura', () => {
    * não oferece a troca em vez de fingir que ela funciona. O aluno vai no corpo
    * porque o back exige o campo.
    */
-  it('mantém o aluno e envia valor e vencimento novos', async () => {
+  it('mantém o aluno e envia o valor novo', async () => {
     const sent: Array<{ id: number; body: SubscriptionInput }> = [];
     server.use(
       meOk(ADMIN),
@@ -115,13 +118,9 @@ describe('edição de assinatura', () => {
 
     await user.clear(within(dialog).getByLabelText(/valor mensal/i));
     await user.type(within(dialog).getByLabelText(/valor mensal/i), '420,00');
-    await user.clear(within(dialog).getByLabelText(/dia de vencimento/i));
-    await user.type(within(dialog).getByLabelText(/dia de vencimento/i), '15');
     await user.click(within(dialog).getByRole('button', { name: 'Salvar' }));
 
-    await waitFor(() =>
-      expect(sent).toEqual([{ id: 3, body: { studentId: 1, monthlyAmount: 420, dueDay: 15 } }]),
-    );
+    await waitFor(() => expect(sent).toEqual([{ id: 3, body: { studentId: 1, monthlyAmount: 420 } }]));
   });
 });
 

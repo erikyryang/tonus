@@ -17,8 +17,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Baixa de fatura: POST /invoices/{id}/payment. Tudo acontece na mesma
- * transação (spec): fatura vira PAGA, pagamento é criado, assinatura recalcula
- * o dia de vencimento, e o evento PaymentRegistered é publicado.
+ * transação (spec): fatura vira PAGA, pagamento é criado e o evento
+ * PaymentRegistered é publicado.
+ *
+ * A baixa <strong>não</strong> mexe no vencimento da assinatura. Mexia — o dia
+ * do pagamento virava o novo dia de vencimento —, e a regra foi substituída
+ * pelo dia do cadastro do aluno (SPEC-004). Os testes daqui seguram a
+ * substituição: pagar em qualquer data deixa o {@code due_day} onde estava.
  *
  * {@code ApplicationEvents} (spring-test), e não
  * {@code AssertablePublishedEvents} do Modulith: o resolver deste último é
@@ -33,18 +38,18 @@ class PaymentIT extends AbstractBillingIntegrationTest {
     private JdbcTemplate jdbcTemplate;
 
     @Test
-    void registeringPaymentClosesInvoiceAndRecalculatesDueDay(ApplicationEvents events) throws Exception {
+    void registeringPaymentClosesInvoiceAndLeavesDueDayAlone(ApplicationEvents events) throws Exception {
         long studentId = createStudent(unique("Aluno Da Baixa"), createTeacher(unique("Professor Da Baixa")));
-        long subscriptionId = createSubscription(studentId, "200.00", 5);
+        long subscriptionId = createSubscription(studentId, "200.00");
+        int dueDayBefore = dueDayOf(subscriptionId);
         long invoiceId = seedInvoice(subscriptionId, "2026-07-01", "200.00", "2026-07-05", "OPEN");
 
         pay(invoiceId, TODAY)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PAID"));
 
-        // O vencimento vira o aniversário do pagamento: dia de hoje (BillingClockConfig).
         assertThat(paymentCountFor(invoiceId)).isEqualTo(1);
-        assertThat(dueDayOf(subscriptionId)).isEqualTo(LocalDate.parse(TODAY).getDayOfMonth());
+        assertThat(dueDayOf(subscriptionId)).isEqualTo(dueDayBefore);
         assertThat(auditActionsFor(invoiceId)).contains("UPDATE");
         assertThat(events.stream(PaymentRegistered.class)).hasSize(1);
     }
@@ -52,12 +57,17 @@ class PaymentIT extends AbstractBillingIntegrationTest {
     /**
      * SPEC-008: a baixa é lançada de um painel, e o dinheiro raramente entra no
      * mesmo dia em que alguém digita. Quando o ADMIN informa a data, é ela — e
-     * não "hoje" — que vira o pagamento e o novo aniversário da assinatura.
+     * não "hoje" — que vira o pagamento.
+     *
+     * E é só isso que ela vira: uma data de pagamento distante do vencimento não
+     * move mais o vencimento. Pagar em atraso empurrava a mensalidade para o dia
+     * do atraso, mês após mês.
      */
     @Test
-    void chosenPaymentDateDrivesPaymentAndDueDay() throws Exception {
+    void chosenPaymentDateDrivesThePaymentAndNothingElse() throws Exception {
         long studentId = createStudent(unique("Aluno Da Data"), createTeacher(unique("Professor Da Data")));
-        long subscriptionId = createSubscription(studentId, "200.00", 5);
+        long subscriptionId = createSubscription(studentId, "200.00");
+        int dueDayBefore = dueDayOf(subscriptionId);
         long invoiceId = seedInvoice(subscriptionId, "2026-07-01", "200.00", "2026-07-05", "OPEN");
 
         pay(invoiceId, "2026-07-20")
@@ -66,18 +76,17 @@ class PaymentIT extends AbstractBillingIntegrationTest {
                 .andExpect(jsonPath("$.paymentDate").value("2026-07-20"));
 
         assertThat(paymentDateOf(invoiceId)).isEqualTo(LocalDate.parse("2026-07-20"));
-        assertThat(dueDayOf(subscriptionId)).isEqualTo(20);
+        assertThat(dueDayOf(subscriptionId)).isEqualTo(dueDayBefore);
     }
 
     /**
-     * Data futura é barrada no back, não só no formulário: aceitá-la jogaria o
-     * vencimento da assinatura para frente e mandaria ao aluno um recibo de um
-     * pagamento que ainda não aconteceu.
+     * Data futura é barrada no back, não só no formulário: aceitá-la mandaria ao
+     * aluno o recibo de um pagamento que ainda não aconteceu.
      */
     @Test
     void futurePaymentDateIsRejected() throws Exception {
         long studentId = createStudent(unique("Aluno Do Futuro"), createTeacher(unique("Professor Do Futuro")));
-        long subscriptionId = createSubscription(studentId, "200.00", 5);
+        long subscriptionId = createSubscription(studentId, "200.00");
         long invoiceId = seedInvoice(subscriptionId, "2026-07-01", "200.00", "2026-07-05", "OPEN");
 
         String tomorrow = LocalDate.parse(TODAY).plusDays(1).toString();
@@ -85,18 +94,17 @@ class PaymentIT extends AbstractBillingIntegrationTest {
         pay(invoiceId, tomorrow).andExpect(status().isBadRequest());
 
         assertThat(paymentCountFor(invoiceId)).isZero();
-        assertThat(dueDayOf(subscriptionId)).isEqualTo(5);
     }
 
     /**
      * A data é obrigatória: não existe "omitiu, então é hoje". Este endpoint
-     * dispara recibo por WhatsApp e move o vencimento da assinatura, e um
-     * default silencioso faria as duas coisas a partir de um corpo esquecido.
+     * dispara recibo por WhatsApp, e um default silencioso o dispararia a partir
+     * de um corpo esquecido.
      */
     @Test
     void paymentDateIsRequired() throws Exception {
         long studentId = createStudent(unique("Aluno Sem Data"), createTeacher(unique("Professor Sem Data")));
-        long subscriptionId = createSubscription(studentId, "200.00", 5);
+        long subscriptionId = createSubscription(studentId, "200.00");
         long invoiceId = seedInvoice(subscriptionId, "2026-07-01", "200.00", "2026-07-05", "OPEN");
 
         mockMvc.perform(post("/invoices/{id}/payment", invoiceId).cookie(admin))
@@ -109,13 +117,12 @@ class PaymentIT extends AbstractBillingIntegrationTest {
                 .andExpect(status().isBadRequest());
 
         assertThat(paymentCountFor(invoiceId)).isZero();
-        assertThat(dueDayOf(subscriptionId)).isEqualTo(5);
     }
 
     @Test
     void payingAlreadyPaidInvoiceIsRejected() throws Exception {
         long studentId = createStudent(unique("Aluno Da Baixa Dupla"), createTeacher(unique("Professor Da Baixa Dupla")));
-        long subscriptionId = createSubscription(studentId, "200.00", 5);
+        long subscriptionId = createSubscription(studentId, "200.00");
         long invoiceId = seedInvoice(subscriptionId, "2026-07-01", "200.00", "2026-07-05", "PAID");
 
         pay(invoiceId, TODAY).andExpect(status().isConflict());
