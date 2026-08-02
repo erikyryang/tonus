@@ -13,6 +13,8 @@ import { listQuery, parseActiveParam, parsePageParam } from '@/lib/listParams';
 import type { AccessUser } from '@/features/auth/api/usersApi';
 import { useAccessOfStudents, useActivateAccess, useCreateStudentAccess } from '@/features/auth/api/usersQueries';
 import { CreateAccessDialog } from '@/features/auth/components/CreateAccessDialog';
+import { useOverdueStudentIds } from '@/features/billing/api/billingQueries';
+import { BillingStatusBadge } from '@/features/billing/components/BillingStatusBadge';
 import type { Student } from '../api/registrationApi';
 import {
   nameById,
@@ -51,6 +53,12 @@ export function StudentsPage() {
 
   const studentIds = students.data?.content.map((student) => student.id) ?? [];
   const access = useAccessOfStudents(studentIds);
+  /*
+   * A situação de cobrança vem do módulo dono da fatura, em consulta própria.
+   * O back não junta as duas coisas: `registration` não consulta `billing`, e
+   * uma coluna na tela não é motivo para abrir essa aresta. Quem cruza é aqui.
+   */
+  const overdue = useOverdueStudentIds();
 
   const createStudent = useCreateStudent();
   const updateStudent = useUpdateStudent();
@@ -102,6 +110,16 @@ export function StudentsPage() {
         />
       )}
 
+      {/* Falha na cobrança esvazia a coluna inteira, e coluna vazia é igual a
+          coluna que ainda não chegou. Sem o aviso, o ADMIN concluiria que
+          ninguém está atrasado — a leitura mais cara possível do erro. */}
+      {overdue.isError && (
+        <ErrorNotice
+          message="Não foi possível carregar a situação de cobrança dos alunos. A coluna fica vazia até a consulta responder."
+          onRetry={overdue.refetch}
+        />
+      )}
+
       <ListFeedback
         state={students}
         loading="Carregando os alunos…"
@@ -114,6 +132,7 @@ export function StudentsPage() {
             students={data.content}
             teacherNames={teacherNames}
             access={access.data}
+            overdueStudentIds={overdue.data}
             onEdit={(student) => setPending({ kind: 'edit', student })}
             onToggle={(student) => setPending({ kind: 'toggle', student })}
             onCreateAccess={(student) => setPending({ kind: 'access', student })}
@@ -237,6 +256,7 @@ function StudentTable({
   students,
   teacherNames,
   access,
+  overdueStudentIds,
   onEdit,
   onToggle,
   onCreateAccess,
@@ -245,6 +265,8 @@ function StudentTable({
   students: Student[];
   teacherNames: Map<number, string>;
   access: Map<number, AccessUser> | undefined;
+  /** Nada enquanto a consulta de cobrança não responde — "não sei" não é "em dia". */
+  overdueStudentIds: Set<number> | undefined;
   onEdit: (student: Student) => void;
   onToggle: (student: Student) => void;
   onCreateAccess: (student: Student) => void;
@@ -267,6 +289,9 @@ function StudentTable({
           <th scope="col" className="px-3 py-2 font-medium">
             Situação
           </th>
+          <th scope="col" className="px-3 py-2 font-medium">
+            Cobrança
+          </th>
           <th scope="col" className="px-3 py-2">
             <span className="sr-only">Ações</span>
           </th>
@@ -281,6 +306,9 @@ function StudentTable({
                 ela não chega, o id é melhor que célula em branco. */}
             <td className="px-3 py-2">{teacherNames.get(student.teacherId) ?? `Professor #${student.teacherId}`}</td>
             <td className="px-3 py-2">{student.active ? 'Ativo' : 'Inativo'}</td>
+            <td className="px-3 py-2">
+              {overdueStudentIds && <BillingStatusBadge overdue={overdueStudentIds.has(student.id)} />}
+            </td>
             <td className="px-3 py-2 text-right">
               <ActionMenu
                 label={`Ações de ${student.name}`}

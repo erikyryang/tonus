@@ -7,6 +7,7 @@ import {
   billingApi,
   invoicesKey,
   myInvoicesKey,
+  overdueStudentIdsKey,
   subscriptionsKey,
 } from './billingApi';
 
@@ -29,13 +30,22 @@ export interface RegisterPaymentInput {
  * baixa tira a fatura do filtro "Atrasadas" e a põe em "Pagas", então qualquer
  * combinação de filtro e página em cache passou a mentir.
  *
+ * E vai junto o conjunto de quem está atrasado, que é outra chave: dar baixa na
+ * última fatura vencida de um aluno tira o "Atrasado" dele na tela de alunos, e
+ * essa tela não estava montada na hora da baixa — sem invalidar, ela voltaria
+ * do cache afirmando um atraso que acabou de ser pago.
+ *
  * O 409 também invalida. Ele significa que outro admin já deu a baixa — a lista
  * na tela está desatualizada exatamente como estaria depois de um sucesso, e
  * deixá-la como está mostraria ao ADMIN uma fatura aberta que não existe mais.
  */
 export function useRegisterPayment() {
   const queryClient = useQueryClient();
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: invoicesKey() });
+  const invalidate = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: invoicesKey() }),
+      queryClient.invalidateQueries({ queryKey: overdueStudentIdsKey }),
+    ]);
 
   return useMutation({
     mutationFn: ({ id, paymentDate }: RegisterPaymentInput) => billingApi.registerPayment(id, paymentDate),
@@ -94,6 +104,21 @@ export function useSetSubscriptionActive() {
     mutationFn: ({ id, active }: { id: number; active: boolean }) =>
       active ? billingApi.activateSubscription(id) : billingApi.deactivateSubscription(id),
     onSuccess: invalidate,
+  });
+}
+
+/**
+ * Os alunos com fatura atrasada, em conjunto para a tela cruzar linha a linha.
+ *
+ * `undefined` enquanto não responde é a informação que importa: quem consome
+ * precisa distinguir "ainda não sei" de "não está atrasado", senão a tela
+ * afirma "Em dia" antes de ter perguntado.
+ */
+export function useOverdueStudentIds() {
+  return useQuery({
+    queryKey: overdueStudentIdsKey,
+    queryFn: () => billingApi.overdueStudentIds(),
+    select: (ids: number[]) => new Set(ids),
   });
 }
 

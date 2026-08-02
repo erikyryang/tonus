@@ -102,6 +102,24 @@ export function activateSubscriptionOk(onRequest?: (id: number) => void) {
   });
 }
 
+/**
+ * GET /invoices/overdue-student-ids — quem está com fatura atrasada, em ids.
+ *
+ * É o que a tela de alunos cruza com a própria lista para dizer "Atrasado" ou
+ * "Em dia": o back não junta as duas coisas porque `registration` não consulta
+ * `billing`, então quem cruza é o cliente.
+ */
+export function overdueStudentIdsHandler(resolve: () => number[], log?: string[]) {
+  return http.get('/api/invoices/overdue-student-ids', ({ request }) => {
+    log?.push(new URL(request.url).search);
+    return HttpResponse.json(resolve());
+  });
+}
+
+export function overdueStudentIds(...ids: number[]) {
+  return overdueStudentIdsHandler(() => ids);
+}
+
 /** GET /me/invoices — as faturas do aluno logado; o id sai do token. */
 export function myInvoicesHandler(resolve: (params: URLSearchParams) => Page<Invoice>, log?: string[]) {
   return http.get('/api/me/invoices', ({ request }) => {

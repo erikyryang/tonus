@@ -14,8 +14,9 @@ tela tem de específico.
 - Mutação → invalidate da listagem → toast. Erros: Problem Details.
 
 ## Telas ADMIN
-- /students: colunas nome, telefone, professor, situação. Form: nome,
-  telefone, professor (select só de ATIVOS — regra do back refletida).
+- /students: colunas nome, telefone, professor, situação e cobrança
+  ("Atrasado" / "Em dia", de `GET /invoices/overdue-student-ids`). Form:
+  nome, telefone, professor (select só de ATIVOS — regra do back refletida).
   Desativar avisa: "o acesso do aluno será revogado". Ações de acesso
   na linha: "Criar acesso" (dialog login+senha → POST /users com
   studentId) e "Reativar acesso" (PATCH /users/{id}/activate) — a
@@ -59,6 +60,22 @@ tela tem de específico.
   por chamada, que é o que transforma esse limite em garantia em vez de
   confiança no cliente (a lista vira cláusula `IN`, um parâmetro por id).
   Acima disso é 400, não 500.
+- `GET /invoices/overdue-student-ids` (ADMIN) → os ids dos alunos com fatura
+  ATRASADA. É o que a coluna "Cobrança" da `/students` cruza com a própria
+  lista. **O grafo de módulos não muda:** `registration` continua sem
+  consultar `billing`, e é o cliente que junta as duas respostas — pôr a
+  situação de cobrança no DTO de aluno criaria a aresta `registration →
+  billing` por causa de uma coluna de tela.
+  Não é paginado, e é a exceção consciente à regra de "listagem sempre
+  paginada": a resposta não é uma listagem, é o conjunto que a tela cruza com
+  a página que já tem em mãos — paginá-la obrigaria a buscar todas as páginas
+  antes de pintar a primeira linha. O tamanho é limitado pelo número de alunos
+  do estúdio e cada item é um número; quando isso deixar de ser desprezível, o
+  sucessor é a forma filtrada de `GET /users?studentIds=`, que já existe aqui.
+  Ids distintos: dois meses atrasados são o mesmo aluno uma vez só. Aluno
+  desativado entra na lista como qualquer outro — a fatura sobrevive à saída
+  (não há DELETE de aluno, para o histórico de cobrança não sumir), e filtrá-lo
+  esconderia o caso mais caro que existe: quem foi embora devendo.
 - `GET /me/schedule` passa a devolver o dia do aluno **com** a descrição do
   feriado e os cancelamentos dele (`SchedulingService.dayOfStudent`, que
   filtra `dayOf` em vez de reexpandir). Sem isso a tela do aluno não teria
@@ -103,6 +120,20 @@ tela tem de específico.
   chamadas), e "ainda não sei" não pode virar "não tem login". O back não
   impede um segundo usuário para o mesmo aluno — só o login é UNIQUE —,
   então um clique nesse intervalo criaria conta duplicada.
+- A coluna "Cobrança" fica vazia enquanto a consulta não responde, em vez de
+  mostrar "Em dia". Mesmo cuidado da consulta de acesso: são chamadas
+  separadas, a tabela chega antes, e "ainda não sei" virar "está tudo certo" é
+  pior que não dizer nada — é justamente a informação que o ADMIN veio buscar.
+  Por isso "Em dia" existe como rótulo: célula vazia e "sem atraso" não podem
+  ser a mesma coisa na tela. Falha na consulta também se explica, com "tentar
+  de novo": calada, a coluna vazia faria o ADMIN concluir que ninguém está
+  atrasado — a leitura mais cara possível do erro.
+- A baixa invalida `['billing','overdue-ids']` além de `['billing','invoices']`.
+  A baixa acontece em `/invoices` e o atraso deixa de existir para a
+  `/students`, que não estava montada — sem invalidar, ela voltaria do cache
+  afirmando um atraso já pago. O teste que cobre isso injeta `staleTime` e
+  `gcTime` infinitos de propósito: com os padrões, toda volta refaz a chamada de
+  qualquer jeito e o verde não provaria nada.
 - Desativar aluno não refaz a consulta de acesso: a revogação é por evento
   e chega depois da resposta HTTP, então o refetch traria de volta o
   `active: true` que está prestes a deixar de valer. A revogação é certa,

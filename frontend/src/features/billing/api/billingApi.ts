@@ -66,6 +66,13 @@ export const subscriptionsKey = (query?: SubscriptionQuery) =>
 
 export const myInvoicesKey = (page: number) => ['billing', 'me', 'invoices', page] as const;
 
+/**
+ * Sem parâmetro: a resposta é o conjunto inteiro de quem está atrasado, e é o
+ * mesmo para qualquer página ou filtro da tela de alunos. Chavear por página
+ * refaria a chamada a cada navegação para receber a mesma lista.
+ */
+export const overdueStudentIdsKey = ['billing', 'overdue-ids'] as const;
+
 export const billingApi = {
   invoices: ({ status, page }: InvoiceQuery) => {
     const params = new URLSearchParams({ page: String(page) });
@@ -92,4 +99,10 @@ export const billingApi = {
 
   /** O id do aluno vem do token: /me/invoices não aceita id nenhum. */
   myInvoices: (page: number) => apiClient.get<Page<Invoice>>(`/me/invoices?page=${page}`),
+
+  /**
+   * Quem está com fatura ATRASADA, em ids de aluno. Quem cruza com a lista de
+   * alunos é a tela: no back, `registration` não consulta `billing`.
+   */
+  overdueStudentIds: () => apiClient.get<number[]>('/invoices/overdue-student-ids'),
 };

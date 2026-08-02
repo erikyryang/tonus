@@ -3,6 +3,13 @@ import type { RequestHandler } from 'msw';
 import { describe, expect, it } from 'vitest';
 import type { Student, StudentInput } from '@/features/registration/api/registrationApi';
 import { ADMIN, meOk } from '@/test/authHandlers';
+import {
+  invoice,
+  invoicesHandler,
+  overdueStudentIds,
+  overdueStudentIdsHandler,
+  registerPaymentOk,
+} from '@/test/billingHandlers';
 import { pageOf } from '@/test/pageOf';
 import {
   activateStudentOk,
@@ -32,9 +39,12 @@ const CLARA = teacher({ id: 11, name: 'Clara Cruz', active: false });
 
 const ANA = student({ id: 1, name: 'Ana Alves', phone: '+5511999990001', teacherId: 10 });
 
-/** Toda tela de aluno consulta três coisas: a lista, os professores e quem tem acesso. */
+/**
+ * Toda tela de aluno consulta quatro coisas: a lista, os professores, quem tem
+ * acesso e quem está com fatura atrasada.
+ */
 function renderStudents(...handlers: RequestHandler[]) {
-  server.use(meOk(ADMIN), teachersList(BRUNO, CLARA), noAccessYet(), ...handlers);
+  server.use(meOk(ADMIN), teachersList(BRUNO, CLARA), noAccessYet(), overdueStudentIds(), ...handlers);
   return renderApp('/admin/students');
 }
 
@@ -65,12 +75,132 @@ describe('lista de alunos', () => {
   });
 });
 
+/**
+ * A situação de cobrança vem de outra chamada, do módulo dono da fatura
+ * (GET /invoices/overdue-student-ids). Quem cruza as duas listas é a tela:
+ * `registration` não consulta `billing` no back, e o grafo de módulos não muda
+ * por causa de uma coluna.
+ */
+describe('situação de cobrança', () => {
+  const BIA = student({ id: 2, name: 'Bia Barros', teacherId: 10 });
+
+  it('marca quem tem fatura atrasada e diz que os demais estão em dia', async () => {
+    server.use(
+      meOk(ADMIN),
+      teachersList(BRUNO),
+      noAccessYet(),
+      overdueStudentIds(1),
+      studentsList(ANA, BIA),
+    );
+
+    renderApp('/admin/students');
+
+    expect(within(await rowOf('Ana Alves')).getByText('Atrasado')).toBeInTheDocument();
+    expect(within(await rowOf('Bia Barros')).getByText('Em dia')).toBeInTheDocument();
+  });
+
+  /**
+   * A coluna vazia por falha é idêntica à coluna que ainda não chegou. Calada,
+   * a tela faria o ADMIN concluir que ninguém está atrasado — a leitura mais
+   * cara possível do erro. E a saída é tentar de novo: falhou a consulta, não
+   * o cadastro.
+   */
+  it('explica quando não consegue carregar a situação de cobrança e refaz a consulta', async () => {
+    let calls = 0;
+    server.use(
+      meOk(ADMIN),
+      teachersList(BRUNO),
+      noAccessYet(),
+      studentsList(ANA),
+      http.get('/api/invoices/overdue-student-ids', () => {
+        calls += 1;
+        return calls === 1 ? HttpResponse.error() : HttpResponse.json([1]);
+      }),
+    );
+
+    const { user } = renderApp('/admin/students');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/situação de cobrança/i);
+
+    await user.click(await screen.findByRole('button', { name: 'Tentar de novo' }));
+
+    expect(await within(await rowOf('Ana Alves')).findByText('Atrasado')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
+  });
+
+  /**
+   * A baixa acontece em outra tela, e é lá que o atraso deixa de existir. Sem
+   * invalidar a chave da cobrança, voltar para os alunos mostraria "Atrasado"
+   * para quem acabou de pagar.
+   *
+   * O cliente do teste tem staleTime e gcTime infinitos de propósito: com os
+   * padrões, toda volta refaz a chamada de qualquer jeito, e o teste passaria
+   * mesmo sem a invalidação — verde que não prova nada.
+   */
+  it('repergunta quem está atrasado depois de uma baixa em outra tela', async () => {
+    let paid = false;
+    server.use(
+      meOk(ADMIN),
+      teachersList(BRUNO),
+      noAccessYet(),
+      studentsList(ANA),
+      overdueStudentIdsHandler(() => (paid ? [] : [1])),
+      invoicesHandler(() => pageOf([invoice({ id: 1, studentId: 1, studentName: 'Ana Alves', status: 'OVERDUE' })])),
+      registerPaymentOk(() => {
+        paid = true;
+      }),
+    );
+
+    const { user } = renderApp(
+      '/admin/students',
+      createTestQueryClient({ staleTime: Infinity, gcTime: Infinity }),
+    );
+
+    expect(within(await rowOf('Ana Alves')).getByText('Atrasado')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('link', { name: 'Faturas' }));
+    await user.click(await screen.findByRole('button', { name: 'Dar baixa na fatura de Ana Alves' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Dar baixa' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    await user.click(screen.getByRole('link', { name: 'Alunos' }));
+
+    expect(await within(await rowOf('Ana Alves')).findByText('Em dia')).toBeInTheDocument();
+  });
+
+  /**
+   * "Ainda não sei" não pode virar "em dia" — mesmo cuidado da consulta de
+   * acesso. Afirmar que está tudo certo antes da resposta é pior que não dizer
+   * nada: é exatamente a informação que o ADMIN veio buscar.
+   */
+  it('não afirma nada enquanto a consulta de cobrança não responde', async () => {
+    server.use(
+      meOk(ADMIN),
+      teachersList(BRUNO),
+      noAccessYet(),
+      studentsList(ANA),
+      http.get('/api/invoices/overdue-student-ids', async () => {
+        await delay('infinite');
+        return HttpResponse.json([]);
+      }),
+    );
+
+    renderApp('/admin/students');
+
+    const row = await rowOf('Ana Alves');
+    expect(within(row).queryByText('Em dia')).not.toBeInTheDocument();
+    expect(within(row).queryByText('Atrasado')).not.toBeInTheDocument();
+  });
+});
+
 describe('filtro de situação', () => {
   /** Critério de aceite: o filtro só existe se chegar ao backend. Default: ativos. */
   it('parte de ?active=true e alterna para inativos e todos', async () => {
     const sent: string[] = [];
     server.use(
       meOk(ADMIN),
+      overdueStudentIds(),
       teachersList(BRUNO),
       noAccessYet(),
       studentsHandler((params) => {
@@ -109,6 +239,7 @@ describe('cadastro de aluno', () => {
 
     server.use(
       meOk(ADMIN),
+      overdueStudentIds(),
       teachersList(BRUNO),
       noAccessYet(),
       studentsHandler(() => pageOf(students)),
@@ -171,6 +302,7 @@ describe('cadastro de aluno', () => {
     const sent: Array<{ id: number; body: StudentInput }> = [];
     server.use(
       meOk(ADMIN),
+      overdueStudentIds(),
       teachersList(BRUNO),
       noAccessYet(),
       studentsList(ANA),
@@ -205,6 +337,7 @@ describe('desativação', () => {
     const deactivated: number[] = [];
     server.use(
       meOk(ADMIN),
+      overdueStudentIds(),
       teachersList(BRUNO),
       noAccessYet(),
       studentsList(ANA),
@@ -230,6 +363,7 @@ describe('desativação', () => {
     const activated: number[] = [];
     server.use(
       meOk(ADMIN),
+      overdueStudentIds(),
       teachersList(BRUNO),
       noAccessYet(),
       studentsList(student({ id: 1, name: 'Ana Alves', active: false })),
@@ -262,6 +396,7 @@ describe('acesso do aluno', () => {
     const sent: Array<{ login: string; role: string; studentId: number }> = [];
     server.use(
       meOk(ADMIN),
+      overdueStudentIds(),
       teachersList(BRUNO),
       noAccessYet(),
       studentsList(ANA),
@@ -288,6 +423,7 @@ describe('acesso do aluno', () => {
     const activated: number[] = [];
     server.use(
       meOk(ADMIN),
+      overdueStudentIds(),
       teachersList(BRUNO),
       studentsList(ANA),
       accessOfStudentsHandler(() => [accessUser({ id: 500, studentId: 1, active: false })]),
@@ -310,6 +446,7 @@ describe('acesso do aluno', () => {
   it('não oferece ação de acesso para quem já tem login ativo', async () => {
     server.use(
       meOk(ADMIN),
+      overdueStudentIds(),
       teachersList(BRUNO),
       studentsList(ANA),
       accessOfStudentsHandler(() => [accessUser({ id: 500, studentId: 1, active: true })]),
@@ -330,6 +467,7 @@ describe('acesso do aluno', () => {
   it('mostra a mensagem do back quando o login já existe', async () => {
     server.use(
       meOk(ADMIN),
+      overdueStudentIds(),
       teachersList(BRUNO),
       noAccessYet(),
       studentsList(ANA),
@@ -356,6 +494,7 @@ describe('acesso do aluno', () => {
   it('não oferece ação de acesso enquanto a consulta não responde', async () => {
     server.use(
       meOk(ADMIN),
+      overdueStudentIds(),
       teachersList(BRUNO),
       studentsList(ANA),
       http.get('/api/users', async () => {
@@ -379,6 +518,7 @@ describe('acesso do aluno', () => {
   it('explica quando não consegue carregar a situação de acesso', async () => {
     server.use(
       meOk(ADMIN),
+      overdueStudentIds(),
       teachersList(BRUNO),
       studentsList(ANA),
       http.get('/api/users', () => HttpResponse.error()),
@@ -397,6 +537,7 @@ describe('acesso do aluno', () => {
     let calls = 0;
     server.use(
       meOk(ADMIN),
+      overdueStudentIds(),
       teachersList(BRUNO),
       studentsList(ANA),
       http.get('/api/users', () => {
@@ -419,6 +560,7 @@ describe('acesso do aluno', () => {
     const asked: string[] = [];
     server.use(
       meOk(ADMIN),
+      overdueStudentIds(),
       teachersList(BRUNO),
       studentsList(ANA, student({ id: 2, name: 'Bia Barros' })),
       accessOfStudentsHandler(() => [], asked),
@@ -444,6 +586,7 @@ describe('paginação', () => {
 
     server.use(
       meOk(ADMIN),
+      overdueStudentIds(),
       teachersList(BRUNO),
       noAccessYet(),
       studentsHandler((params) => {

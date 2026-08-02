@@ -36,6 +36,18 @@ class BillingAccessControlIT extends AbstractBillingIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    /**
+     * A lista de quem está atrasado é situação de cobrança do estúdio inteiro:
+     * o professor não a vê, mesmo sendo uma lista de ids.
+     */
+    @Test
+    void teacherCannotListOverdueStudentIds() throws Exception {
+        long teacherId = createTeacher(unique("Professor Sem Acesso A Inadimplencia"));
+
+        mockMvc.perform(get("/invoices/overdue-student-ids").cookie(linkedTeacherCookie(teacherId)))
+                .andExpect(status().isForbidden());
+    }
+
     @Test
     void teacherCannotRegisterPayment() throws Exception {
         long teacherId = createTeacher(unique("Professor Sem Poder De Baixa"));

@@ -138,6 +138,26 @@ public class BillingService {
     }
 
     /**
+     * Quem está com fatura atrasada, em ids de aluno.
+     *
+     * Responde à pergunta que a tela de alunos faz sem que {@code registration}
+     * passe a conhecer {@code billing}: quem é dono da fatura responde, e quem
+     * cruza as duas listas é o cliente. A aresta que não existe no grafo de
+     * módulos continua não existindo.
+     *
+     * Ids distintos e ordenados: a resposta é sobre alunos, não sobre faturas —
+     * dois meses atrasados são o mesmo aluno uma vez só.
+     */
+    @Transactional(readOnly = true)
+    public List<Long> findOverdueStudentIds() {
+        List<Invoice> overdue = invoiceRepository.findByStatus(InvoiceStatus.OVERDUE);
+        return studentIdsBySubscription(overdue).values().stream()
+                .distinct()
+                .sorted()
+                .toList();
+    }
+
+    /**
      * Baixa: fatura vira PAGA, pagamento é criado, assinatura recalcula o
      * vencimento para o aniversário do pagamento, evento é publicado. Tudo na
      * mesma transação, como a spec exige.
