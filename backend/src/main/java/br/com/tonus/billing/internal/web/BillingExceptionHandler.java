@@ -3,8 +3,10 @@ package br.com.tonus.billing.internal.web;
 import br.com.tonus.billing.internal.FuturePaymentDateException;
 import br.com.tonus.billing.internal.InvoiceAlreadyPaidException;
 import br.com.tonus.billing.internal.InvoiceNotFoundException;
-import br.com.tonus.billing.internal.SubscriptionAlreadyExistsException;
-import br.com.tonus.billing.internal.SubscriptionNotFoundException;
+import br.com.tonus.billing.internal.EnrollmentAlreadyExistsException;
+import br.com.tonus.billing.internal.EnrollmentNotFoundException;
+import br.com.tonus.billing.internal.PlanNotFoundException;
+import br.com.tonus.billing.internal.UnknownPlanException;
 import br.com.tonus.billing.internal.UnknownStudentException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
@@ -13,22 +15,27 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(assignableTypes = {
-        SubscriptionController.class,
         InvoiceController.class,
-        MyInvoicesController.class})
+        MyInvoicesController.class,
+        PlanController.class,
+        PlanEnrollmentController.class,
+        BillingSettingsController.class})
 class BillingExceptionHandler {
 
-    @ExceptionHandler({SubscriptionNotFoundException.class, InvoiceNotFoundException.class})
+    @ExceptionHandler({InvoiceNotFoundException.class,
+            PlanNotFoundException.class, EnrollmentNotFoundException.class})
     ProblemDetail handleNotFound(RuntimeException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
-    @ExceptionHandler({SubscriptionAlreadyExistsException.class, InvoiceAlreadyPaidException.class})
+    @ExceptionHandler({InvoiceAlreadyPaidException.class,
+            EnrollmentAlreadyExistsException.class})
     ProblemDetail handleConflict(RuntimeException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
     }
 
-    @ExceptionHandler({UnknownStudentException.class, FuturePaymentDateException.class})
+    @ExceptionHandler({UnknownStudentException.class, FuturePaymentDateException.class,
+            UnknownPlanException.class})
     ProblemDetail handleBadRequest(RuntimeException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
     }

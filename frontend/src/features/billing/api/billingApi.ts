@@ -12,11 +12,10 @@ export type InvoiceStatus = 'OPEN' | 'PAID' | 'OVERDUE';
  */
 export interface Invoice {
   id: number;
-  subscriptionId: number;
   studentId: number;
   /**
-   * Nulo é possível: subscription.student_id não tem FK (docs/ddl.md), então o
-   * back não consegue prometer que o aluno existe. A tela resolve o fallback.
+   * Nulo é possível: invoice.student_id não tem FK (docs/ddl.md), então o back
+   * não consegue prometer que o aluno existe. A tela resolve o fallback.
    */
   studentName: string | null;
   /** yyyy-MM — competência, o mês a que a fatura se refere. */
@@ -40,32 +39,56 @@ export interface InvoiceQuery {
 export const invoicesKey = (query?: InvoiceQuery) =>
   query ? (['billing', 'invoices', query] as const) : (['billing', 'invoices'] as const);
 
-/** Espelha o DTO de /subscriptions. */
-export interface Subscription {
+/**
+ * Espelha o DTO de /plans.
+ *
+ * `activeEnrollments` vem do back porque a tela precisa dizer quantos alunos
+ * deixam de ser cobrados antes de desativar um plano, e contá-lo aqui exigiria
+ * carregar as matrículas do estúdio inteiro.
+ */
+export interface Plan {
   id: number;
-  studentId: number;
-  monthlyAmount: number;
-  /**
-   * Só leitura: é o dia do cadastro do aluno, definido pelo back (SPEC-004). O
-   * ajuste para o último dia em mês curto é dele também, por competência.
-   */
-  dueDay: number;
+  name: string;
+  monthlyPrice: number;
   active: boolean;
+  activeEnrollments: number;
 }
 
-/** Sem dueDay: o back o resolve pelo cadastro do aluno e ignora o que vier daqui. */
-export interface SubscriptionInput {
-  studentId: number;
-  monthlyAmount: number;
+export interface PlanInput {
+  name: string;
+  monthlyPrice: number;
 }
 
-export interface SubscriptionQuery {
+export interface PlanQuery {
   active?: boolean;
   page: number;
 }
 
-export const subscriptionsKey = (query?: SubscriptionQuery) =>
-  query ? (['billing', 'subscriptions', query] as const) : (['billing', 'subscriptions'] as const);
+export const plansKey = (query?: PlanQuery) =>
+  query ? (['billing', 'plans', query] as const) : (['billing', 'plans'] as const);
+
+/** O catálogo inteiro para os seletores — sem paginação, como o de professores. */
+export const plansLookupKey = ['billing', 'plans', 'lookup'] as const;
+
+/** O vínculo aluno -> plano. Desativar não apaga: a linha guarda o histórico. */
+export interface PlanEnrollment {
+  id: number;
+  studentId: number;
+  planId: number;
+  active: boolean;
+}
+
+export const enrollmentsKey = (studentId?: number) =>
+  studentId === undefined
+    ? (['billing', 'plan-enrollments'] as const)
+    : (['billing', 'plan-enrollments', studentId] as const);
+
+/** A configuração do estúdio: uma linha, um campo. */
+export interface BillingSettings {
+  multiPlanDiscountPercent: number;
+}
+
+export const billingSettingsKey = ['billing', 'settings'] as const;
 
 export const myInvoicesKey = (page: number) => ['billing', 'me', 'invoices', page] as const;
 
@@ -85,20 +108,25 @@ export const billingApi = {
   registerPayment: (id: number, paymentDate: string) =>
     apiClient.post<Invoice>(`/invoices/${id}/payment`, { paymentDate }),
 
-  subscriptions: ({ active, page }: SubscriptionQuery) => {
+  plans: ({ active, page }: PlanQuery) => {
     const params = new URLSearchParams({ page: String(page) });
     if (active !== undefined) params.set('active', String(active));
-    return apiClient.get<Page<Subscription>>(`/subscriptions?${params}`);
+    return apiClient.get<Page<Plan>>(`/plans?${params}`);
   },
-  createSubscription: (input: SubscriptionInput) => apiClient.post<Subscription>('/subscriptions', input),
-  /**
-   * O aluno vai no corpo mesmo na edição: o back exige o campo, e ignora a
-   * troca — assinatura não muda de dono, cria-se outra.
-   */
-  updateSubscription: (id: number, input: SubscriptionInput) =>
-    apiClient.put<Subscription>(`/subscriptions/${id}`, input),
-  activateSubscription: (id: number) => apiClient.patch<Subscription>(`/subscriptions/${id}/activate`),
-  deactivateSubscription: (id: number) => apiClient.patch<Subscription>(`/subscriptions/${id}/deactivate`),
+  createPlan: (input: PlanInput) => apiClient.post<Plan>('/plans', input),
+  updatePlan: (id: number, input: PlanInput) => apiClient.put<Plan>(`/plans/${id}`, input),
+  activatePlan: (id: number) => apiClient.patch<Plan>(`/plans/${id}/activate`),
+  deactivatePlan: (id: number) => apiClient.patch<Plan>(`/plans/${id}/deactivate`),
+
+  enrollmentsOfStudent: (studentId: number) =>
+    apiClient.get<PlanEnrollment[]>(`/plan-enrollments?studentId=${studentId}`),
+  enroll: (studentId: number, planId: number) =>
+    apiClient.post<PlanEnrollment>('/plan-enrollments', { studentId, planId }),
+  activateEnrollment: (id: number) => apiClient.patch<PlanEnrollment>(`/plan-enrollments/${id}/activate`),
+  deactivateEnrollment: (id: number) => apiClient.patch<PlanEnrollment>(`/plan-enrollments/${id}/deactivate`),
+
+  settings: () => apiClient.get<BillingSettings>('/billing-settings'),
+  updateSettings: (input: BillingSettings) => apiClient.put<BillingSettings>('/billing-settings', input),
 
   /** O id do aluno vem do token: /me/invoices não aceita id nenhum. */
   myInvoices: (page: number) => apiClient.get<Page<Invoice>>(`/me/invoices?page=${page}`),

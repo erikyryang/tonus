@@ -40,16 +40,13 @@ class PaymentIT extends AbstractBillingIntegrationTest {
     @Test
     void registeringPaymentClosesInvoiceAndLeavesDueDayAlone(ApplicationEvents events) throws Exception {
         long studentId = createStudent(unique("Aluno Da Baixa"), createTeacher(unique("Professor Da Baixa")));
-        long subscriptionId = createSubscription(studentId, "200.00");
-        int dueDayBefore = dueDayOf(subscriptionId);
-        long invoiceId = seedInvoice(subscriptionId, "2026-07-01", "200.00", "2026-07-05", "OPEN");
+        long invoiceId = seedInvoice(studentId, "2026-07-01", "200.00", "2026-07-05", "OPEN");
 
         pay(invoiceId, TODAY)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PAID"));
 
         assertThat(paymentCountFor(invoiceId)).isEqualTo(1);
-        assertThat(dueDayOf(subscriptionId)).isEqualTo(dueDayBefore);
         assertThat(auditActionsFor(invoiceId)).contains("UPDATE");
         assertThat(events.stream(PaymentRegistered.class)).hasSize(1);
     }
@@ -66,9 +63,7 @@ class PaymentIT extends AbstractBillingIntegrationTest {
     @Test
     void chosenPaymentDateDrivesThePaymentAndNothingElse() throws Exception {
         long studentId = createStudent(unique("Aluno Da Data"), createTeacher(unique("Professor Da Data")));
-        long subscriptionId = createSubscription(studentId, "200.00");
-        int dueDayBefore = dueDayOf(subscriptionId);
-        long invoiceId = seedInvoice(subscriptionId, "2026-07-01", "200.00", "2026-07-05", "OPEN");
+        long invoiceId = seedInvoice(studentId, "2026-07-01", "200.00", "2026-07-05", "OPEN");
 
         pay(invoiceId, "2026-07-20")
                 .andExpect(status().isOk())
@@ -76,7 +71,6 @@ class PaymentIT extends AbstractBillingIntegrationTest {
                 .andExpect(jsonPath("$.paymentDate").value("2026-07-20"));
 
         assertThat(paymentDateOf(invoiceId)).isEqualTo(LocalDate.parse("2026-07-20"));
-        assertThat(dueDayOf(subscriptionId)).isEqualTo(dueDayBefore);
     }
 
     /**
@@ -86,8 +80,7 @@ class PaymentIT extends AbstractBillingIntegrationTest {
     @Test
     void futurePaymentDateIsRejected() throws Exception {
         long studentId = createStudent(unique("Aluno Do Futuro"), createTeacher(unique("Professor Do Futuro")));
-        long subscriptionId = createSubscription(studentId, "200.00");
-        long invoiceId = seedInvoice(subscriptionId, "2026-07-01", "200.00", "2026-07-05", "OPEN");
+        long invoiceId = seedInvoice(studentId, "2026-07-01", "200.00", "2026-07-05", "OPEN");
 
         String tomorrow = LocalDate.parse(TODAY).plusDays(1).toString();
 
@@ -104,8 +97,7 @@ class PaymentIT extends AbstractBillingIntegrationTest {
     @Test
     void paymentDateIsRequired() throws Exception {
         long studentId = createStudent(unique("Aluno Sem Data"), createTeacher(unique("Professor Sem Data")));
-        long subscriptionId = createSubscription(studentId, "200.00");
-        long invoiceId = seedInvoice(subscriptionId, "2026-07-01", "200.00", "2026-07-05", "OPEN");
+        long invoiceId = seedInvoice(studentId, "2026-07-01", "200.00", "2026-07-05", "OPEN");
 
         mockMvc.perform(post("/invoices/{id}/payment", invoiceId).cookie(admin))
                 .andExpect(status().isBadRequest());
@@ -122,8 +114,7 @@ class PaymentIT extends AbstractBillingIntegrationTest {
     @Test
     void payingAlreadyPaidInvoiceIsRejected() throws Exception {
         long studentId = createStudent(unique("Aluno Da Baixa Dupla"), createTeacher(unique("Professor Da Baixa Dupla")));
-        long subscriptionId = createSubscription(studentId, "200.00");
-        long invoiceId = seedInvoice(subscriptionId, "2026-07-01", "200.00", "2026-07-05", "PAID");
+        long invoiceId = seedInvoice(studentId, "2026-07-01", "200.00", "2026-07-05", "PAID");
 
         pay(invoiceId, TODAY).andExpect(status().isConflict());
     }
@@ -151,12 +142,6 @@ class PaymentIT extends AbstractBillingIntegrationTest {
         Integer count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM payment WHERE invoice_id = ?", Integer.class, invoiceId);
         return count == null ? 0 : count;
-    }
-
-    private int dueDayOf(long subscriptionId) {
-        Integer dueDay = jdbcTemplate.queryForObject(
-                "SELECT due_day FROM subscription WHERE id = ?", Integer.class, subscriptionId);
-        return dueDay == null ? -1 : dueDay;
     }
 
     private List<String> auditActionsFor(long invoiceId) {

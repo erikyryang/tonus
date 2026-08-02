@@ -66,7 +66,8 @@ public class SecurityConfig {
                                 "/default-schedules/**", "/announcements/**").hasRole("ADMIN")
 
                         // Cobrança.
-                        .requestMatchers("/subscriptions/**", "/invoices/**").hasRole("ADMIN")
+                        .requestMatchers("/subscriptions/**", "/invoices/**", "/plans/**",
+                                "/plan-enrollments/**", "/billing-settings").hasRole("ADMIN")
 
                         // /auth/me e o que mais existir: exige sessão, sem
                         // escolher papel. Mesma regra de antes desta mudança —

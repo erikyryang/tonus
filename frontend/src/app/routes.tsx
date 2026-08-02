@@ -6,7 +6,8 @@ import { LoginPage } from '@/features/auth/pages/LoginPage';
 import { destinationFor, useSessionState } from '@/features/auth/session';
 import { InvoicesPage } from '@/features/billing/pages/InvoicesPage';
 import { MyInvoicesPage } from '@/features/billing/pages/MyInvoicesPage';
-import { SubscriptionsPage } from '@/features/billing/pages/SubscriptionsPage';
+import { PlansPage } from '@/features/billing/pages/PlansPage';
+import { SettingsPage } from '@/features/billing/pages/SettingsPage';
 import { StudentsPage } from '@/features/registration/pages/StudentsPage';
 import { TeachersPage } from '@/features/registration/pages/TeachersPage';
 import { DefaultSchedulesPage } from '@/features/scheduling/pages/DefaultSchedulesPage';
@@ -34,7 +35,8 @@ export function AppRoutes() {
             <Route path="teachers" element={<TeachersPage />} />
             <Route path="default-schedules" element={<DefaultSchedulesPage />} />
             <Route path="announcements" element={<AnnouncementsPage />} />
-            <Route path="subscriptions" element={<SubscriptionsPage />} />
+            <Route path="plans" element={<PlansPage />} />
+            <Route path="settings" element={<SettingsPage />} />
             <Route path="invoices" element={<InvoicesPage />} />
           </Route>
         </Route>

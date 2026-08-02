@@ -10,8 +10,9 @@ const NAV_ITEMS = [
   { to: '/admin/teachers', label: 'Professores' },
   { to: '/admin/default-schedules', label: 'Horários' },
   { to: '/admin/announcements', label: 'Comunicados' },
-  { to: '/admin/subscriptions', label: 'Assinaturas' },
+  { to: '/admin/plans', label: 'Planos' },
   { to: '/admin/invoices', label: 'Faturas' },
+  { to: '/admin/settings', label: 'Configuração' },
 ];
 
 export function AdminShell() {

@@ -22,10 +22,8 @@ class MyInvoicesIT extends AbstractBillingIntegrationTest {
         long ownStudentId = createStudent(unique("Aluno Dono Da Fatura"), teacherId);
         long otherStudentId = createStudent(unique("Aluno De Fora"), teacherId);
 
-        long ownSubscriptionId = createSubscription(ownStudentId, "200.00");
-        long otherSubscriptionId = createSubscription(otherStudentId, "200.00");
-        long ownInvoiceId = seedInvoice(ownSubscriptionId, "2026-07-01", "200.00", "2026-07-10", "OPEN");
-        seedInvoice(otherSubscriptionId, "2026-07-01", "200.00", "2026-07-10", "OPEN");
+        long ownInvoiceId = seedInvoice(ownStudentId, "2026-07-01", "200.00", "2026-07-10", "OPEN");
+        seedInvoice(otherStudentId, "2026-07-01", "200.00", "2026-07-10", "OPEN");
 
         MvcResult result = mockMvc.perform(get("/me/invoices").cookie(linkedStudentCookie(ownStudentId)))
                 .andExpect(status().isOk())
@@ -44,9 +42,8 @@ class MyInvoicesIT extends AbstractBillingIntegrationTest {
     void studentSeesPaymentDateOfSettledInvoice() throws Exception {
         String name = unique("Aluno Com Recibo");
         long studentId = createStudent(name, createTeacher(unique("Professor Do Recibo")));
-        long subscriptionId = createSubscription(studentId, "200.00");
-        long openId = seedInvoice(subscriptionId, "2026-07-01", "200.00", "2026-07-10", "OPEN");
-        long paidId = seedInvoice(subscriptionId, "2026-06-01", "200.00", "2026-06-10", "PAID");
+        long openId = seedInvoice(studentId, "2026-07-01", "200.00", "2026-07-10", "OPEN");
+        long paidId = seedInvoice(studentId, "2026-06-01", "200.00", "2026-06-10", "PAID");
         seedPayment(paidId, "2026-06-08", 1L);
 
         MvcResult result = mockMvc.perform(get("/me/invoices").param("size", "100")

@@ -116,12 +116,14 @@ Entrega concluída é apagada depois de `shared.events.retention` (7 dias), pelo
 ### `InvoiceDueSoon(Long invoiceId, Long studentId, LocalDate dueDate, BigDecimal amount)`
 
 - **Publica:** `billing`, em `BillingService.generateDueInvoices` (job diário),
-  quando nasce a fatura da competência de uma assinatura ativa.
+  quando nasce a fatura da competência de um aluno com plano ativo.
 - **Significa:** a fatura do mês venceu hoje.
 - **Consome:** `notification` (SPEC-005) — avisa o aluno por WhatsApp.
-- **Idempotência:** o pré-check de existência + `uk_invoice_subscription_period`
+- **Idempotência:** o pré-check de existência + `uk_invoice_student_period`
   garantem que o job só publica este evento uma vez por fatura, mesmo rodando
-  2× no mesmo dia. Ainda assim o consumidor precisa tolerar entrega repetida —
+  2× no mesmo dia. O payload não mudou quando a fatura deixou de ser da
+  assinatura e passou a ser do aluno (SPEC-012): ele já carregava `studentId`,
+  e é por isso que `notification` não foi tocada. Ainda assim o consumidor precisa tolerar entrega repetida —
   a garantia é at-least-once.
 
 ### `InvoiceOverdue(Long invoiceId, Long studentId, LocalDate dueDate)`

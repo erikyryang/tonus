@@ -12,7 +12,11 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 
 /**
- * Fatura de uma competência de uma assinatura.
+ * Fatura de uma competência de um aluno.
+ *
+ * Uma por aluno por competência, e não uma por plano: o aluno com três planos
+ * recebe uma cobrança só, com a soma (SPEC-012). O {@code amount} é cópia do
+ * que foi cobrado — mudar o preço de um plano depois não reescreve histórico.
  *
  * Auditada por decisão de arquitetura (docs/ddl.md): transição de status de
  * fatura precisa ficar rastreável.
@@ -22,8 +26,8 @@ import java.time.YearMonth;
 @Audited
 public class Invoice extends BaseEntity {
 
-    @Column(name = "subscription_id", nullable = false)
-    private Long subscriptionId;
+    @Column(name = "student_id", nullable = false)
+    private Long studentId;
 
     @Column(name = "reference_month", nullable = false)
     private LocalDate referenceMonth;
@@ -41,8 +45,8 @@ public class Invoice extends BaseEntity {
     protected Invoice() {
     }
 
-    public Invoice(Long subscriptionId, YearMonth referenceMonth, BigDecimal amount, LocalDate dueDate) {
-        this.subscriptionId = subscriptionId;
+    public Invoice(Long studentId, YearMonth referenceMonth, BigDecimal amount, LocalDate dueDate) {
+        this.studentId = studentId;
         this.referenceMonth = referenceMonth.atDay(1);
         this.amount = amount;
         this.dueDate = dueDate;
@@ -57,8 +61,8 @@ public class Invoice extends BaseEntity {
         this.status = InvoiceStatus.OVERDUE;
     }
 
-    public Long getSubscriptionId() {
-        return subscriptionId;
+    public Long getStudentId() {
+        return studentId;
     }
 
     public YearMonth getReferenceMonth() {

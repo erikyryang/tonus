@@ -154,6 +154,25 @@ independe de fuso, mas "hoje" não: `/me/schedule` sem data resolve o dia por
 mostraria a agenda do dia seguinte. Erro que só aparece de noite é o mais caro
 de descobrir.
 
+## Cobrança por planos
+
+O aluno assina N planos e recebe **uma** fatura por mês, com a soma dos planos
+ativos e desconto configurável a partir do segundo. Substituiu a assinatura
+única por aluno; o desenho, a migração em quatro passos e as consequências
+assumidas estão na SPEC-012.
+
+Duas decisões dali que valem para além do módulo:
+
+- **A fatura é do aluno, não do vínculo de cobrança.** A chave única passou de
+  `(assinatura, competência)` para `(aluno, competência)`. Com N planos, a
+  chave antiga entregaria uma fatura por plano — e o aluno receberia três
+  cobranças no mesmo dia.
+- **Os eventos de billing não mudaram de payload.** `InvoiceDueSoon`,
+  `InvoiceOverdue` e `PaymentRegistered` já carregavam `studentId` e nunca
+  mencionaram assinatura, então `notification` atravessou a mudança sem uma
+  linha alterada. É o argumento a favor de o evento carregar o identificador do
+  domínio, e não o da tabela que por acaso o originou.
+
 ## Banco
 
 Postgres, Flyway, `ddl-auto: validate` — nunca criação automática de schema.

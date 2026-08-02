@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
 
-    boolean existsBySubscriptionIdAndReferenceMonth(Long subscriptionId, LocalDate referenceMonth);
+    boolean existsByStudentIdAndReferenceMonth(Long studentId, LocalDate referenceMonth);
 
     List<Invoice> findByStatusAndDueDateBefore(InvoiceStatus status, LocalDate cutoff);
 
@@ -16,5 +16,5 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
 
     List<Invoice> findByStatus(InvoiceStatus status);
 
-    Page<Invoice> findBySubscriptionId(Long subscriptionId, Pageable pageable);
+    Page<Invoice> findByStudentId(Long studentId, Pageable pageable);
 }

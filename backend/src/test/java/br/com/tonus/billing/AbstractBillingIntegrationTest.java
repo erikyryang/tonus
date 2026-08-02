@@ -16,9 +16,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Base dos testes do módulo billing.
  *
- * Assinatura é criada pela própria API (POST /subscriptions), mas fatura não
- * tem endpoint de criação — ela só nasce do job diário. Testes que precisam de
- * uma fatura existente semeiam a linha direto por SQL, no mesmo espírito de
+ * Plano e matrícula são criados pela própria API, mas fatura não tem endpoint
+ * de criação — ela só nasce do job diário. Testes que precisam de uma fatura
+ * existente semeiam a linha direto por SQL, no mesmo espírito de
  * {@code SchedulingEventsIT.seedStudent}: contornar a ausência de um caminho
  * HTTP que não existe por decisão de arquitetura, não por lacuna a preencher.
  */
@@ -31,31 +31,39 @@ abstract class AbstractBillingIntegrationTest extends AbstractRegistrationIntegr
     @Autowired
     protected JdbcTemplate jdbcTemplate;
 
-    /**
-     * Sem dia de vencimento: ele vem do dia do cadastro do aluno, e não do
-     * corpo da requisição (SPEC-004).
-     */
-    protected long createSubscription(long studentId, String monthlyAmount) throws Exception {
-        return idOf(postSubscription(studentId, monthlyAmount)
+    protected long createPlan(String name, String monthlyPrice) throws Exception {
+        return idOf(mockMvc.perform(post("/plans")
+                        .cookie(admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"%s","monthlyPrice":"%s"}
+                                """.formatted(name, monthlyPrice)))
                 .andExpect(status().isCreated())
                 .andReturn());
     }
 
-    protected ResultActions postSubscription(long studentId, String monthlyAmount) throws Exception {
-        return mockMvc.perform(post("/subscriptions")
+    protected long enroll(long studentId, long planId) throws Exception {
+        return idOf(postEnrollment(studentId, planId)
+                .andExpect(status().isCreated())
+                .andReturn());
+    }
+
+    protected ResultActions postEnrollment(long studentId, long planId) throws Exception {
+        return mockMvc.perform(post("/plan-enrollments")
                 .cookie(admin)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"studentId":%d,"monthlyAmount":%s}
-                        """.formatted(studentId, monthlyAmount)));
+                        {"studentId":%d,"planId":%d}
+                        """.formatted(studentId, planId)));
     }
 
-    protected long seedInvoice(long subscriptionId, String referenceMonth, String amount, String dueDate, String status) {
+    /** A fatura é do aluno desde a SPEC-012; não existe mais assinatura para semear. */
+    protected long seedInvoice(long studentId, String referenceMonth, String amount, String dueDate, String status) {
         return jdbcTemplate.queryForObject("""
-                INSERT INTO invoice (subscription_id, reference_month, amount, due_date, status, created_at, updated_at)
+                INSERT INTO invoice (student_id, reference_month, amount, due_date, status, created_at, updated_at)
                 VALUES (?, ?::date, ?::numeric, ?::date, ?, now(), now())
                 RETURNING id
-                """, Long.class, subscriptionId, referenceMonth, amount, dueDate, status);
+                """, Long.class, studentId, referenceMonth, amount, dueDate, status);
     }
 
     /**
@@ -75,6 +83,18 @@ abstract class AbstractBillingIntegrationTest extends AbstractRegistrationIntegr
      * endpoints /me dependem do vínculo, e o {@code studentCookie} herdado do
      * auth cria usuário sem vínculo nenhum.
      */
+    protected Cookie linkedTeacherCookie(long teacherId) throws Exception {
+        String login = unique("billing-teacher") + "@tonus.com";
+        mockMvc.perform(post("/users")
+                        .cookie(admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"login":"%s","password":"%s","role":"TEACHER","teacherId":%d}
+                                """.formatted(login, DEFAULT_PASSWORD, teacherId)))
+                .andExpect(status().isCreated());
+        return extractCookie(login(login, DEFAULT_PASSWORD), ACCESS_COOKIE);
+    }
+
     protected Cookie linkedStudentCookie(long studentId) throws Exception {
         String login = unique("billing-student") + "@tonus.com";
         mockMvc.perform(post("/users")

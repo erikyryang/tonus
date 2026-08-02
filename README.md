@@ -151,7 +151,7 @@ migration roda em todo ambiente, e uma senha conhecida aplicada em produção é
 conta aberta. Isto aqui é ferramenta de desenvolvimento — o dia em que houver
 ambiente de verdade, senha por usuário volta a ser senha de verdade.
 
-O seed cria **pessoas e acessos, não movimento**: horário padrão, assinatura e
+O seed cria **pessoas e acessos, não movimento**: horário padrão, plano e
 fatura continuam vindo pela API ou pela tela, então a agenda e as faturas nascem
 vazias. Encher essas telas é seed de dados de demonstração, outra ferramenta.
 
@@ -211,11 +211,13 @@ Backend e frontend completos até a SPEC-007.
   que podem ou não suspender as aulas do dia. A agenda de um
   dia é derivada a cada consulta, nunca materializada. Endpoints
   `/schedule/day` (ADMIN), `/me/schedule` (aluno) e `/me/grid` (professor).
-- **SPEC-004 (`billing`)** — ciclo assinatura → fatura → pagamento, com job
+- **SPEC-004 + SPEC-012 (`billing`)** — ciclo plano → fatura → pagamento, com job
   diário (`@Scheduled` + ShedLock) que gera faturas e marca atrasos. A
   idempotência do job é uma constraint do banco, não uma checagem em código.
   O vencimento da mensalidade é o dia do mês em que o aluno se cadastrou, fixo:
-  dar baixa não o move (regra substituída, ver SPEC-004).
+  dar baixa não o move (regra substituída, ver SPEC-004). O aluno pode assinar
+  vários planos e recebe **uma** fatura por mês com a soma, com desconto
+  configurável a partir do segundo (SPEC-012).
 - **SPEC-005 (`notification`)** — consome os seis eventos do catálogo e avisa o
   aluno por WhatsApp (Evolution API). Único módulo que fala com o mundo
   externo. `notification_log` com UNIQUE por (template, aluno, referência):

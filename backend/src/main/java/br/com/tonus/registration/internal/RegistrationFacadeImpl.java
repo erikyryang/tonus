@@ -97,6 +97,17 @@ class RegistrationFacadeImpl implements RegistrationFacade {
 
     @Override
     @Transactional(readOnly = true)
+    public Map<Long, LocalDate> findRegistrationDates(Collection<Long> studentIds) {
+        if (studentIds.isEmpty()) {
+            return Map.of();
+        }
+        return studentRepository.findAllById(studentIds).stream()
+                .collect(Collectors.toMap(Student::getId,
+                        student -> LocalDate.ofInstant(student.getCreatedAt(), clock.getZone())));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Optional<StudentSummary> findStudentSummary(Long studentId) {
         return studentRepository.findById(studentId)
                 .map(student -> toSummaries(List.of(student)).getFirst());

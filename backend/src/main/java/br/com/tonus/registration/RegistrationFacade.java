@@ -70,6 +70,16 @@ public interface RegistrationFacade {
     Optional<LocalDate> findRegistrationDate(Long studentId);
 
     /**
+     * As datas de cadastro de vários alunos de uma vez, indexadas por id.
+     *
+     * Existe para o job diário de cobrança, que resolve o vencimento de cada
+     * fatura pelo dia do cadastro (SPEC-004) e roda sobre o estúdio inteiro:
+     * perguntar aluno a aluno seria N+1 no único lugar do sistema que trabalha
+     * com todo mundo de uma vez. Ids sem aluno não aparecem no mapa.
+     */
+    Map<Long, LocalDate> findRegistrationDates(Collection<Long> studentIds);
+
+    /**
      * Um aluno só, com nome e professor — o que a agenda precisa para montar a
      * linha de uma aula.
      *

@@ -36,10 +36,18 @@ tela tem de específico.
   ("Aulas suspensas" / "Aulas normais"): sem ela, dois comunicados pareceriam
   a mesma coisa e um deles apaga o dia. Excluir com confirmação, e só promete
   a volta das aulas quando elas estavam suspensas.
-- /subscriptions: aluno (select de ativos) e valor mensal (R$). Sem campo de
-  vencimento: ele é o dia do cadastro do aluno (SPEC-004), e o formulário só
-  diz de onde vem, com o hint do ajuste para fim de mês. A coluna da tabela
-  continua mostrando o dia, que é leitura.
+- /plans: nome e valor mensal (R$). A tabela mostra quantos alunos estão
+  matriculados, e é esse número que a confirmação de desativar repete — a
+  SPEC-012 permite desativar plano com matrícula ativa, e o preço da permissão
+  é dizer o tamanho do estrago antes. Sem excluir: plano desativado continua
+  explicando as faturas emitidas com ele.
+- /settings: o desconto de múltiplos planos, um campo só. Tela própria porque
+  desconto não é atributo de plano nenhum.
+- Os planos de um aluno saem da linha dele em /students ("Planos"), num diálogo
+  de caixas de seleção. Sem botão de salvar: cada caixa é uma decisão isolada,
+  e o back tem endpoint para cada uma — um "salvar" no fim mandaria N chamadas
+  do mesmo jeito, com a diferença de que uma falha no meio deixaria a tela
+  mentindo sobre o que gravou. Desmarcar desativa a matrícula, não a apaga.
 
 ## Telas /me (mobile-first, read-only)
 - /me/schedule (STUDENT): o horário padrão + as próximas exceções e

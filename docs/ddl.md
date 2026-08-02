@@ -38,6 +38,10 @@ Toda mudança entra como migration nova; migration aplicada não se edita.
 | V016 | billing | realinha `subscription.due_day` para o dia do cadastro do aluno (dado, não schema) |
 | V017 | scheduling | `announcement` (substitui `holiday`, que é copiado e removido) |
 | V018 | notification | templates de comunicado no CHECK de `notification_log` |
+| V019 | billing | `plan`, `plan_enrollment`, `billing_settings` |
+| V020 | billing | assinaturas viram planos + matrículas (dado, não schema) |
+| V021 | billing | `invoice.student_id` no lugar de `subscription_id`; troca a UNIQUE |
+| V022 | billing | `DROP TABLE subscription` |
 
 ---
 
@@ -160,44 +164,68 @@ Cada evento entregue a um listener vira uma linha, marcada como completa só
 quando o listener termina. Linha com `completion_date IS NULL` é entrega que
 não fechou — é isso que sustenta o at-least-once. Ver `docs/eventos.md`.
 
-## `subscription` (billing)
+## `plan` (billing)
 
-`id`, `student_id`, `monthly_amount`, `due_day`, `active`, timestamps.
+`id`, `name`, `monthly_price`, `active`, timestamps.
 
-- `student_id` **sem FK**, mesma decisão de `default_schedule.student_id`: a
-  integridade é garantida em código, via `RegistrationFacade`.
-- `uk_subscription_student` — um aluno tem no máximo uma assinatura. Duas
-  tornariam ambíguo quem o job diário deveria faturar.
-- `ck_subscription_due_day CHECK (due_day BETWEEN 1 AND 31)` — dia de mês
-  válido; a resolução para o último dia do mês (31 em fevereiro) é lógica de
-  domínio (`Subscription.dueDateFor`), não do banco.
-- `due_day` é **cópia do dia do mês de `student.created_at`**, gravada na
-  criação da assinatura (SPEC-004). Não vem do cliente e não muda — a baixa de
-  fatura, que antes o realinhava para o dia do pagamento, não o toca mais.
-  Continua sendo coluna daqui, e não uma leitura do `registration` a cada
-  fatura, porque o job diário não pode depender de outro módulo para resolver a
-  data do que gera; é cópia de um valor que não retroage.
+- Substituiu `subscription` na SPEC-012: o aluno pode assinar N planos, e o
+  valor de cada um vive no catálogo, não na linha do aluno.
+- `ck_plan_monthly_price CHECK (monthly_price > 0)` — plano de graça não é
+  plano; se o estúdio quiser isentar alguém, o caminho é não matriculá-lo.
+- Não existe DELETE: plano desativado continua explicando as faturas emitidas
+  com ele.
+
+## `plan_enrollment` (billing)
+
+`id`, `student_id`, `plan_id`, `active`, timestamps.
+
+- **`uk_plan_enrollment_student_plan`** — o mesmo plano não se assina duas
+  vezes: a segunda linha tornaria ambíguo quanto cobrar. Cobrar em dobro se
+  resolve com um plano de outro preço.
+- `student_id` **sem FK**, mesma decisão de `users.student_id` e
+  `default_schedule.student_id`; `plan_id` **com** FK, porque plano e matrícula
+  são do mesmo módulo.
+- `active` em vez de apagar a linha: "esse aluno já teve esse plano" é pergunta
+  de cobrança, e é o que permite rematricular sem esbarrar na UNIQUE.
+- `idx_plan_enrollment_student` — o job monta a fatura por aluno, e a tela do
+  aluno pergunta os planos dele.
+
+## `billing_settings` (billing)
+
+`id`, `multi_plan_discount_percent`, timestamps.
+
+- **`ck_billing_settings_singleton CHECK (id = 1)`** — linha única por
+  constraint, não por convenção. Com duas linhas, "qual desconto vale?" teria
+  como resposta "a que o LIMIT 1 pegou".
+- `ck_billing_settings_discount CHECK (BETWEEN 0 AND 100)` — percentual fora
+  disso não tem significado, e o negativo viraria acréscimo silencioso.
+- Nasce com 0 na migration: desconto é escolha do estúdio, não default.
 
 ## `invoice` (billing)
 
-`id`, `subscription_id`, `reference_month`, `amount`, `due_date`, `status`,
+`id`, `student_id`, `reference_month`, `amount`, `due_date`, `status`,
 timestamps.
 
-- `subscription_id` com FK normal para `subscription`: as duas tabelas são do
-  mesmo módulo, então não há o acoplamento entre módulos que se evita em
-  `student_id`/`teacher_id`.
+- `student_id` **sem FK** (V021, SPEC-012): a fatura passou a ser do aluno, e
+  aluno é de outro módulo — mesma decisão de `plan_enrollment.student_id`. Era
+  `subscription_id` com FK, quando fatura e assinatura eram ambas de billing.
+- `amount` é **cópia** do que foi cobrado, não uma soma recalculável: mudar o
+  preço de um plano depois não pode reescrever histórico.
 - `reference_month` guarda sempre o dia 1 do mês — é a representação de
   `YearMonth` no banco, para reaproveitar `DATE` em vez de duas colunas
   separadas de ano e mês.
-- **`uk_invoice_subscription_period`** — uma fatura por assinatura por
-  competência. É o critério de aceite "job rodando 2× no mesmo dia não
-  duplica fatura" expresso no banco: a idempotência do job vira constraint,
-  não só verificação em código.
+- **`uk_invoice_student_period`** — uma fatura por **aluno** por competência.
+  É o critério de aceite "job rodando 2× no mesmo dia não duplica fatura"
+  expresso no banco: a idempotência do job vira constraint, não só verificação
+  em código. A chave mudou de `(subscription, competência)` na V021 — com N
+  planos por aluno, a chave antiga entregaria uma fatura por plano, que é
+  exatamente o que a SPEC-012 veio evitar.
 - `ck_invoice_status CHECK (status IN ('OPEN', 'PAID', 'OVERDUE'))` — mesma
   razão do CHECK de `users.role`.
 - `idx_invoice_status` / `idx_invoice_due_date` — o job diário varre faturas
   por status (abertas vencendo → atrasadas) e por vencimento (quem vence
-  hoje).
+  hoje). `idx_invoice_student` — a listagem do aluno e o cruzamento de
+  inadimplência.
 - Auditada (`@Audited`): transição de status de fatura precisa ficar
   rastreável — mesma decisão de `default_schedule`.
 

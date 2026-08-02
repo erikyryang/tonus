@@ -1,13 +1,20 @@
 # SPEC-004 — Cobrança
 
+> **Assinatura foi substituída por planos na SPEC-012.** O ciclo, o job diário,
+> os eventos e a regra de vencimento continuam valendo como descritos aqui; o
+> que mudou é a origem do valor — soma dos planos ativos do aluno, com desconto,
+> em vez de uma assinatura única. Onde este documento diz "assinatura", leia
+> "matrícula em plano", e o que vale sobre a fatura está na SPEC-012.
+
 ## Objetivo
-Ciclo assinatura → fatura → pagamento, com job diário e eventos.
+Ciclo cobrança → fatura → pagamento, com job diário e eventos.
 
 ## Regras
 - `assinatura`: aluno_id (FK, UNIQUE), valor_mensal, dia_vencimento, ativa.
-- `fatura`: assinatura_id, competencia, valor, vencimento,
-  status ABERTA/PAGA/ATRASADA. UNIQUE(assinatura_id, competencia) —
-  idempotência do job virando constraint.
+  **Substituída por `plan` + `plan_enrollment` na SPEC-012.**
+- `fatura`: competencia, valor, vencimento, status ABERTA/PAGA/ATRASADA.
+  UNIQUE(aluno, competencia) — idempotência do job virando constraint. Era
+  UNIQUE(assinatura, competencia) até a SPEC-012.
 - `pagamento`: fatura_id (FK, UNIQUE), data_pagamento, registrado_por.
 - Job diário (@Scheduled + ShedLock):
     1. Gera fatura da competência para assinaturas ativas com vencimento hoje
@@ -21,7 +28,8 @@ Ciclo assinatura → fatura → pagamento, com job diário e eventos.
   por competência, na resolução; o dia guardado continua sendo o do cadastro.
 - Baixa (ADMIN): fatura → PAGA + cria pagamento + publica PagamentoRegistrado.
       Tudo na MESMA transação. **Não** mexe no dia_vencimento.
-- Endpoints: CRUD /assinaturas, GET /faturas (filtros por status, paginado),
+- Endpoints: CRUD /planos e /matrículas (SPEC-012), GET /faturas (filtros por
+  status, paginado),
   POST /faturas/{id}/pagamento (ADMIN), GET /me/faturas (ALUNO).
   A baixa passou a exigir corpo `{paymentDate}` em SPEC-008 — a data é do
   ADMIN, não do Clock. O Clock continua decidindo o que é "futuro".
@@ -30,7 +38,7 @@ Ciclo assinatura → fatura → pagamento, com job diário e eventos.
 ## Critérios de aceite
 - Job rodando 2× no mesmo dia não duplica fatura nem eventos.
 - Baixa em fatura já PAGA → 409.
-- Aluno cadastrado no dia 5 → assinatura nasce vencendo dia 5.
+- Aluno cadastrado no dia 5 → a fatura dele vence no dia 5.
 - Baixa em qualquer data deixa o dia_vencimento onde estava.
 - Cadastro dia 31 → dia_vencimento 31, e a fatura de fevereiro vence dia 28.
 - Datas testáveis via Clock injetado (nunca LocalDate.now()).
@@ -58,11 +66,12 @@ Consequências assumidas:
   assinatura passaria a discordar do aluno a que pertence. Se um dia for
   preciso mudar o vencimento de alguém, a mudança é no cadastro, e vai
   precisar de decisão própria.
-- **`due_day` continua sendo coluna da assinatura**, cópia do dia do cadastro,
-  em vez de ser lido do `registration` a cada fatura. A assinatura é quem
-  responde "quando vence", e o job diário não pode depender de outro módulo
-  para resolver a data de cada fatura que gera. É cópia de valor que não
-  retroage.
+- **`due_day` era coluna da assinatura**, cópia do dia do cadastro. Com a
+  SPEC-012 a coluna morreu junto com a assinatura, e o job passou a resolver o
+  vencimento na hora, pelo cadastro — com a data de todo mundo vindo em lote
+  (`RegistrationFacade.findRegistrationDates`), para não virar N+1. A regra em
+  si não mudou: o dia é o do cadastro, aparado para o último dia do mês quando
+  não existe. Ela vive em `DueDates.forMonth`, com teste unitário próprio.
 - `RegistrationFacade.findRegistrationDate` nasceu disso. Devolve `LocalDate`
   no fuso do estúdio, não `Instant`: quem se cadastrou às 21h30 de Brasília se
   cadastrou no dia 5, e em UTC seria dia 6 — a mensalidade venceria um dia
@@ -70,7 +79,9 @@ Consequências assumidas:
 - O que foi removido: `Subscription.realignDueDayTo`, o `dueDay` de
   `SubscriptionRequest` e do formulário, o aviso de recálculo no diálogo de
   baixa, e os testes da regra antiga (`PaymentIT` agora prova o contrário —
-  que a baixa **não** move o vencimento).
+  que a baixa **não** move o vencimento). O que sobrou disso tudo depois da
+  SPEC-012 é a regra: a assinatura inteira morreu, o vencimento pelo cadastro
+  ficou.
 - **As assinaturas que já existiam foram realinhadas** (migration V016). Sem
   isso o estúdio conviveria com duas regras ao mesmo tempo — a nova para quem
   assinasse dali em diante, a antiga congelada para quem já tinha assinado —, e
@@ -85,8 +96,9 @@ Consequências assumidas:
   reconciliação contínua; a V016 é correção de uma vez, não rotina.
 - O fuso do estúdio decide o dia, não UTC — quem se cadastra às 21h30 de
   Brasília se cadastra no dia 5, e em UTC já é dia 6. Vale nos dois caminhos, e
-  os dois têm teste que falha se alguém trocar por UTC: `DueDayTimeZoneIT` (a
-  regra viva, com relógio de 21h30) e `DueDayBackfillIT` (a migration).
+  tem teste que falha se alguém trocar por UTC: `DueDayTimeZoneIT`, com relógio
+  de 21h30, hoje exercitando o job de faturamento. O teste da V016 morreu com a
+  tabela que ela corrigia (SPEC-012).
 
 ## Fora de escopo
 PIX/gateway, multa/juros, parcelamento, reenvio periódico do alerta de atraso.

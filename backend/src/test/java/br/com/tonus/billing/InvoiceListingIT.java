@@ -17,9 +17,8 @@ class InvoiceListingIT extends AbstractBillingIntegrationTest {
     @Test
     void listsInvoicesFilteredByStatus() throws Exception {
         long studentId = createStudent(unique("Aluno Da Listagem"), createTeacher(unique("Professor Da Listagem")));
-        long subscriptionId = createSubscription(studentId, "200.00");
-        long openId = seedInvoice(subscriptionId, "2026-07-01", "200.00", "2026-07-10", "OPEN");
-        seedInvoice(subscriptionId, "2026-06-01", "200.00", "2026-06-10", "PAID");
+        long openId = seedInvoice(studentId, "2026-07-01", "200.00", "2026-07-10", "OPEN");
+        seedInvoice(studentId, "2026-06-01", "200.00", "2026-06-10", "PAID");
 
         MvcResult result = mockMvc.perform(get("/invoices")
                         .param("status", "OPEN")
@@ -42,9 +41,8 @@ class InvoiceListingIT extends AbstractBillingIntegrationTest {
     void listingCarriesStudentNameAndPaymentDate() throws Exception {
         String name = unique("Aluno Nomeado");
         long studentId = createStudent(name, createTeacher(unique("Professor Nomeado")));
-        long subscriptionId = createSubscription(studentId, "200.00");
-        long openId = seedInvoice(subscriptionId, "2026-07-01", "200.00", "2026-07-10", "OPEN");
-        long paidId = seedInvoice(subscriptionId, "2026-06-01", "200.00", "2026-06-10", "PAID");
+        long openId = seedInvoice(studentId, "2026-07-01", "200.00", "2026-07-10", "OPEN");
+        long paidId = seedInvoice(studentId, "2026-06-01", "200.00", "2026-06-10", "PAID");
         // registered_by não tem FK (billing não pode depender de auth): id solto basta.
         seedPayment(paidId, "2026-06-08", 1L);
 
@@ -74,10 +72,9 @@ class InvoiceListingIT extends AbstractBillingIntegrationTest {
     @Test
     void listingIsPaged() throws Exception {
         long studentId = createStudent(unique("Aluno Paginado"), createTeacher(unique("Professor Paginado")));
-        long subscriptionId = createSubscription(studentId, "200.00");
-        seedInvoice(subscriptionId, "2026-05-01", "200.00", "2026-05-10", "PAID");
-        seedInvoice(subscriptionId, "2026-06-01", "200.00", "2026-06-10", "PAID");
-        seedInvoice(subscriptionId, "2026-07-01", "200.00", "2026-07-10", "OPEN");
+        seedInvoice(studentId, "2026-05-01", "200.00", "2026-05-10", "PAID");
+        seedInvoice(studentId, "2026-06-01", "200.00", "2026-06-10", "PAID");
+        seedInvoice(studentId, "2026-07-01", "200.00", "2026-07-10", "OPEN");
 
         mockMvc.perform(get("/invoices").param("page", "0").param("size", "2").cookie(admin))
                 .andExpect(status().isOk())

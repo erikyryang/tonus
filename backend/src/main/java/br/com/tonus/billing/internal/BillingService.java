@@ -6,13 +6,18 @@ import br.com.tonus.billing.PaymentRegistered;
 import br.com.tonus.billing.internal.domain.Invoice;
 import br.com.tonus.billing.internal.domain.InvoiceRepository;
 import br.com.tonus.billing.internal.domain.InvoiceStatus;
+import br.com.tonus.billing.internal.domain.BillingSettings;
+import br.com.tonus.billing.internal.domain.BillingSettingsRepository;
 import br.com.tonus.billing.internal.domain.Payment;
 import br.com.tonus.billing.internal.domain.PaymentRepository;
-import br.com.tonus.billing.internal.domain.Subscription;
-import br.com.tonus.billing.internal.domain.SubscriptionRepository;
+import br.com.tonus.billing.internal.domain.Plan;
+import br.com.tonus.billing.internal.domain.PlanEnrollment;
+import br.com.tonus.billing.internal.domain.PlanEnrollmentRepository;
+import br.com.tonus.billing.internal.domain.PlanRepository;
 import br.com.tonus.registration.RegistrationFacade;
 import br.com.tonus.registration.StudentContact;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -31,85 +36,158 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class BillingService {
 
-    private final SubscriptionRepository subscriptionRepository;
     private final InvoiceRepository invoiceRepository;
     private final PaymentRepository paymentRepository;
+    private final PlanRepository planRepository;
+    private final PlanEnrollmentRepository planEnrollmentRepository;
+    private final BillingSettingsRepository billingSettingsRepository;
     private final RegistrationFacade registrationFacade;
     private final ApplicationEventPublisher events;
     private final Clock clock;
     private final BillingProperties billingProperties;
 
-    public BillingService(SubscriptionRepository subscriptionRepository,
-                           InvoiceRepository invoiceRepository,
+    public BillingService(InvoiceRepository invoiceRepository,
                            PaymentRepository paymentRepository,
+                           PlanRepository planRepository,
+                           PlanEnrollmentRepository planEnrollmentRepository,
+                           BillingSettingsRepository billingSettingsRepository,
                            RegistrationFacade registrationFacade,
                            ApplicationEventPublisher events,
                            Clock clock,
                            BillingProperties billingProperties) {
-        this.subscriptionRepository = subscriptionRepository;
         this.invoiceRepository = invoiceRepository;
         this.paymentRepository = paymentRepository;
+        this.planRepository = planRepository;
+        this.planEnrollmentRepository = planEnrollmentRepository;
+        this.billingSettingsRepository = billingSettingsRepository;
         this.registrationFacade = registrationFacade;
         this.events = events;
         this.clock = clock;
         this.billingProperties = billingProperties;
     }
 
+    // ---------------------------------------------------------------- planos
+
+    @Transactional
+    public PlanView createPlan(String name, BigDecimal monthlyPrice) {
+        Plan plan = planRepository.save(new Plan(name, monthlyPrice));
+        return new PlanView(plan, 0);
+    }
+
+    @Transactional
+    public PlanView updatePlan(Long id, String name, BigDecimal monthlyPrice) {
+        Plan plan = requirePlan(id);
+        plan.update(name, monthlyPrice);
+        return withEnrollmentCount(planRepository.save(plan));
+    }
+
+    /**
+     * Desativar plano com matrícula ativa é permitido (SPEC-012): encerrar um
+     * plano não pode exigir desmatricular aluno por aluno. Quem avisa do
+     * estrago é a tela, com a contagem que {@code activeEnrollments} carrega.
+     */
+    @Transactional
+    public PlanView setPlanActive(Long id, boolean active) {
+        Plan plan = requirePlan(id);
+        if (active) {
+            plan.activate();
+        } else {
+            plan.deactivate();
+        }
+        return withEnrollmentCount(planRepository.save(plan));
+    }
+
+    @Transactional(readOnly = true)
+    public PlanView findPlan(Long id) {
+        return withEnrollmentCount(requirePlan(id));
+    }
+
+    /**
+     * A contagem de matriculados sai de UMA consulta para a página inteira. Uma
+     * por plano seria N+1 justamente na tela em que o ADMIN decide desativar
+     * algo — e é a contagem que ele lê antes de decidir.
+     */
+    @Transactional(readOnly = true)
+    public Page<PlanView> findPlans(Boolean active, Pageable pageable) {
+        Pageable stable = withStableSort(pageable);
+        Page<Plan> plans = active == null
+                ? planRepository.findAll(stable)
+                : planRepository.findByActive(active, stable);
+
+        List<Long> planIds = plans.getContent().stream().map(Plan::getId).toList();
+        Map<Long, Long> counts = planIds.isEmpty()
+                ? Map.of()
+                : planEnrollmentRepository.countActiveByPlanIds(planIds).stream()
+                        .collect(Collectors.toMap(
+                                PlanEnrollmentRepository.PlanEnrollmentCount::getPlanId,
+                                PlanEnrollmentRepository.PlanEnrollmentCount::getTotal));
+
+        return plans.map(plan -> new PlanView(plan, counts.getOrDefault(plan.getId(), 0L)));
+    }
+
+    // ------------------------------------------------------------ matrículas
+
+    @Transactional
+    public PlanEnrollment enroll(Long studentId, Long planId) {
+        requireActiveStudent(studentId);
+        if (!planRepository.existsById(planId)) {
+            throw new UnknownPlanException(planId);
+        }
+        if (planEnrollmentRepository.existsByStudentIdAndPlanId(studentId, planId)) {
+            throw new EnrollmentAlreadyExistsException(studentId, planId);
+        }
+        return planEnrollmentRepository.save(new PlanEnrollment(studentId, planId));
+    }
+
+    @Transactional
+    public PlanEnrollment setEnrollmentActive(Long id, boolean active) {
+        PlanEnrollment enrollment = planEnrollmentRepository.findById(id)
+                .orElseThrow(() -> new EnrollmentNotFoundException(id));
+        if (active) {
+            enrollment.activate();
+        } else {
+            enrollment.deactivate();
+        }
+        return planEnrollmentRepository.save(enrollment);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PlanEnrollment> findEnrollmentsOfStudent(Long studentId) {
+        return planEnrollmentRepository.findByStudentId(studentId);
+    }
+
+    // ---------------------------------------------------------- configuração
+
+    @Transactional(readOnly = true)
+    public BillingSettings findSettings() {
+        return requireSettings();
+    }
+
+    @Transactional
+    public BillingSettings updateSettings(BigDecimal multiPlanDiscountPercent) {
+        BillingSettings settings = requireSettings();
+        settings.update(multiPlanDiscountPercent);
+        return billingSettingsRepository.save(settings);
+    }
+
+    private BillingSettings requireSettings() {
+        return billingSettingsRepository.findById(BillingSettings.SINGLETON_ID)
+                .orElseThrow(() -> new IllegalStateException(
+                        "billing_settings sem a linha única; a migration V019 deveria tê-la criado"));
+    }
+
+    private Plan requirePlan(Long id) {
+        return planRepository.findById(id).orElseThrow(() -> new PlanNotFoundException(id));
+    }
+
+    private PlanView withEnrollmentCount(Plan plan) {
+        return new PlanView(plan, planEnrollmentRepository.countByPlanIdAndActiveTrue(plan.getId()));
+    }
+
     /**
      * O dia de vencimento vem do cadastro do aluno, não do pedido: é o dia do
      * mês em que ele entrou no estúdio (SPEC-004).
      */
-    @Transactional
-    public Subscription createSubscription(Long studentId, BigDecimal monthlyAmount) {
-        requireActiveStudent(studentId);
-        if (subscriptionRepository.existsByStudentId(studentId)) {
-            throw new SubscriptionAlreadyExistsException(studentId);
-        }
-        return subscriptionRepository.save(
-                new Subscription(studentId, monthlyAmount, dueDayOfRegistration(studentId)));
-    }
-
-    @Transactional
-    public Subscription updateSubscription(Long id, BigDecimal monthlyAmount) {
-        Subscription subscription = requireSubscription(id);
-        subscription.update(monthlyAmount);
-        return subscriptionRepository.save(subscription);
-    }
-
-    /**
-     * Reativar exige que o aluno vinculado ainda esteja ativo — senão a
-     * assinatura voltaria a gerar fatura para quem já saiu do estúdio no
-     * próximo job diário. Mesma regra de RegistrationService.activateStudent
-     * para o professor.
-     */
-    @Transactional
-    public Subscription activateSubscription(Long id) {
-        Subscription subscription = requireSubscription(id);
-        requireActiveStudent(subscription.getStudentId());
-        subscription.activate();
-        return subscriptionRepository.save(subscription);
-    }
-
-    @Transactional
-    public Subscription deactivateSubscription(Long id) {
-        Subscription subscription = requireSubscription(id);
-        subscription.deactivate();
-        return subscriptionRepository.save(subscription);
-    }
-
-    @Transactional(readOnly = true)
-    public Subscription findSubscription(Long id) {
-        return requireSubscription(id);
-    }
-
-    @Transactional(readOnly = true)
-    public Page<Subscription> findSubscriptions(Boolean active, Pageable pageable) {
-        Pageable stable = withStableSort(pageable);
-        return active == null
-                ? subscriptionRepository.findAll(stable)
-                : subscriptionRepository.findByActive(active, stable);
-    }
-
     @Transactional(readOnly = true)
     public Page<InvoiceView> findInvoices(InvoiceStatus status, Pageable pageable) {
         Pageable stable = withStableSort(pageable);
@@ -117,29 +195,23 @@ public class BillingService {
                 ? invoiceRepository.findAll(stable)
                 : invoiceRepository.findByStatus(status, stable);
 
-        Map<Long, Long> studentIds = studentIdsBySubscription(invoices.getContent());
-        Map<Long, String> studentNames = registrationFacade.findStudentNames(Set.copyOf(studentIds.values()));
+        Set<Long> studentIds = invoices.getContent().stream().map(Invoice::getStudentId).collect(Collectors.toSet());
+        Map<Long, String> studentNames = registrationFacade.findStudentNames(studentIds);
         Map<Long, LocalDate> paymentDates = paymentDatesOf(invoices.getContent());
 
-        return invoices.map(invoice -> {
-            Long studentId = studentIds.get(invoice.getSubscriptionId());
-            return new InvoiceView(invoice, studentId, studentNames.get(studentId), paymentDates.get(invoice.getId()));
-        });
+        return invoices.map(invoice -> new InvoiceView(invoice, invoice.getStudentId(),
+                studentNames.get(invoice.getStudentId()), paymentDates.get(invoice.getId())));
     }
 
     @Transactional(readOnly = true)
     public Page<InvoiceView> findInvoicesOfStudent(Long studentId, Pageable pageable) {
         Pageable stable = withStableSort(pageable);
-        return subscriptionRepository.findByStudentId(studentId)
-                .map(subscription -> {
-                    Page<Invoice> invoices = invoiceRepository.findBySubscriptionId(subscription.getId(), stable);
-                    // Um aluno só: o nome é uma consulta, não uma por linha.
-                    String studentName = studentNameOf(studentId);
-                    Map<Long, LocalDate> paymentDates = paymentDatesOf(invoices.getContent());
-                    return invoices.map(invoice ->
-                            new InvoiceView(invoice, studentId, studentName, paymentDates.get(invoice.getId())));
-                })
-                .orElseGet(() -> Page.empty(stable));
+        Page<Invoice> invoices = invoiceRepository.findByStudentId(studentId, stable);
+        // Um aluno só: o nome é uma consulta, não uma por linha.
+        String studentName = studentNameOf(studentId);
+        Map<Long, LocalDate> paymentDates = paymentDatesOf(invoices.getContent());
+        return invoices.map(invoice ->
+                new InvoiceView(invoice, studentId, studentName, paymentDates.get(invoice.getId())));
     }
 
     /**
@@ -155,8 +227,8 @@ public class BillingService {
      */
     @Transactional(readOnly = true)
     public List<Long> findOverdueStudentIds() {
-        List<Invoice> overdue = invoiceRepository.findByStatus(InvoiceStatus.OVERDUE);
-        return studentIdsBySubscription(overdue).values().stream()
+        return invoiceRepository.findByStatus(InvoiceStatus.OVERDUE).stream()
+                .map(Invoice::getStudentId)
                 .distinct()
                 .sorted()
                 .toList();
@@ -186,34 +258,78 @@ public class BillingService {
         invoiceRepository.save(invoice);
         paymentRepository.save(new Payment(invoiceId, paymentDate, registeredBy));
 
-        Subscription subscription = requireSubscription(invoice.getSubscriptionId());
-        events.publishEvent(new PaymentRegistered(invoiceId, subscription.getStudentId(), paymentDate, invoice.getAmount()));
-        return new InvoiceView(invoice, subscription.getStudentId(),
-                studentNameOf(subscription.getStudentId()), paymentDate);
+        events.publishEvent(new PaymentRegistered(invoiceId, invoice.getStudentId(), paymentDate, invoice.getAmount()));
+        return new InvoiceView(invoice, invoice.getStudentId(), studentNameOf(invoice.getStudentId()), paymentDate);
     }
 
     /**
-     * Passo 1 do job diário: gera a fatura da competência para assinaturas
-     * ativas cujo vencimento cai hoje. A checagem de existência é a
-     * idempotência de negócio; uk_invoice_subscription_period é a rede de
-     * segurança do banco por trás dela.
+     * Passo 1 do job diário: gera a fatura da competência para cada aluno com
+     * plano ativo cujo vencimento cai hoje.
+     *
+     * Uma fatura por aluno, com a soma dos planos — o aluno de três planos
+     * recebe uma cobrança, não três. A checagem de existência é a idempotência
+     * de negócio; uk_invoice_student_period é a rede de segurança do banco por
+     * trás dela.
+     *
+     * As consultas são por conjunto, não por aluno: planos ativos, matrículas
+     * ativas e datas de cadastro vêm em três consultas, e o laço só trabalha em
+     * memória. Perguntar a data de cadastro aluno a aluno seria N+1 no job que
+     * roda sobre o estúdio inteiro.
      */
     @Transactional
     public void generateDueInvoices() {
         LocalDate today = LocalDate.now(clock);
         YearMonth currentMonth = YearMonth.from(today);
-        for (Subscription subscription : subscriptionRepository.findByActiveTrue()) {
-            LocalDate dueDate = subscription.dueDateFor(currentMonth);
-            if (!dueDate.equals(today)) {
-                continue;
-            }
-            if (invoiceRepository.existsBySubscriptionIdAndReferenceMonth(subscription.getId(), currentMonth.atDay(1))) {
-                continue;
-            }
-            Invoice invoice = invoiceRepository.save(
-                    new Invoice(subscription.getId(), currentMonth, subscription.getMonthlyAmount(), dueDate));
-            events.publishEvent(new InvoiceDueSoon(invoice.getId(), subscription.getStudentId(), dueDate, invoice.getAmount()));
+
+        Map<Long, BigDecimal> pricesByPlan = planRepository.findByActiveTrue().stream()
+                .collect(Collectors.toMap(Plan::getId, Plan::getMonthlyPrice));
+
+        Map<Long, List<BigDecimal>> pricesByStudent = planEnrollmentRepository.findByActiveTrue().stream()
+                .filter(enrollment -> pricesByPlan.containsKey(enrollment.getPlanId()))
+                .collect(Collectors.groupingBy(PlanEnrollment::getStudentId,
+                        Collectors.mapping(enrollment -> pricesByPlan.get(enrollment.getPlanId()),
+                                Collectors.toList())));
+
+        if (pricesByStudent.isEmpty()) {
+            return;
         }
+
+        BigDecimal discountPercent = requireSettings().getMultiPlanDiscountPercent();
+        Map<Long, LocalDate> registrationDates = registrationFacade.findRegistrationDates(pricesByStudent.keySet());
+
+        for (Map.Entry<Long, List<BigDecimal>> entry : pricesByStudent.entrySet()) {
+            Long studentId = entry.getKey();
+            LocalDate registration = registrationDates.get(studentId);
+            if (registration == null) {
+                continue;
+            }
+            if (!DueDates.forMonth(registration, currentMonth).equals(today)) {
+                continue;
+            }
+            if (invoiceRepository.existsByStudentIdAndReferenceMonth(studentId, currentMonth.atDay(1))) {
+                continue;
+            }
+            BigDecimal amount = amountOf(entry.getValue(), discountPercent);
+            Invoice invoice = invoiceRepository.save(new Invoice(studentId, currentMonth, amount, today));
+            events.publishEvent(new InvoiceDueSoon(invoice.getId(), studentId, today, amount));
+        }
+    }
+
+    /**
+     * A soma dos planos, com desconto a partir do segundo.
+     *
+     * O arredondamento acontece uma vez só, no total. Descontar plano a plano e
+     * somar depois produz centavos diferentes conforme a ordem das parcelas, e
+     * a diferença aparece no valor que o aluno recebe por WhatsApp.
+     */
+    private BigDecimal amountOf(List<BigDecimal> prices, BigDecimal discountPercent) {
+        BigDecimal total = prices.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (prices.size() > 1) {
+            BigDecimal keptFraction = BigDecimal.ONE.subtract(
+                    discountPercent.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP));
+            total = total.multiply(keptFraction);
+        }
+        return total.setScale(2, RoundingMode.HALF_UP);
     }
 
     /**
@@ -227,24 +343,8 @@ public class BillingService {
         for (Invoice invoice : invoiceRepository.findByStatusAndDueDateBefore(InvoiceStatus.OPEN, cutoff)) {
             invoice.markOverdue();
             invoiceRepository.save(invoice);
-            Subscription subscription = requireSubscription(invoice.getSubscriptionId());
-            events.publishEvent(new InvoiceOverdue(invoice.getId(), subscription.getStudentId(), invoice.getDueDate()));
+            events.publishEvent(new InvoiceOverdue(invoice.getId(), invoice.getStudentId(), invoice.getDueDate()));
         }
-    }
-
-    /**
-     * O aluno de cada fatura da página, em UMA consulta.
-     *
-     * invoice.subscription_id tem FK de verdade (V012), então toda fatura da
-     * página tem assinatura e nenhum id fica de fora do mapa.
-     */
-    private Map<Long, Long> studentIdsBySubscription(List<Invoice> invoices) {
-        Set<Long> subscriptionIds = invoices.stream().map(Invoice::getSubscriptionId).collect(Collectors.toSet());
-        if (subscriptionIds.isEmpty()) {
-            return Map.of();
-        }
-        return subscriptionRepository.findAllById(subscriptionIds).stream()
-                .collect(Collectors.toMap(Subscription::getId, Subscription::getStudentId));
     }
 
     /**
@@ -294,11 +394,6 @@ public class BillingService {
         if (!registrationFacade.studentIsActive(studentId)) {
             throw new UnknownStudentException(studentId);
         }
-    }
-
-    private Subscription requireSubscription(Long id) {
-        return subscriptionRepository.findById(id)
-                .orElseThrow(() -> new SubscriptionNotFoundException(id));
     }
 
     private Invoice requireInvoice(Long id) {

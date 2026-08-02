@@ -13,8 +13,17 @@ import { listQuery, parseActiveParam, parsePageParam } from '@/lib/listParams';
 import type { AccessUser } from '@/features/auth/api/usersApi';
 import { useAccessOfStudents, useActivateAccess, useCreateStudentAccess } from '@/features/auth/api/usersQueries';
 import { CreateAccessDialog } from '@/features/auth/components/CreateAccessDialog';
-import { useOverdueStudentIds } from '@/features/billing/api/billingQueries';
+import type { Plan, PlanEnrollment } from '@/features/billing/api/billingApi';
+import {
+  useBillingSettings,
+  useEnroll,
+  useEnrollmentsOfStudent,
+  useOverdueStudentIds,
+  usePlansLookup,
+  useSetEnrollmentActive,
+} from '@/features/billing/api/billingQueries';
 import { BillingStatusBadge } from '@/features/billing/components/BillingStatusBadge';
+import { StudentPlansDialog } from '@/features/billing/components/StudentPlansDialog';
 import type { Student } from '../api/registrationApi';
 import {
   nameById,
@@ -38,6 +47,7 @@ type Pending =
   | { kind: 'edit'; student: Student }
   | { kind: 'toggle'; student: Student }
   | { kind: 'access'; student: Student }
+  | { kind: 'plans'; student: Student }
   | { kind: 'reactivate'; student: Student; userId: number };
 
 export function StudentsPage() {
@@ -59,6 +69,12 @@ export function StudentsPage() {
    * uma coluna na tela não é motivo para abrir essa aresta. Quem cruza é aqui.
    */
   const overdue = useOverdueStudentIds();
+  const plans = usePlansLookup();
+  const planStudentId = pending?.kind === 'plans' ? pending.student.id : undefined;
+  const enrollments = useEnrollmentsOfStudent(planStudentId);
+  const enroll = useEnroll();
+  const setEnrollmentActive = useSetEnrollmentActive();
+  const billingSettings = useBillingSettings();
 
   const createStudent = useCreateStudent();
   const updateStudent = useUpdateStudent();
@@ -73,6 +89,8 @@ export function StudentsPage() {
     setActive.reset();
     createAccess.reset();
     activateAccess.reset();
+    enroll.reset();
+    setEnrollmentActive.reset();
   }
 
   function succeed(message: string) {
@@ -136,6 +154,7 @@ export function StudentsPage() {
             onEdit={(student) => setPending({ kind: 'edit', student })}
             onToggle={(student) => setPending({ kind: 'toggle', student })}
             onCreateAccess={(student) => setPending({ kind: 'access', student })}
+            onManagePlans={(student) => setPending({ kind: 'plans', student })}
             onReactivateAccess={(student, userId) => setPending({ kind: 'reactivate', student, userId })}
           />
           <Pagination
@@ -230,6 +249,25 @@ export function StudentsPage() {
         />
       )}
 
+      {pending?.kind === 'plans' && (
+        <StudentPlansDialog
+          studentName={pending.student.name}
+          plans={(plans.data ?? []).filter((plan: Plan) => plan.active)}
+          enrollments={enrollments.data}
+          discountPercent={billingSettings.data?.multiPlanDiscountPercent}
+          pending={enroll.isPending || setEnrollmentActive.isPending}
+          error={enroll.error ?? setEnrollmentActive.error}
+          onClose={closeDialog}
+          onToggle={(plan: Plan, enrollment: PlanEnrollment | undefined) => {
+            if (enrollment == null) {
+              enroll.mutate({ studentId: pending.student.id, planId: plan.id });
+            } else {
+              setEnrollmentActive.mutate({ id: enrollment.id, active: !enrollment.active });
+            }
+          }}
+        />
+      )}
+
       {pending?.kind === 'reactivate' && (
         <ConfirmDialog
           title="Reativar acesso"
@@ -260,6 +298,7 @@ function StudentTable({
   onEdit,
   onToggle,
   onCreateAccess,
+  onManagePlans,
   onReactivateAccess,
 }: {
   students: Student[];
@@ -270,6 +309,7 @@ function StudentTable({
   onEdit: (student: Student) => void;
   onToggle: (student: Student) => void;
   onCreateAccess: (student: Student) => void;
+  onManagePlans: (student: Student) => void;
   onReactivateAccess: (student: Student, userId: number) => void;
 }) {
   return (
@@ -316,6 +356,7 @@ function StudentTable({
                   onEdit,
                   onToggle,
                   onCreateAccess,
+                  onManagePlans,
                   onReactivateAccess,
                 })}
               />
@@ -350,11 +391,15 @@ function actionsFor(
     onEdit: (student: Student) => void;
     onToggle: (student: Student) => void;
     onCreateAccess: (student: Student) => void;
+    onManagePlans: (student: Student) => void;
     onReactivateAccess: (student: Student, userId: number) => void;
   },
 ): MenuAction[] {
   const actions: MenuAction[] = [
     { label: 'Editar', onSelect: () => handlers.onEdit(student) },
+    // Planos aparece para todo aluno, inclusive inativo: quem saiu do estúdio
+    // ainda precisa ter a cobrança encerrada, e é aqui que isso se faz.
+    { label: 'Planos', onSelect: () => handlers.onManagePlans(student) },
     {
       label: student.active ? 'Desativar' : 'Ativar',
       onSelect: () => handlers.onToggle(student),

@@ -125,7 +125,7 @@ describe('lista de faturas', () => {
   });
 
   /**
-   * subscription.student_id não tem FK (decisão de docs/ddl.md), então o back
+   * invoice.student_id não tem FK (decisão de docs/ddl.md), então o back
    * pode devolver nome nulo. Célula em branco numa linha sobre dinheiro é pior
    * do que um identificador feio.
    */

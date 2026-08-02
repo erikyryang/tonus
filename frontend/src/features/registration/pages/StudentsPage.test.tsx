@@ -4,11 +4,20 @@ import { describe, expect, it } from 'vitest';
 import type { Student, StudentInput } from '@/features/registration/api/registrationApi';
 import { ADMIN, meOk } from '@/test/authHandlers';
 import {
+  billingSettings,
+  enrollOk,
+  enrollment,
+  enrollmentsHandler,
   invoice,
   invoicesHandler,
+  noEnrollments,
   overdueStudentIds,
   overdueStudentIdsHandler,
+  plan,
+  plansList,
   registerPaymentOk,
+  setEnrollmentActiveOk,
+  settingsHandler,
 } from '@/test/billingHandlers';
 import { pageOf } from '@/test/pageOf';
 import {
@@ -191,6 +200,143 @@ describe('situação de cobrança', () => {
     const row = await rowOf('Ana Alves');
     expect(within(row).queryByText('Em dia')).not.toBeInTheDocument();
     expect(within(row).queryByText('Atrasado')).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Os planos do aluno vivem na tela dele porque é onde a pergunta nasce ("o que
+ * essa pessoa paga?"), mas o dado é de billing: a tela cruza duas chamadas, sem
+ * o back juntar cadastro e cobrança num DTO só.
+ */
+describe('planos do aluno', () => {
+  it('matricula o aluno num plano', async () => {
+    const enrolled: Array<{ studentId: number; planId: number }> = [];
+    server.use(
+      meOk(ADMIN),
+      teachersList(BRUNO),
+      noAccessYet(),
+      overdueStudentIds(),
+      studentsList(ANA),
+      plansList(plan({ id: 3, name: 'Musculação' }), plan({ id: 4, name: 'Pilates' })),
+      noEnrollments(),
+      enrollOk((body) => enrolled.push(body)),
+    );
+
+    const { user } = renderApp('/admin/students');
+
+    await user.click(await screen.findByRole('button', { name: 'Ações de Ana Alves' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Planos' }));
+
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('checkbox', { name: /Musculação/ }));
+
+    await waitFor(() => expect(enrolled).toEqual([{ studentId: 1, planId: 3 }]));
+  });
+
+  /**
+   * Desmarcar não apaga a matrícula: desativa. A linha sobrevive porque "esse
+   * aluno já teve esse plano" é pergunta de cobrança — e é também o que impede
+   * a UNIQUE de barrar uma rematrícula.
+   */
+  it('desativa a matrícula em vez de apagá-la, e reativa depois', async () => {
+    const changed: Array<{ id: number; active: boolean }> = [];
+    server.use(
+      meOk(ADMIN),
+      teachersList(BRUNO),
+      noAccessYet(),
+      overdueStudentIds(),
+      studentsList(ANA),
+      plansList(plan({ id: 3, name: 'Musculação' })),
+      enrollmentsHandler(() => [enrollment({ id: 77, studentId: 1, planId: 3, active: true })]),
+      ...setEnrollmentActiveOk((id, active) => changed.push({ id, active })),
+    );
+
+    const { user } = renderApp('/admin/students');
+
+    await user.click(await screen.findByRole('button', { name: 'Ações de Ana Alves' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Planos' }));
+
+    const dialog = await screen.findByRole('dialog');
+    const box = within(dialog).getByRole('checkbox', { name: /Musculação/ });
+    expect(box).toBeChecked();
+
+    await user.click(box);
+
+    await waitFor(() => expect(changed).toEqual([{ id: 77, active: false }]));
+  });
+
+  /**
+   * O ADMIN que marca a segunda caixa quer saber o que muda no bolso do aluno.
+   * A tela conta o desconto configurado — mas não calcula o total: o valor da
+   * fatura é regra do back, e recomputá-la aqui criaria uma segunda verdade
+   * que diverge no primeiro centavo.
+   */
+  it('conta o desconto configurado quando o aluno tem mais de um plano', async () => {
+    server.use(
+      meOk(ADMIN),
+      teachersList(BRUNO),
+      noAccessYet(),
+      overdueStudentIds(),
+      studentsList(ANA),
+      plansList(plan({ id: 3, name: 'Musculação' }), plan({ id: 4, name: 'Pilates' })),
+      enrollmentsHandler(() => [
+        enrollment({ id: 77, studentId: 1, planId: 3, active: true }),
+        enrollment({ id: 78, studentId: 1, planId: 4, active: true }),
+      ]),
+      settingsHandler(() => billingSettings(10)),
+    );
+
+    const { user } = renderApp('/admin/students');
+
+    await user.click(await screen.findByRole('button', { name: 'Ações de Ana Alves' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Planos' }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(await within(dialog).findByText(/10% de desconto sobre a soma/i)).toBeInTheDocument();
+  });
+
+  /** Com um plano só não há desconto a anunciar. */
+  it('não fala em desconto para quem tem um plano só', async () => {
+    server.use(
+      meOk(ADMIN),
+      teachersList(BRUNO),
+      noAccessYet(),
+      overdueStudentIds(),
+      studentsList(ANA),
+      plansList(plan({ id: 3, name: 'Musculação' })),
+      enrollmentsHandler(() => [enrollment({ id: 77, studentId: 1, planId: 3, active: true })]),
+      settingsHandler(() => billingSettings(10)),
+    );
+
+    const { user } = renderApp('/admin/students');
+
+    await user.click(await screen.findByRole('button', { name: 'Ações de Ana Alves' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Planos' }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).queryByText(/desconto/i)).not.toBeInTheDocument();
+  });
+
+  /** Plano inativo não é oferecido: matricular alguém nele não geraria cobrança. */
+  it('não oferece plano inativo', async () => {
+    server.use(
+      meOk(ADMIN),
+      teachersList(BRUNO),
+      noAccessYet(),
+      overdueStudentIds(),
+      studentsList(ANA),
+      plansList(plan({ id: 3, name: 'Musculação' }), plan({ id: 5, name: 'Plano Extinto', active: false })),
+      noEnrollments(),
+    );
+
+    const { user } = renderApp('/admin/students');
+
+    await user.click(await screen.findByRole('button', { name: 'Ações de Ana Alves' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Planos' }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('checkbox', { name: /Musculação/ })).toBeInTheDocument();
+    expect(within(dialog).queryByRole('checkbox', { name: /Plano Extinto/ })).not.toBeInTheDocument();
   });
 });
 

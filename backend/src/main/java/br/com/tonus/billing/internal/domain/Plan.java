@@ -1,0 +1,62 @@
+package br.com.tonus.billing.internal.domain;
+
+import br.com.tonus.shared.BaseEntity;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
+import java.math.BigDecimal;
+
+/**
+ * Um plano do catálogo do estúdio: nome e mensalidade.
+ *
+ * Não existe DELETE, mesma decisão de aluno e professor: plano desativado sai
+ * das listagens e das matrículas novas, mas continua explicando as faturas que
+ * já foram emitidas com ele.
+ */
+@Entity
+@Table(name = "plan")
+public class Plan extends BaseEntity {
+
+    @Column(nullable = false)
+    private String name;
+
+    @Column(name = "monthly_price", nullable = false)
+    private BigDecimal monthlyPrice;
+
+    @Column(nullable = false)
+    private boolean active;
+
+    protected Plan() {
+    }
+
+    public Plan(String name, BigDecimal monthlyPrice) {
+        this.name = name;
+        this.monthlyPrice = monthlyPrice;
+        this.active = true;
+    }
+
+    public void update(String name, BigDecimal monthlyPrice) {
+        this.name = name;
+        this.monthlyPrice = monthlyPrice;
+    }
+
+    public void activate() {
+        this.active = true;
+    }
+
+    public void deactivate() {
+        this.active = false;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public BigDecimal getMonthlyPrice() {
+        return monthlyPrice;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+}

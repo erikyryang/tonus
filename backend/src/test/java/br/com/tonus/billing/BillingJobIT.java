@@ -33,7 +33,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * um — colidem com {@code lockAtLeastFor} e a segunda silenciosamente não
  * executa. Isso testaria o lock do ShedLock, não a idempotência de negócio da
  * spec ("job rodando 2x não duplica"), que é o pré-check de existência +
- * uk_invoice_subscription_period.
+ * uk_invoice_student_period.
  */
 @ApplicationModuleTest(mode = ApplicationModuleTest.BootstrapMode.ALL_DEPENDENCIES)
 @ActiveProfiles("test")
@@ -70,14 +70,16 @@ class BillingJobIT {
 
     @Test
     void jobRunningTwiceDoesNotDuplicateInvoiceOrEvent(AssertablePublishedEvents events) {
-        long studentId = seedStudent();
-        long subscriptionId = seedSubscription(studentId, 15, "220.00");
+        // Cadastrado num dia 15: é o vencimento dele, e é "hoje" para o relógio
+        // fixo desta classe — sem isso o job não teria o que faturar.
+        long studentId = seedStudent("2026-01-15 10:00:00");
+        seedEnrollment(studentId, seedPlan("Plano Do Job", "220.00"));
 
         billingService.generateDueInvoices();
         billingService.generateDueInvoices();
 
         assertThat(invoiceRepository.findAll())
-                .filteredOn(invoice -> invoice.getSubscriptionId().equals(subscriptionId))
+                .filteredOn(invoice -> invoice.getStudentId().equals(studentId))
                 .hasSize(1);
         // Filtra por aluno: o Postgres é compartilhado entre as classes de teste
         // de billing sem rollback, então outras faturas/eventos da varredura
@@ -88,8 +90,8 @@ class BillingJobIT {
 
     @Test
     void jobTransitionsOverdueInvoiceOnceAndPublishesOnce(AssertablePublishedEvents events) {
-        long subscriptionId = seedSubscription(seedStudent(), 1, "180.00");
-        long invoiceId = seedInvoice(subscriptionId, "2026-07-01", "180.00", "2026-07-05", "OPEN");
+        long invoiceId = seedInvoice(seedStudent("2026-01-01 10:00:00"),
+                "2026-07-01", "180.00", "2026-07-05", "OPEN");
 
         billingService.markOverdueInvoices();
         billingService.markOverdueInvoices();
@@ -105,7 +107,7 @@ class BillingJobIT {
                 .hasSize(1);
     }
 
-    private long seedStudent() {
+    private long seedStudent(String createdAt) {
         Long teacherId = jdbcTemplate.queryForObject("""
                 INSERT INTO teacher (name, phone, active, created_at, updated_at)
                 VALUES ('Professor Do Job', '+5511999990000', TRUE, now(), now())
@@ -113,24 +115,31 @@ class BillingJobIT {
                 """, Long.class);
         return jdbcTemplate.queryForObject("""
                 INSERT INTO student (name, phone, teacher_id, active, created_at, updated_at)
-                VALUES ('Aluno Do Job', '+5511988880000', ?, TRUE, now(), now())
+                VALUES ('Aluno Do Job', '+5511988880000', ?, TRUE, ?::timestamp, now())
                 RETURNING id
-                """, Long.class, teacherId);
+                """, Long.class, teacherId, createdAt);
     }
 
-    private long seedSubscription(long studentId, int dueDay, String monthlyAmount) {
+    private long seedPlan(String name, String monthlyPrice) {
         return jdbcTemplate.queryForObject("""
-                INSERT INTO subscription (student_id, monthly_amount, due_day, active, created_at, updated_at)
-                VALUES (?, ?::numeric, ?, TRUE, now(), now())
+                INSERT INTO plan (name, monthly_price, active, created_at, updated_at)
+                VALUES (?, ?::numeric, TRUE, now(), now())
                 RETURNING id
-                """, Long.class, studentId, monthlyAmount, dueDay);
+                """, Long.class, name, monthlyPrice);
     }
 
-    private long seedInvoice(long subscriptionId, String referenceMonth, String amount, String dueDate, String status) {
+    private void seedEnrollment(long studentId, long planId) {
+        jdbcTemplate.update("""
+                INSERT INTO plan_enrollment (student_id, plan_id, active, created_at, updated_at)
+                VALUES (?, ?, TRUE, now(), now())
+                """, studentId, planId);
+    }
+
+    private long seedInvoice(long studentId, String referenceMonth, String amount, String dueDate, String status) {
         return jdbcTemplate.queryForObject("""
-                INSERT INTO invoice (subscription_id, reference_month, amount, due_date, status, created_at, updated_at)
+                INSERT INTO invoice (student_id, reference_month, amount, due_date, status, created_at, updated_at)
                 VALUES (?, ?::date, ?::numeric, ?::date, ?, now(), now())
                 RETURNING id
-                """, Long.class, subscriptionId, referenceMonth, amount, dueDate, status);
+                """, Long.class, studentId, referenceMonth, amount, dueDate, status);
     }
 }

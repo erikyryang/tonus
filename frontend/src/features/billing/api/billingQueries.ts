@@ -1,14 +1,18 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isConflict } from '@/lib/apiError';
 import {
+  type BillingSettings,
   type InvoiceQuery,
-  type SubscriptionInput,
-  type SubscriptionQuery,
+  type PlanInput,
+  type PlanQuery,
   billingApi,
+  billingSettingsKey,
+  enrollmentsKey,
   invoicesKey,
   myInvoicesKey,
   overdueStudentIdsKey,
-  subscriptionsKey,
+  plansKey,
+  plansLookupKey,
 } from './billingApi';
 
 export function useInvoices(query: InvoiceQuery) {
@@ -56,54 +60,108 @@ export function useRegisterPayment() {
   });
 }
 
-export function useSubscriptions(query: SubscriptionQuery) {
+export function usePlans(query: PlanQuery) {
   return useQuery({
-    queryKey: subscriptionsKey(query),
-    queryFn: () => billingApi.subscriptions(query),
+    queryKey: plansKey(query),
+    queryFn: () => billingApi.plans(query),
     placeholderData: keepPreviousData,
   });
 }
 
 /**
- * A invalidação é do prefixo: criar ou desativar assinatura muda a combinação
- * de filtro e página inteira, não só a linha mexida.
+ * O catálogo inteiro, para o diálogo de planos do aluno. Só os ativos entram na
+ * escolha: matricular alguém num plano desativado não geraria cobrança.
  */
-function useSubscriptionInvalidation() {
+export function usePlansLookup() {
+  return useQuery({
+    queryKey: plansLookupKey,
+    queryFn: () => billingApi.plans({ active: true, page: 0 }),
+    select: (page) => page.content,
+  });
+}
+
+function usePlanInvalidation() {
   const queryClient = useQueryClient();
-  return () => queryClient.invalidateQueries({ queryKey: subscriptionsKey() });
+  return () => queryClient.invalidateQueries({ queryKey: plansKey() });
 }
 
-/** 409 é "esse aluno já tem assinatura": a lista na tela já está desatualizada. */
-export function useCreateSubscription() {
-  const invalidate = useSubscriptionInvalidation();
+export function useCreatePlan() {
+  const invalidate = usePlanInvalidation();
   return useMutation({
-    mutationFn: (input: SubscriptionInput) => billingApi.createSubscription(input),
-    onSuccess: invalidate,
-    onError: (error) => {
-      if (isConflict(error)) invalidate();
-    },
-  });
-}
-
-export interface UpdateSubscriptionInput {
-  id: number;
-  input: SubscriptionInput;
-}
-
-export function useUpdateSubscription() {
-  const invalidate = useSubscriptionInvalidation();
-  return useMutation({
-    mutationFn: ({ id, input }: UpdateSubscriptionInput) => billingApi.updateSubscription(id, input),
+    mutationFn: (input: PlanInput) => billingApi.createPlan(input),
     onSuccess: invalidate,
   });
 }
 
-export function useSetSubscriptionActive() {
-  const invalidate = useSubscriptionInvalidation();
+export function useUpdatePlan() {
+  const invalidate = usePlanInvalidation();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: number; input: PlanInput }) => billingApi.updatePlan(id, input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSetPlanActive() {
+  const invalidate = usePlanInvalidation();
   return useMutation({
     mutationFn: ({ id, active }: { id: number; active: boolean }) =>
-      active ? billingApi.activateSubscription(id) : billingApi.deactivateSubscription(id),
+      active ? billingApi.activatePlan(id) : billingApi.deactivatePlan(id),
     onSuccess: invalidate,
+  });
+}
+
+export function useEnrollmentsOfStudent(studentId: number | undefined) {
+  return useQuery({
+    queryKey: enrollmentsKey(studentId),
+    queryFn: () => billingApi.enrollmentsOfStudent(studentId!),
+    enabled: studentId !== undefined,
+  });
+}
+
+/**
+ * Matricular e desmatricular invalidam o prefixo das matrículas e o dos planos:
+ * a contagem de alunos por plano — que a tela de planos usa para avisar antes
+ * de desativar — muda junto.
+ */
+function useEnrollmentInvalidation() {
+  const queryClient = useQueryClient();
+  return () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: enrollmentsKey() }),
+      queryClient.invalidateQueries({ queryKey: plansKey() }),
+    ]);
+}
+
+export function useEnroll() {
+  const invalidate = useEnrollmentInvalidation();
+  return useMutation({
+    mutationFn: ({ studentId, planId }: { studentId: number; planId: number }) =>
+      billingApi.enroll(studentId, planId),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSetEnrollmentActive() {
+  const invalidate = useEnrollmentInvalidation();
+  return useMutation({
+    mutationFn: ({ id, active }: { id: number; active: boolean }) =>
+      active ? billingApi.activateEnrollment(id) : billingApi.deactivateEnrollment(id),
+    onSuccess: invalidate,
+  });
+}
+
+export function useBillingSettings() {
+  return useQuery({
+    queryKey: billingSettingsKey,
+    queryFn: () => billingApi.settings(),
+  });
+}
+
+export function useUpdateBillingSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: BillingSettings) => billingApi.updateSettings(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: billingSettingsKey }),
   });
 }
 

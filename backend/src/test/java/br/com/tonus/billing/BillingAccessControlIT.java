@@ -1,6 +1,5 @@
 package br.com.tonus.billing;
 
-import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
@@ -15,16 +14,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class BillingAccessControlIT extends AbstractBillingIntegrationTest {
 
     @Test
-    void studentCannotCreateSubscription() throws Exception {
+    void studentCannotCreatePlan() throws Exception {
         long teacherId = createTeacher(unique("Professor Do Acesso Negado"));
         long studentId = createStudent(unique("Aluno Sem Poder De Cobranca"), teacherId);
 
-        mockMvc.perform(post("/subscriptions")
+        mockMvc.perform(post("/plans")
                         .cookie(linkedStudentCookie(studentId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"studentId":%d,"monthlyAmount":"200.00"}
-                                """.formatted(studentId)))
+                                {"name":"Plano Proibido","monthlyPrice":"200.00"}
+                                """))
                 .andExpect(status().isForbidden());
     }
 
@@ -58,20 +57,8 @@ class BillingAccessControlIT extends AbstractBillingIntegrationTest {
 
     @Test
     void anonymousIsRejectedEverywhere() throws Exception {
-        mockMvc.perform(get("/subscriptions")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/plans")).andExpect(status().isUnauthorized());
         mockMvc.perform(get("/invoices")).andExpect(status().isUnauthorized());
         mockMvc.perform(get("/me/invoices")).andExpect(status().isUnauthorized());
-    }
-
-    private Cookie linkedTeacherCookie(long teacherId) throws Exception {
-        String login = unique("billing-teacher") + "@tonus.com";
-        mockMvc.perform(post("/users")
-                        .cookie(admin)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"login":"%s","password":"%s","role":"TEACHER","teacherId":%d}
-                                """.formatted(login, DEFAULT_PASSWORD, teacherId)))
-                .andExpect(status().isCreated());
-        return extractCookie(login(login, DEFAULT_PASSWORD), ACCESS_COOKIE);
     }
 }

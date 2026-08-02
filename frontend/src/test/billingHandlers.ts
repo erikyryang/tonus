@@ -1,12 +1,17 @@
 import { http, HttpResponse } from 'msw';
-import type { Invoice, Subscription, SubscriptionInput } from '@/features/billing/api/billingApi';
+import type {
+  BillingSettings,
+  Invoice,
+  Plan,
+  PlanEnrollment,
+  PlanInput,
+} from '@/features/billing/api/billingApi';
 import type { Page } from '@/lib/page';
 import { pageOf } from './pageOf';
 import { problem } from './problem';
 
 export function invoice(overrides: Partial<Invoice> & { id: number }): Invoice {
   return {
-    subscriptionId: 100 + overrides.id,
     studentId: 200 + overrides.id,
     studentName: `Aluno ${overrides.id}`,
     referenceMonth: '2026-07',
@@ -44,61 +49,109 @@ export function registerPaymentOk(onRequest?: (id: number, paymentDate: string) 
   });
 }
 
-export function subscription(overrides: Partial<Subscription> & { id: number }): Subscription {
+export function plan(overrides: Partial<Plan> & { id: number }): Plan {
   return {
-    studentId: 200 + overrides.id,
-    monthlyAmount: 300,
-    dueDay: 10,
+    name: `Plano ${overrides.id}`,
+    monthlyPrice: 350,
     active: true,
+    activeEnrollments: 0,
     ...overrides,
   };
 }
 
-export function subscriptionsHandler(
-  resolve: (params: URLSearchParams) => Page<Subscription>,
-  log?: string[],
-) {
-  return http.get('/api/subscriptions', ({ request }) => {
+export function plansHandler(resolve: (params: URLSearchParams) => Page<Plan>, log?: string[]) {
+  return http.get('/api/plans', ({ request }) => {
     const url = new URL(request.url);
     log?.push(url.search);
     return HttpResponse.json(resolve(url.searchParams));
   });
 }
 
-export function subscriptionsList(...subscriptions: Subscription[]) {
-  return subscriptionsHandler(() => pageOf(subscriptions));
+export function plansList(...plans: Plan[]) {
+  return plansHandler(() => pageOf(plans));
 }
 
-export function createSubscriptionOk(onRequest?: (body: SubscriptionInput) => void, id = 70) {
-  return http.post('/api/subscriptions', async ({ request }) => {
-    const body = (await request.json()) as SubscriptionInput;
+export function createPlanOk(onRequest?: (body: PlanInput) => void, id = 90) {
+  return http.post('/api/plans', async ({ request }) => {
+    const body = (await request.json()) as PlanInput;
     onRequest?.(body);
-    return HttpResponse.json(subscription({ id, ...body }), { status: 201 });
+    return HttpResponse.json(plan({ id, ...body }), { status: 201 });
   });
 }
 
-export function updateSubscriptionOk(onRequest?: (id: number, body: SubscriptionInput) => void) {
-  return http.put('/api/subscriptions/:id', async ({ params, request }) => {
-    const body = (await request.json()) as SubscriptionInput;
+export function updatePlanOk(onRequest?: (id: number, body: PlanInput) => void) {
+  return http.put('/api/plans/:id', async ({ params, request }) => {
+    const body = (await request.json()) as PlanInput;
     const id = Number(params.id);
     onRequest?.(id, body);
-    return HttpResponse.json(subscription({ id, ...body }));
+    return HttpResponse.json(plan({ id, ...body }));
   });
 }
 
-export function deactivateSubscriptionOk(onRequest?: (id: number) => void) {
-  return http.patch('/api/subscriptions/:id/deactivate', ({ params }) => {
-    const id = Number(params.id);
-    onRequest?.(id);
-    return HttpResponse.json(subscription({ id, active: false }));
+export function setPlanActiveOk(onRequest?: (id: number, active: boolean) => void) {
+  return [
+    http.patch('/api/plans/:id/activate', ({ params }) => {
+      onRequest?.(Number(params.id), true);
+      return HttpResponse.json(plan({ id: Number(params.id), active: true }));
+    }),
+    http.patch('/api/plans/:id/deactivate', ({ params }) => {
+      onRequest?.(Number(params.id), false);
+      return HttpResponse.json(plan({ id: Number(params.id), active: false }));
+    }),
+  ];
+}
+
+export function enrollment(overrides: Partial<PlanEnrollment> & { id: number; planId: number }): PlanEnrollment {
+  return { studentId: 1, active: true, ...overrides };
+}
+
+/** GET /plan-enrollments?studentId= — os planos de um aluno, sem paginação. */
+export function enrollmentsHandler(resolve: (studentId: number) => PlanEnrollment[], log?: number[]) {
+  return http.get('/api/plan-enrollments', ({ request }) => {
+    const studentId = Number(new URL(request.url).searchParams.get('studentId'));
+    log?.push(studentId);
+    return HttpResponse.json(resolve(studentId));
   });
 }
 
-export function activateSubscriptionOk(onRequest?: (id: number) => void) {
-  return http.patch('/api/subscriptions/:id/activate', ({ params }) => {
-    const id = Number(params.id);
-    onRequest?.(id);
-    return HttpResponse.json(subscription({ id, active: true }));
+export function noEnrollments() {
+  return enrollmentsHandler(() => []);
+}
+
+export function enrollOk(onRequest?: (body: { studentId: number; planId: number }) => void, id = 500) {
+  return http.post('/api/plan-enrollments', async ({ request }) => {
+    const body = (await request.json()) as { studentId: number; planId: number };
+    onRequest?.(body);
+    return HttpResponse.json(enrollment({ id, ...body }), { status: 201 });
+  });
+}
+
+export function setEnrollmentActiveOk(onRequest?: (id: number, active: boolean) => void) {
+  return [
+    http.patch('/api/plan-enrollments/:id/activate', ({ params }) => {
+      onRequest?.(Number(params.id), true);
+      return HttpResponse.json(enrollment({ id: Number(params.id), planId: 1, active: true }));
+    }),
+    http.patch('/api/plan-enrollments/:id/deactivate', ({ params }) => {
+      onRequest?.(Number(params.id), false);
+      return HttpResponse.json(enrollment({ id: Number(params.id), planId: 1, active: false }));
+    }),
+  ];
+}
+
+export function billingSettings(multiPlanDiscountPercent = 0): BillingSettings {
+  return { multiPlanDiscountPercent };
+}
+
+export function settingsHandler(resolve: () => BillingSettings) {
+  return http.get('/api/billing-settings', () => HttpResponse.json(resolve()));
+}
+
+export function updateSettingsOk(onRequest?: (body: BillingSettings) => void) {
+  return http.put('/api/billing-settings', async ({ request }) => {
+    const body = (await request.json()) as BillingSettings;
+    onRequest?.(body);
+    return HttpResponse.json(body);
   });
 }
 

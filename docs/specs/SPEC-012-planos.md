@@ -1,8 +1,8 @@
 # SPEC-012 — Planos (substitui assinatura)
 
-> **PROPOSTA — não implementada.** Escrita antes de qualquer código, como a
-> mudança 5 exigia. Nada nesta spec vale como decisão até ser aprovada; o que
-> está no ar continua sendo a SPEC-004 (assinatura única por aluno).
+Substitui o modelo de assinatura única por aluno da SPEC-004. Escrita e
+aprovada **antes** de qualquer código, porque o desenho cresceu além do que
+cabia numa mudança pontual — o porquê está na seção seguinte.
 
 ## Por que uma spec própria
 
@@ -126,6 +126,34 @@ Pontos que exigem decisão consciente:
 - Migração: aluno com assinatura de 350 termina com um plano de 350 ativo, e a
   fatura de competência anterior continua apontando para ele.
 - Os três eventos de billing mantêm payload idêntico (teste de contrato).
+
+## Decisões tomadas na implementação
+
+- **O total previsto não é calculado no front.** O diálogo de planos do aluno
+  mostra o preço de cada plano e, quando ele tem mais de um, o percentual de
+  desconto configurado — mas não a conta final. O valor da fatura (soma,
+  desconto e arredondamento uma vez só no total) é regra do back, e recomputá-la
+  na tela criaria uma segunda verdade que diverge no primeiro centavo. Quando o
+  valor previsto for necessário de fato, quem deve respondê-lo é o back.
+- **A contagem de matriculados por plano sai de uma consulta**, não de uma por
+  linha. Nasceu N+1 e o `BillingQueryCountIT` é o que impede a volta — é a tela
+  em que o ADMIN decide desativar um plano, e a contagem é justamente o que ele
+  lê antes de decidir.
+- **O job resolve tudo em lote antes de decidir quem faturar**: planos,
+  matrículas, desconto e datas de cadastro, quatro consultas que não crescem
+  com o estúdio. O teste que garante isso usa alunos que vencem em outro dia,
+  para isolar o caminho de leitura do custo de inserir fatura — este último é
+  proporcional por natureza (insert + auditoria + registro do evento) e não é
+  N+1.
+- **A V021 não tem teste de backfill**, e é a única parte da migração sem rede.
+  A forma que ela transforma (`invoice.subscription_id`) deixa de existir na
+  V022, então não há como recriá-la sem desfazer a própria migration. A
+  mitigação está no arquivo: o `UPDATE ... FROM` roda **antes** do
+  `SET NOT NULL`, então fatura órfã derruba a migration alto, em vez de deixar
+  a coluna meio preenchida.
+- **O seed de desenvolvimento continua não criando plano nem fatura.** É a
+  decisão registrada no README ("pessoas e acessos, não movimento") e ela não
+  mudou: com o CRUD de planos no ar, montar o catálogo local é uma tela.
 
 ## Decisões tomadas antes de implementar
 

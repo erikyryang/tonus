@@ -2,8 +2,11 @@
 
 ## Objetivo
 Lista de faturas com filtro por status e o fluxo de dar baixa — a ação
-de maior consequência da UI: dispara recibo real por WhatsApp e
-recalcula o vencimento da assinatura.
+de maior consequência da UI: dispara recibo real por WhatsApp.
+
+A baixa deixou de mexer no vencimento (SPEC-004, regra substituída), e a
+fatura deixou de ser de uma assinatura para ser do aluno (SPEC-012). O
+DTO perdeu `subscriptionId`; o resto do contrato desta tela não mudou.
 
 ## Regras
 - Rota /invoices (shell ADMIN). Fonte: GET /invoices paginado,

@@ -42,9 +42,8 @@ class OverdueStudentIdsIT extends AbstractBillingIntegrationTest {
     void studentWithTwoOverdueInvoicesAppearsOnce() throws Exception {
         long teacherId = createTeacher(unique("Professor Do Aluno Muito Atrasado"));
         long studentId = createStudent(unique("Aluno Com Duas Atrasadas"), teacherId);
-        long subscriptionId = createSubscription(studentId, "200.00");
-        seedInvoice(subscriptionId, "2026-06-01", "200.00", "2026-06-10", "OVERDUE");
-        seedInvoice(subscriptionId, "2026-07-01", "200.00", "2026-07-10", "OVERDUE");
+        seedInvoice(studentId, "2026-06-01", "200.00", "2026-06-10", "OVERDUE");
+        seedInvoice(studentId, "2026-07-01", "200.00", "2026-07-10", "OVERDUE");
 
         assertThat(overdueStudentIds()).filteredOn(id -> id == studentId).hasSize(1);
     }
@@ -68,8 +67,7 @@ class OverdueStudentIdsIT extends AbstractBillingIntegrationTest {
 
     private long studentWithInvoice(long teacherId, String name, String status) throws Exception {
         long studentId = createStudent(unique(name), teacherId);
-        long subscriptionId = createSubscription(studentId, "200.00");
-        seedInvoice(subscriptionId, "2026-07-01", "200.00", "2026-07-10", status);
+        seedInvoice(studentId, "2026-07-01", "200.00", "2026-07-10", status);
         return studentId;
     }
 
