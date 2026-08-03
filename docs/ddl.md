@@ -189,6 +189,12 @@ não fechou — é isso que sustenta o at-least-once. Ver `docs/eventos.md`.
   de cobrança, e é o que permite rematricular sem esbarrar na UNIQUE.
 - `idx_plan_enrollment_student` — o job monta a fatura por aluno, e a tela do
   aluno pergunta os planos dele.
+- **"Encerrar" (mudança 8, SPEC-009) é `active = false` por esta mesma linha**,
+  via `PATCH /plan-enrollments/{id}/deactivate` — nenhuma coluna nova, nenhum
+  endpoint novo. Encerra o vínculo aluno-plano, não o aluno: `student.active`
+  não muda, e o job diário simplesmente para de somar este plano na fatura do
+  aluno. Faturas já emitidas com este plano não são apagadas nem recalculadas
+  — `invoice.amount` já era cópia congelada do que foi cobrado.
 
 ## `billing_settings` (billing)
 
@@ -238,6 +244,9 @@ timestamps.
   billing não pode depender de auth (fecharia ciclo com `auth → registration`).
 - **`uk_payment_invoice`** — uma fatura só pode ser paga uma vez. É o
   critério de aceite "baixa em fatura já paga → 409" expresso no banco.
+- **"Renovar" (mudança 8, SPEC-008/009) é o rótulo de UI para esta mesma
+  baixa** — schema, endpoint (`POST /invoices/{id}/payment`) e semântica
+  (fatura paga = ciclo renovado) não mudaram, só o texto que o ADMIN vê.
 
 ## `shedlock` (shared)
 

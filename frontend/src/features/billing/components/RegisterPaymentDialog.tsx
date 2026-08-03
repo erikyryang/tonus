@@ -56,7 +56,7 @@ export function RegisterPaymentDialog({
   const alreadySettled = isConflict(error);
 
   return (
-    <Dialog title="Dar baixa na fatura" onClose={onClose} busy={pending}>
+    <Dialog title="Renovar fatura" onClose={onClose} busy={pending}>
       <form onSubmit={handleSubmit(onConfirm)} noValidate className="space-y-4">
         <p className="text-sm text-slate-700">
           Fatura de <strong>{studentLabel(invoice)}</strong> — {formatMoney(invoice.amount)}.
@@ -75,8 +75,11 @@ export function RegisterPaymentDialog({
         </div>
 
         {/* O efeito real, não "tem certeza?": o WhatsApp sai e não há como desavisar.
-            O vencimento não entra mais aqui: a baixa não o move (SPEC-004). */}
-        <p className="text-sm font-medium text-slate-900">O aluno receberá a confirmação por WhatsApp.</p>
+            O vencimento não entra mais aqui: o pagamento não o move (SPEC-004).
+            Fatura paga é ciclo renovado — o texto fala de renovação, não de dívida. */}
+        <p className="text-sm font-medium text-slate-900">
+          O ciclo do aluno é renovado e ele receberá a confirmação por WhatsApp.
+        </p>
 
         {error != null && (
           <p role="alert" className="text-sm text-red-600">
@@ -89,7 +92,7 @@ export function RegisterPaymentDialog({
             Voltar
           </Button>
           <Button type="submit" disabled={pending || alreadySettled}>
-            {pending ? 'Dando baixa…' : 'Dar baixa'}
+            {pending ? 'Renovando…' : 'Renovar'}
           </Button>
         </DialogActions>
       </form>

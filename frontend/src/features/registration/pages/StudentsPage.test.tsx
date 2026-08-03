@@ -254,9 +254,9 @@ describe('situação de cobrança', () => {
     expect(within(await rowOf('Ana Alves')).getByText('Atrasado')).toBeInTheDocument();
 
     await user.click(screen.getByRole('link', { name: 'Faturas' }));
-    await user.click(await screen.findByRole('button', { name: 'Dar baixa na fatura de Ana Alves' }));
+    await user.click(await screen.findByRole('button', { name: 'Renovar a fatura de Ana Alves' }));
     const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Dar baixa' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Renovar' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 
     await user.click(screen.getByRole('link', { name: 'Alunos' }));
@@ -322,11 +322,15 @@ describe('planos do aluno', () => {
   });
 
   /**
-   * Desmarcar não apaga a matrícula: desativa. A linha sobrevive porque "esse
-   * aluno já teve esse plano" é pergunta de cobrança — e é também o que impede
-   * a UNIQUE de barrar uma rematrícula.
+   * Encerrar é ação à parte, com confirmação (mudança 8) — diferente de
+   * matricular, ela para a cobrança futura, e a caixa sozinha nunca perguntava
+   * "tem certeza?". Não apaga a matrícula: desativa. A linha sobrevive porque
+   * "esse aluno já teve esse plano" é pergunta de cobrança — e é também o que
+   * impede a UNIQUE de barrar uma rematrícula, testada aqui pela caixa
+   * destravada depois do encerramento.
    */
-  it('desativa a matrícula em vez de apagá-la, e reativa depois', async () => {
+  it('encerra o plano com confirmação, sem apagar a matrícula, e libera para rematricular', async () => {
+    let planActive = true;
     const changed: Array<{ id: number; active: boolean }> = [];
     server.use(
       meOk(ADMIN),
@@ -336,8 +340,11 @@ describe('planos do aluno', () => {
       schedulesByStudent(),
       studentsList(ANA),
       plansList(plan({ id: 3, name: 'Musculação' })),
-      enrollmentsHandler(() => [enrollment({ id: 77, studentId: 1, planId: 3, active: true })]),
-      ...setEnrollmentActiveOk((id, active) => changed.push({ id, active })),
+      enrollmentsHandler(() => [enrollment({ id: 77, studentId: 1, planId: 3, active: planActive })]),
+      ...setEnrollmentActiveOk((id, active) => {
+        changed.push({ id, active });
+        planActive = active;
+      }),
     );
 
     const { user } = renderApp('/admin/students');
@@ -348,10 +355,53 @@ describe('planos do aluno', () => {
     const dialog = await screen.findByRole('dialog');
     const box = within(dialog).getByRole('checkbox', { name: /Musculação/ });
     expect(box).toBeChecked();
+    // Ativo: só o botão encerra. A caixa sozinha nunca pede confirmação.
+    expect(box).toBeDisabled();
 
-    await user.click(box);
+    await user.click(within(dialog).getByRole('button', { name: 'Encerrar' }));
+
+    const confirm = await screen.findByRole('dialog');
+    expect(within(confirm).getByText(/tem certeza que quer encerrar/i)).toBeInTheDocument();
+    expect(within(confirm).getByText(/deixa de ser cobrado por este plano/i)).toBeInTheDocument();
+    expect(within(confirm).getByText(/faturas já emitidas continuam/i)).toBeInTheDocument();
+
+    await user.click(within(confirm).getByRole('button', { name: 'Encerrar' }));
 
     await waitFor(() => expect(changed).toEqual([{ id: 77, active: false }]));
+
+    // Volta para a lista de planos, com a caixa destravada para rematricular.
+    const plansAgain = await screen.findByRole('dialog');
+    const boxAfter = await within(plansAgain).findByRole('checkbox', { name: /Musculação/ });
+    expect(boxAfter).not.toBeChecked();
+    expect(boxAfter).toBeEnabled();
+  });
+
+  /** Voltar não encerra nada: sem handler de PATCH, uma chamada derrubaria o teste. */
+  it('cancela o encerramento sem chamar a API', async () => {
+    server.use(
+      meOk(ADMIN),
+      teachersList(BRUNO),
+      noAccessYet(),
+      overdueStudentIds(),
+      schedulesByStudent(),
+      studentsList(ANA),
+      plansList(plan({ id: 3, name: 'Musculação' })),
+      enrollmentsHandler(() => [enrollment({ id: 77, studentId: 1, planId: 3, active: true })]),
+    );
+
+    const { user } = renderApp('/admin/students');
+
+    await user.click(await screen.findByRole('button', { name: 'Ações de Ana Alves' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Planos' }));
+
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Encerrar' }));
+
+    const confirm = await screen.findByRole('dialog');
+    await user.click(within(confirm).getByRole('button', { name: 'Voltar' }));
+
+    const plansAgain = await screen.findByRole('dialog');
+    expect(within(plansAgain).getByRole('checkbox', { name: /Musculação/ })).toBeChecked();
   });
 
   /**

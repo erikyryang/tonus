@@ -53,7 +53,20 @@ tela tem de específico.
   de caixas de seleção. Sem botão de salvar: cada caixa é uma decisão isolada,
   e o back tem endpoint para cada uma — um "salvar" no fim mandaria N chamadas
   do mesmo jeito, com a diferença de que uma falha no meio deixaria a tela
-  mentindo sobre o que gravou. Desmarcar desativa a matrícula, não a apaga.
+  mentindo sobre o que gravou.
+  **Encerrar é ação à parte, por linha, com confirmação (mudança 8).**
+  Diferente de matricular, encerrar tem efeito sobre cobrança futura, e a
+  caixa sozinha nunca perguntava "tem certeza?". Plano ativo mostra a caixa
+  marcada e travada — quem desliga é o botão "Encerrar" ao lado, nunca o
+  clique na caixa. Confirmação: "Tem certeza que quer encerrar o plano X de
+  Y?" + o efeito real, "o aluno deixa de ser cobrado por este plano; as
+  faturas já emitidas continuam" — mesmo `PATCH /plan-enrollments/{id}/
+  deactivate` de sempre (SPEC-012), sem endpoint novo. Não desativa o aluno
+  nem revoga acesso: são coisas separadas, e um aluno sem plano nenhum
+  continua aluno ativo. Nenhum WhatsApp: encerrar é decisão administrativa,
+  quem comunica é o admin. Confirmar volta para a lista de planos (não fecha
+  o diálogo inteiro), com a caixa destravada — a matrícula não é apagada, só
+  desativada, e é o que permite rematricular sem esbarrar na UNIQUE.
 
 ## Telas /me (mobile-first, read-only)
 - /me/schedule (STUDENT): o horário padrão + as próximas exceções e
@@ -172,6 +185,12 @@ tela tem de específico.
   afirmando um atraso já pago. O teste que cobre isso injeta `staleTime` e
   `gcTime` infinitos de propósito: com os padrões, toda volta refaz a chamada de
   qualquer jeito e o verde não provaria nada.
+- **"Dar baixa" virou "Renovar" na UI de `/invoices` (mudança 8).** O botão da
+  linha, o título do diálogo e o toast mudaram de texto; endpoint
+  (`POST /invoices/{id}/payment`) e comportamento continuam os mesmos. O
+  diálogo fala em renovar o ciclo do aluno, não mais em vencimento
+  recalculado — a baixa nunca moveu o vencimento (SPEC-004), e o texto antigo
+  estava incorreto nesse ponto.
 - Desativar aluno não refaz a consulta de acesso: a revogação é por evento
   e chega depois da resposta HTTP, então o refetch traria de volta o
   `active: true` que está prestes a deixar de valer. A revogação é certa,

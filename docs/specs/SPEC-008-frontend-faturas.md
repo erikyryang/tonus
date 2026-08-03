@@ -1,8 +1,14 @@
-# SPEC-008 — Faturas e baixa (ADMIN)
+# SPEC-008 — Faturas e renovação (ADMIN)
 
 ## Objetivo
-Lista de faturas com filtro por status e o fluxo de dar baixa — a ação
-de maior consequência da UI: dispara recibo real por WhatsApp.
+Lista de faturas com filtro por status e o fluxo de registrar o pagamento —
+a ação de maior consequência da UI: dispara recibo real por WhatsApp.
+
+> **Mudança 8 renomeou a ação para "Renovar" na UI.** Endpoint e semântica de
+> backend não mudam — continua `POST /invoices/{id}/payment`, e fatura paga
+> continua sendo ciclo renovado. Só o texto deixou de falar de dívida
+> ("dar baixa") para falar de renovação. Onde este documento diz "baixa",
+> leia "renovação" — é o mesmo fluxo.
 
 A baixa deixou de mexer no vencimento (SPEC-004, regra substituída), e a
 fatura deixou de ser de uma assinatura para ser do aluno (SPEC-012). O
@@ -16,18 +22,19 @@ DTO perdeu `subscriptionId`; o resto do contrato desta tela não mudou.
   (dd/MM/yyyy), status como badge — OVERDUE visualmente distinto
   (é o que o admin caça nessa tela). Filtro default: todas;
   atalho visível "Atrasadas".
-- Baixa: ação apenas em OPEN/OVERDUE → dialog de confirmação com
-  data do pagamento (default hoje, editável, zod: não futura) e o
-  aviso do efeito real: "O aluno receberá a confirmação por WhatsApp
-  e o vencimento da assinatura será recalculado para o dia dd."
-  Confirmou → POST /invoices/{id}/payment {paymentDate} → invalidar
-  ['billing','invoices'] → toast.
+- Renovar (rótulo da baixa, mudança 8): ação apenas em OPEN/OVERDUE →
+  dialog de confirmação com data do pagamento (default hoje, editável,
+  zod: não futura) e o aviso do efeito real: "O ciclo do aluno é
+  renovado e ele receberá a confirmação por WhatsApp." O vencimento não
+  entra na frase — a baixa não o move (SPEC-004), e prometer isso seria
+  mentir. Confirmou → POST /invoices/{id}/payment {paymentDate} →
+  invalidar ['billing','invoices'] → toast ("Renovação registrada...").
 - 409 (fatura já paga — corrida com outro admin ou duplo clique):
   mensagem do Problem Details no dialog + refetch da lista. Não é
   erro genérico: é estado legítimo que a UI explica.
 - Fatura PAGA exibe a data do pagamento (se o DTO da listagem não a
   carregar, acrescentar no back — toque documentado).
-- Botão de baixa desabilitado durante a mutação (dupla proteção com
+- Botão de renovar desabilitado durante a mutação (dupla proteção com
   o 409; o idempotente de verdade é o uk_payment_invoice do banco).
 
 ## Toques no backend (mesmo PR)
@@ -62,7 +69,7 @@ A tela não fecha só com frontend. Cada mudança tem teste de integração
 
 ## Critérios de aceite (Vitest + RTL + MSW)
 - Filtro por status altera a query string enviada (asserção no MSW).
-- Fluxo de baixa completo: dialog → request com paymentDate →
+- Fluxo de renovar completo: dialog → request com paymentDate →
   invalidação → badge PAID na lista atualizada.
 - 409 exibe a mensagem do back e a lista é refeita.
 - Data de pagamento futura é barrada pelo zod antes de qualquer
@@ -76,7 +83,7 @@ A tela não fecha só com frontend. Cada mudança tem teste de integração
 - Vazio fala do filtro ativo: "Nenhuma fatura atrasada" sob o atalho,
   não "Nenhuma fatura", que leria como "não existe fatura nenhuma".
 - Página que deixa de existir recua sozinha (`replace`, sem entrada no
-  histórico). Acontece de verdade: dar baixa no único item da última
+  histórico). Acontece de verdade: renovar o único item da última
   página sob "Atrasadas" tira a fatura do filtro e a página some. Cobre
   também `?page=` fora do intervalo digitado na URL.
 - Depois do 409 o botão de confirmar fica desabilitado: o conflito não é

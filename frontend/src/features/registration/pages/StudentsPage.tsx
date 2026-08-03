@@ -49,7 +49,8 @@ type Pending =
   | { kind: 'toggle'; student: Student }
   | { kind: 'access'; student: Student }
   | { kind: 'plans'; student: Student }
-  | { kind: 'reactivate'; student: Student; userId: number };
+  | { kind: 'reactivate'; student: Student; userId: number }
+  | { kind: 'encerrar'; student: Student; plan: Plan; enrollment: PlanEnrollment };
 
 export function StudentsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -76,7 +77,11 @@ export function StudentsPage() {
    */
   const schedules = useSchedulesByStudent();
   const plans = usePlansLookup();
-  const planStudentId = pending?.kind === 'plans' ? pending.student.id : undefined;
+  // 'encerrar' também conta: é a confirmação aberta em cima do mesmo aluno, e
+  // desligar a consulta nesse meio tempo só forçaria um refetch em vazio ao
+  // voltar para a lista de planos.
+  const planStudentId =
+    pending?.kind === 'plans' || pending?.kind === 'encerrar' ? pending.student.id : undefined;
   const enrollments = useEnrollmentsOfStudent(planStudentId);
   const enroll = useEnroll();
   const setEnrollmentActive = useSetEnrollmentActive();
@@ -281,7 +286,49 @@ export function StudentsPage() {
               setEnrollmentActive.mutate({ id: enrollment.id, active: !enrollment.active });
             }
           }}
+          onRequestDeactivate={(plan, enrollment) =>
+            setPending({ kind: 'encerrar', student: pending.student, plan, enrollment })
+          }
         />
+      )}
+
+      {/*
+       * Encerrar é a ação de maior consequência do diálogo de planos, e por
+       * isso não acontece no clique da caixa: substitui a tela de planos por
+       * uma confirmação (o Dialog escrito à mão não empilha overlay — Escape
+       * fecharia os dois de uma vez) e volta para ela ao confirmar ou voltar.
+       */}
+      {pending?.kind === 'encerrar' && (
+        <ConfirmDialog
+          title="Encerrar plano"
+          confirmLabel="Encerrar"
+          pendingLabel="Encerrando…"
+          pending={setEnrollmentActive.isPending}
+          error={setEnrollmentActive.error}
+          onClose={() => {
+            setEnrollmentActive.reset();
+            setPending({ kind: 'plans', student: pending.student });
+          }}
+          onConfirm={() =>
+            setEnrollmentActive.mutate(
+              { id: pending.enrollment.id, active: false },
+              {
+                onSuccess: () => {
+                  toast.show(`Plano ${pending.plan.name} encerrado.`);
+                  setPending({ kind: 'plans', student: pending.student });
+                },
+              },
+            )
+          }
+        >
+          <p>
+            Tem certeza que quer encerrar o plano <strong>{pending.plan.name}</strong> de{' '}
+            <strong>{pending.student.name}</strong>?
+          </p>
+          <p>
+            O aluno deixa de ser cobrado por este plano; as faturas já emitidas continuam.
+          </p>
+        </ConfirmDialog>
       )}
 
       {pending?.kind === 'reactivate' && (

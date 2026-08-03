@@ -106,7 +106,7 @@ export function InvoicesPage() {
                   // "será avisado", não "recebeu": a entrega do WhatsApp é
                   // assíncrona (evento + reentrega). No instante da resposta
                   // HTTP nada foi entregue ainda, e o toast não pode mentir.
-                  toast.show('Baixa registrada. O aluno será avisado por WhatsApp.');
+                  toast.show('Renovação registrada. O aluno será avisado por WhatsApp.');
                   closeDialog();
                 },
               },
@@ -173,15 +173,17 @@ function InvoiceTable({
               )}
             </td>
             <td className="px-3 py-2 text-right">
-              {/* Pagamento é imutável no back: PAGA não tem ação a oferecer. */}
+              {/* Pagamento é imutável no back: PAGA não tem ação a oferecer.
+                  "Renovar": fatura paga é ciclo renovado, mesmo endpoint de sempre
+                  (POST /invoices/{id}/payment) — só o texto muda (SPEC-004/008). */}
               {invoice.status !== 'PAID' && (
                 <Button
                   size="sm"
                   variant="outline"
-                  aria-label={`Dar baixa na fatura de ${studentLabel(invoice)}`}
+                  aria-label={`Renovar a fatura de ${studentLabel(invoice)}`}
                   onClick={() => onRegisterPayment(invoice)}
                 >
-                  Dar baixa
+                  Renovar
                 </Button>
               )}
             </td>

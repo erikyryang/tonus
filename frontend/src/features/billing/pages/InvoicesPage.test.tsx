@@ -74,7 +74,7 @@ describe('lista de faturas', () => {
   });
 
   /** Pagamento é imutável no back: sem baixa a oferecer, só o registro do que houve. */
-  it('fatura paga mostra a data do pagamento e não oferece baixa', async () => {
+  it('fatura paga mostra a data do pagamento e não oferece renovar', async () => {
     server.use(
       meOk(ADMIN),
       fixedList(invoice({ ...ANA, status: 'PAID', paymentDate: '2026-07-08' })),
@@ -85,10 +85,10 @@ describe('lista de faturas', () => {
     const row = await rowOf('Ana Alves');
     expect(within(row).getByText('Paga')).toBeInTheDocument();
     expect(within(row).getByText(/08\/07\/2026/)).toBeInTheDocument();
-    expect(within(row).queryByRole('button', { name: /dar baixa/i })).not.toBeInTheDocument();
+    expect(within(row).queryByRole('button', { name: /renovar/i })).not.toBeInTheDocument();
   });
 
-  it('oferece baixa em fatura aberta e em atrasada', async () => {
+  it('oferece renovar em fatura aberta e em atrasada', async () => {
     server.use(
       meOk(ADMIN),
       fixedList(
@@ -100,9 +100,9 @@ describe('lista de faturas', () => {
 
     renderInvoices();
 
-    expect(await screen.findByRole('button', { name: 'Dar baixa na fatura de Ana Alves' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Dar baixa na fatura de Bia Barros' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Dar baixa na fatura de Caio Costa' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Renovar a fatura de Ana Alves' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Renovar a fatura de Bia Barros' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Renovar a fatura de Caio Costa' })).not.toBeInTheDocument();
   });
 
   it('mostra vazio explícito quando não há fatura', async () => {
@@ -138,7 +138,7 @@ describe('lista de faturas', () => {
     renderInvoices();
 
     expect(await screen.findByText('Aluno #201')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Dar baixa na fatura de Aluno #201' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Renovar a fatura de Aluno #201' })).toBeInTheDocument();
   });
 
   it('dá nome acessível à tabela', async () => {
@@ -186,9 +186,9 @@ describe('filtro por status', () => {
   });
 });
 
-describe('dar baixa', () => {
+describe('renovar', () => {
   async function openPaymentDialog(user: ReturnType<typeof renderInvoices>['user'], studentName = 'Ana Alves') {
-    await user.click(await screen.findByRole('button', { name: `Dar baixa na fatura de ${studentName}` }));
+    await user.click(await screen.findByRole('button', { name: `Renovar a fatura de ${studentName}` }));
     return screen.findByRole('dialog');
   }
 
@@ -219,13 +219,13 @@ describe('dar baixa', () => {
     const dialog = await openPaymentDialog(user);
 
     // O diálogo avisa o efeito real, não pergunta "tem certeza?".
-    expect(within(dialog).getByText(/receberá a confirmação por WhatsApp/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/ciclo do aluno é renovado/i)).toBeInTheDocument();
 
     fireEvent.change(within(dialog).getByLabelText('Data do pagamento'), { target: { value: '2026-07-20' } });
     // A baixa não mexe mais no vencimento (SPEC-004): prometer isso seria mentir.
     expect(within(dialog).queryByText(/vencimento da assinatura/i)).not.toBeInTheDocument();
 
-    await user.click(within(dialog).getByRole('button', { name: 'Dar baixa' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Renovar' }));
 
     await waitFor(() => expect(sent).toEqual([{ id: 1, paymentDate: '2026-07-20' }]));
 
@@ -234,7 +234,7 @@ describe('dar baixa', () => {
     const row = await rowOf('Ana Alves');
     expect(within(row).getByText('Paga')).toBeInTheDocument();
     expect(within(row).getByText(/20\/07\/2026/)).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(/baixa registrada/i));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(/renovação registrada/i));
   });
 
   it('já vem com a data de hoje preenchida', async () => {
@@ -254,7 +254,7 @@ describe('dar baixa', () => {
     const dialog = await openPaymentDialog(user);
 
     fireEvent.change(within(dialog).getByLabelText('Data do pagamento'), { target: { value: '2099-01-01' } });
-    await user.click(within(dialog).getByRole('button', { name: 'Dar baixa' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Renovar' }));
 
     // Sem handler de POST: se a chamada saísse, o MSW derrubaria o teste.
     expect(await within(dialog).findByText(/data futura/i)).toBeInTheDocument();
@@ -293,7 +293,7 @@ describe('dar baixa', () => {
     const dialog = await openPaymentDialog(user);
     expect(requests).toHaveLength(1);
 
-    await user.click(within(dialog).getByRole('button', { name: 'Dar baixa' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Renovar' }));
 
     expect(await within(dialog).findByText('Fatura já paga: 1')).toBeInTheDocument();
     await waitFor(() => expect(requests).toHaveLength(2));
@@ -306,7 +306,7 @@ describe('dar baixa', () => {
    * O 409 aqui não é transitório: a fatura está paga e vai continuar paga.
    * Deixar o botão armado convida a repetir uma ação que só pode falhar de novo.
    */
-  it('não deixa repetir a baixa depois do 409', async () => {
+  it('não deixa repetir a renovação depois do 409', async () => {
     server.use(
       meOk(ADMIN),
       fixedList(invoice({ ...ANA, status: 'OPEN' })),
@@ -316,10 +316,10 @@ describe('dar baixa', () => {
     const { user } = renderInvoices();
     const dialog = await openPaymentDialog(user);
 
-    await user.click(within(dialog).getByRole('button', { name: 'Dar baixa' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Renovar' }));
 
     expect(await within(dialog).findByText('Fatura já paga: 1')).toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: 'Dar baixa' })).toBeDisabled();
+    expect(within(dialog).getByRole('button', { name: 'Renovar' })).toBeDisabled();
     expect(within(dialog).getByRole('button', { name: 'Voltar' })).toBeEnabled();
   });
 
@@ -333,14 +333,14 @@ describe('dar baixa', () => {
 
     const { user } = renderInvoices();
     const dialog = await openPaymentDialog(user);
-    await user.click(within(dialog).getByRole('button', { name: 'Dar baixa' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Renovar' }));
 
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(/baixa registrada/i));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(/renovação registrada/i));
     expect(screen.getByRole('status')).not.toHaveTextContent(/recebeu/i);
   });
 
   /** Dupla proteção com o 409; o idempotente de verdade é o uk_payment_invoice. */
-  it('desabilita o botão enquanto a baixa está em andamento', async () => {
+  it('desabilita o botão enquanto a renovação está em andamento', async () => {
     server.use(
       meOk(ADMIN),
       fixedList(invoice({ ...ANA, status: 'OPEN' })),
@@ -352,9 +352,9 @@ describe('dar baixa', () => {
     const { user } = renderInvoices();
     const dialog = await openPaymentDialog(user);
 
-    await user.click(within(dialog).getByRole('button', { name: 'Dar baixa' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Renovar' }));
 
-    const busy = await within(dialog).findByRole('button', { name: /dando baixa/i });
+    const busy = await within(dialog).findByRole('button', { name: /renovando/i });
     expect(busy).toBeDisabled();
   });
 });
@@ -393,7 +393,7 @@ describe('paginação', () => {
    * existir. Sem recuar, a tela diria "nenhuma fatura atrasada" com a página 1
    * ainda cheia.
    */
-  it('recua quando a página deixa de existir depois da baixa', async () => {
+  it('recua quando a página deixa de existir depois da renovação', async () => {
     let paid = false;
     const sent: string[] = [];
 
@@ -418,8 +418,8 @@ describe('paginação', () => {
 
     const { user } = renderInvoices(createTestQueryClient(), '/admin/invoices?status=OVERDUE&page=1');
 
-    await user.click(await screen.findByRole('button', { name: 'Dar baixa na fatura de Bia Barros' }));
-    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Dar baixa' }));
+    await user.click(await screen.findByRole('button', { name: 'Renovar a fatura de Bia Barros' }));
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Renovar' }));
 
     // Recuou para a página 0 e mostra o que sobrou, em vez do vazio da página 1.
     expect(await rowOf('Ana Alves')).toBeInTheDocument();

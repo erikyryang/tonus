@@ -5,6 +5,11 @@
 > que mudou é a origem do valor — soma dos planos ativos do aluno, com desconto,
 > em vez de uma assinatura única. Onde este documento diz "assinatura", leia
 > "matrícula em plano", e o que vale sobre a fatura está na SPEC-012.
+>
+> **"Baixa" virou "Renovar" na UI (mudança 8, SPEC-008).** Endpoint e semântica
+> de backend não mudam: continua `POST /invoices/{id}/payment`, fatura paga
+> continua sendo ciclo renovado. "Baixa" abaixo é o termo de domínio do back;
+> a tela mostra "Renovar".
 
 ## Objetivo
 Ciclo cobrança → fatura → pagamento, com job diário e eventos.

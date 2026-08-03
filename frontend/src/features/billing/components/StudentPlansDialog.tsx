@@ -5,15 +5,16 @@ import { formatMoney } from '@/lib/formatters';
 import type { Plan, PlanEnrollment } from '../api/billingApi';
 
 /**
- * Os planos de um aluno, marcados e desmarcados na hora.
+ * Os planos de um aluno: matricular é marcar a caixa, sem botão de salvar —
+ * cada caixa é uma decisão isolada, e o back tem endpoint para cada uma. Um
+ * "salvar" no fim exigiria calcular o diff aqui e mandar N chamadas mesmo
+ * assim — com a diferença de que uma falha no meio deixaria a tela mentindo
+ * sobre o que foi gravado.
  *
- * Sem botão de salvar: cada caixa é uma decisão isolada, e o back tem endpoint
- * para cada uma. Um "salvar" no fim exigiria calcular o diff aqui e mandar N
- * chamadas mesmo assim — com a diferença de que uma falha no meio deixaria a
- * tela mentindo sobre o que foi gravado.
- *
- * Desmarcar desativa a matrícula, não a apaga: a linha guarda que aquele aluno
- * já teve aquele plano, e é o que permite rematricular sem esbarrar na UNIQUE.
+ * Encerrar é ação à parte, por linha, com confirmação (mudança 8): diferente
+ * de matricular, tem efeito sobre cobrança futura, e a caixa sozinha nunca
+ * perguntava "tem certeza?". Enquanto ativo, o plano fica com a caixa marcada
+ * e travada — quem desliga é o botão "Encerrar", nunca o clique na caixa.
  */
 export function StudentPlansDialog({
   studentName,
@@ -23,6 +24,7 @@ export function StudentPlansDialog({
   pending,
   error,
   onToggle,
+  onRequestDeactivate,
   onClose,
 }: {
   studentName: string;
@@ -34,6 +36,8 @@ export function StudentPlansDialog({
   pending: boolean;
   error: unknown;
   onToggle: (plan: Plan, enrollment: PlanEnrollment | undefined) => void;
+  /** Pede confirmação antes de encerrar — quem desativa de fato é o ADMIN, depois. */
+  onRequestDeactivate: (plan: Plan, enrollment: PlanEnrollment) => void;
   onClose: () => void;
 }) {
   const byPlan = new Map((enrollments ?? []).map((enrollment) => [enrollment.planId, enrollment]));
@@ -48,19 +52,34 @@ export function StudentPlansDialog({
           <ul className="space-y-2">
             {plans.map((plan) => {
               const enrollment = byPlan.get(plan.id);
+              const active = enrollment?.active ?? false;
               return (
                 <li key={plan.id} className="flex items-center gap-2">
                   <input
                     id={`plan-${plan.id}`}
                     type="checkbox"
                     className="h-4 w-4 rounded border-slate-300"
-                    checked={enrollment?.active ?? false}
-                    disabled={pending || enrollments === undefined}
+                    checked={active}
+                    // Ativo: só o botão "Encerrar" desliga. A caixa aqui vira
+                    // indicador, não controle — dois caminhos para a mesma
+                    // ação, um deles sem confirmação, derrotaria o propósito.
+                    disabled={pending || enrollments === undefined || active}
                     onChange={() => onToggle(plan, enrollment)}
                   />
                   <label htmlFor={`plan-${plan.id}`} className="text-sm text-slate-900">
                     {plan.name} — {formatMoney(plan.monthlyPrice)}
                   </label>
+                  {active && enrollment && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="ml-auto"
+                      disabled={pending}
+                      onClick={() => onRequestDeactivate(plan, enrollment)}
+                    >
+                      Encerrar
+                    </Button>
+                  )}
                 </li>
               );
             })}
