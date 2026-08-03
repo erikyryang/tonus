@@ -132,6 +132,8 @@ export const defaultSchedulesKey = (page?: number) =>
     ? (['scheduling', 'default-schedules'] as const)
     : (['scheduling', 'default-schedules', page] as const);
 
+export const schedulesByStudentKey = ['scheduling', 'schedules-by-student'] as const;
+
 export const announcementsKey = (page?: number) =>
   page === undefined
     ? (['scheduling', 'announcements'] as const)
@@ -157,6 +159,13 @@ export const schedulingApi = {
    * padrão é configuração corrente, não histórico.
    */
   deleteDefaultSchedule: (id: number) => apiClient.delete<void>(`/default-schedules/${id}`),
+
+  /**
+   * A coluna "Horário" de /students (SPEC-009): mapa aluno → hora, para o
+   * front cruzar com a tabela de alunos que já tem em mãos. O grafo não muda —
+   * `registration` continua sem consultar `scheduling`.
+   */
+  schedulesByStudent: () => apiClient.get<Record<number, string>>('/default-schedules/by-student'),
 
   announcements: (page: number) => apiClient.get<Page<Announcement>>(`/announcements?page=${page}`),
   createAnnouncement: (input: AnnouncementInput) => apiClient.post<Announcement>('/announcements', input),

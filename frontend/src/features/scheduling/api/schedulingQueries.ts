@@ -8,6 +8,7 @@ import {
   announcementsKey,
   myGridKey,
   myScheduleWeekKey,
+  schedulesByStudentKey,
   schedulingApi,
 } from './schedulingApi';
 
@@ -131,6 +132,19 @@ export function useDeleteDefaultSchedule() {
   return useMutation({
     mutationFn: (id: number) => schedulingApi.deleteDefaultSchedule(id),
     onSuccess: invalidate,
+  });
+}
+
+/**
+ * A coluna "Horário" de /students. Mesmo cuidado da consulta de cobrança:
+ * `select` vira o registro num Map só para o cliente decidir "sem horário" —
+ * "ainda não sei" (dado undefined) não pode virar a mesma coisa.
+ */
+export function useSchedulesByStudent() {
+  return useQuery({
+    queryKey: schedulesByStudentKey,
+    queryFn: () => schedulingApi.schedulesByStudent(),
+    select: (data) => new Map(Object.entries(data).map(([id, time]) => [Number(id), time])),
   });
 }
 

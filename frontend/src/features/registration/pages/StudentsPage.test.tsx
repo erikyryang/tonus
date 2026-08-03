@@ -33,6 +33,7 @@ import {
 } from '@/test/registrationHandlers';
 import { problem } from '@/test/problem';
 import { createTestQueryClient, renderApp } from '@/test/renderApp';
+import { schedulesByStudent } from '@/test/schedulingHandlers';
 import { server } from '@/test/server';
 import {
   accessOfStudentsHandler,
@@ -53,7 +54,14 @@ const ANA = student({ id: 1, name: 'Ana Alves', phone: '+5511999990001', teacher
  * acesso e quem está com fatura atrasada.
  */
 function renderStudents(...handlers: RequestHandler[]) {
-  server.use(meOk(ADMIN), teachersList(BRUNO, CLARA), noAccessYet(), overdueStudentIds(), ...handlers);
+  server.use(
+    meOk(ADMIN),
+    teachersList(BRUNO, CLARA),
+    noAccessYet(),
+    overdueStudentIds(),
+    schedulesByStudent(),
+    ...handlers,
+  );
   return renderApp('/admin/students');
 }
 
@@ -85,6 +93,81 @@ describe('lista de alunos', () => {
 });
 
 /**
+ * O horário padrão vem de outra chamada, do módulo dono da agenda
+ * (GET /default-schedules/by-student). Quem cruza as duas listas é a tela:
+ * `registration` não consulta `scheduling` no back, mesma decisão da coluna
+ * de cobrança.
+ */
+describe('horário do aluno', () => {
+  const BIA = student({ id: 2, name: 'Bia Barros', teacherId: 10 });
+
+  it('mostra a hora de quem tem horário e traço para quem não tem', async () => {
+    server.use(
+      meOk(ADMIN),
+      teachersList(BRUNO),
+      noAccessYet(),
+      overdueStudentIds(),
+      schedulesByStudent({ 1: '07:00' }),
+      studentsList(ANA, BIA),
+    );
+
+    renderApp('/admin/students');
+
+    expect(within(await rowOf('Ana Alves')).getByText('07:00')).toBeInTheDocument();
+    expect(within(await rowOf('Bia Barros')).getByText('—')).toBeInTheDocument();
+  });
+
+  /**
+   * A coluna vazia por falha é idêntica à coluna que ainda não chegou. Calada,
+   * a tela faria o ADMIN concluir que ninguém tem horário — a leitura mais
+   * cara possível do erro.
+   */
+  it('explica quando não consegue carregar os horários e refaz a consulta', async () => {
+    let calls = 0;
+    server.use(
+      meOk(ADMIN),
+      teachersList(BRUNO),
+      noAccessYet(),
+      overdueStudentIds(),
+      studentsList(ANA),
+      http.get('/api/default-schedules/by-student', () => {
+        calls += 1;
+        return calls === 1 ? HttpResponse.error() : HttpResponse.json({ 1: '07:00' });
+      }),
+    );
+
+    const { user } = renderApp('/admin/students');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/horário/i);
+
+    await user.click(await screen.findByRole('button', { name: 'Tentar de novo' }));
+
+    expect(await within(await rowOf('Ana Alves')).findByText('07:00')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
+  });
+
+  /** "Ainda não sei" não pode virar "sem horário" antes da consulta responder. */
+  it('não afirma nada enquanto a consulta de horários não responde', async () => {
+    server.use(
+      meOk(ADMIN),
+      teachersList(BRUNO),
+      noAccessYet(),
+      overdueStudentIds(),
+      studentsList(ANA),
+      http.get('/api/default-schedules/by-student', async () => {
+        await delay('infinite');
+        return HttpResponse.json({});
+      }),
+    );
+
+    renderApp('/admin/students');
+
+    const row = await rowOf('Ana Alves');
+    expect(within(row).queryByText('—')).not.toBeInTheDocument();
+  });
+});
+
+/**
  * A situação de cobrança vem de outra chamada, do módulo dono da fatura
  * (GET /invoices/overdue-student-ids). Quem cruza as duas listas é a tela:
  * `registration` não consulta `billing` no back, e o grafo de módulos não muda
@@ -99,6 +182,7 @@ describe('situação de cobrança', () => {
       teachersList(BRUNO),
       noAccessYet(),
       overdueStudentIds(1),
+      schedulesByStudent(),
       studentsList(ANA, BIA),
     );
 
@@ -120,6 +204,7 @@ describe('situação de cobrança', () => {
       meOk(ADMIN),
       teachersList(BRUNO),
       noAccessYet(),
+      schedulesByStudent(),
       studentsList(ANA),
       http.get('/api/invoices/overdue-student-ids', () => {
         calls += 1;
@@ -152,6 +237,7 @@ describe('situação de cobrança', () => {
       meOk(ADMIN),
       teachersList(BRUNO),
       noAccessYet(),
+      schedulesByStudent(),
       studentsList(ANA),
       overdueStudentIdsHandler(() => (paid ? [] : [1])),
       invoicesHandler(() => pageOf([invoice({ id: 1, studentId: 1, studentName: 'Ana Alves', status: 'OVERDUE' })])),
@@ -188,6 +274,7 @@ describe('situação de cobrança', () => {
       meOk(ADMIN),
       teachersList(BRUNO),
       noAccessYet(),
+      schedulesByStudent(),
       studentsList(ANA),
       http.get('/api/invoices/overdue-student-ids', async () => {
         await delay('infinite');
@@ -216,6 +303,7 @@ describe('planos do aluno', () => {
       teachersList(BRUNO),
       noAccessYet(),
       overdueStudentIds(),
+      schedulesByStudent(),
       studentsList(ANA),
       plansList(plan({ id: 3, name: 'Musculação' }), plan({ id: 4, name: 'Pilates' })),
       noEnrollments(),
@@ -245,6 +333,7 @@ describe('planos do aluno', () => {
       teachersList(BRUNO),
       noAccessYet(),
       overdueStudentIds(),
+      schedulesByStudent(),
       studentsList(ANA),
       plansList(plan({ id: 3, name: 'Musculação' })),
       enrollmentsHandler(() => [enrollment({ id: 77, studentId: 1, planId: 3, active: true })]),
@@ -277,6 +366,7 @@ describe('planos do aluno', () => {
       teachersList(BRUNO),
       noAccessYet(),
       overdueStudentIds(),
+      schedulesByStudent(),
       studentsList(ANA),
       plansList(plan({ id: 3, name: 'Musculação' }), plan({ id: 4, name: 'Pilates' })),
       enrollmentsHandler(() => [
@@ -302,6 +392,7 @@ describe('planos do aluno', () => {
       teachersList(BRUNO),
       noAccessYet(),
       overdueStudentIds(),
+      schedulesByStudent(),
       studentsList(ANA),
       plansList(plan({ id: 3, name: 'Musculação' })),
       enrollmentsHandler(() => [enrollment({ id: 77, studentId: 1, planId: 3, active: true })]),
@@ -324,6 +415,7 @@ describe('planos do aluno', () => {
       teachersList(BRUNO),
       noAccessYet(),
       overdueStudentIds(),
+      schedulesByStudent(),
       studentsList(ANA),
       plansList(plan({ id: 3, name: 'Musculação' }), plan({ id: 5, name: 'Plano Extinto', active: false })),
       noEnrollments(),
@@ -347,6 +439,7 @@ describe('filtro de situação', () => {
     server.use(
       meOk(ADMIN),
       overdueStudentIds(),
+      schedulesByStudent(),
       teachersList(BRUNO),
       noAccessYet(),
       studentsHandler((params) => {
@@ -386,6 +479,7 @@ describe('cadastro de aluno', () => {
     server.use(
       meOk(ADMIN),
       overdueStudentIds(),
+      schedulesByStudent(),
       teachersList(BRUNO),
       noAccessYet(),
       studentsHandler(() => pageOf(students)),
@@ -449,6 +543,7 @@ describe('cadastro de aluno', () => {
     server.use(
       meOk(ADMIN),
       overdueStudentIds(),
+      schedulesByStudent(),
       teachersList(BRUNO),
       noAccessYet(),
       studentsList(ANA),
@@ -484,6 +579,7 @@ describe('desativação', () => {
     server.use(
       meOk(ADMIN),
       overdueStudentIds(),
+      schedulesByStudent(),
       teachersList(BRUNO),
       noAccessYet(),
       studentsList(ANA),
@@ -510,6 +606,7 @@ describe('desativação', () => {
     server.use(
       meOk(ADMIN),
       overdueStudentIds(),
+      schedulesByStudent(),
       teachersList(BRUNO),
       noAccessYet(),
       studentsList(student({ id: 1, name: 'Ana Alves', active: false })),
@@ -543,6 +640,7 @@ describe('acesso do aluno', () => {
     server.use(
       meOk(ADMIN),
       overdueStudentIds(),
+      schedulesByStudent(),
       teachersList(BRUNO),
       noAccessYet(),
       studentsList(ANA),
@@ -570,6 +668,7 @@ describe('acesso do aluno', () => {
     server.use(
       meOk(ADMIN),
       overdueStudentIds(),
+      schedulesByStudent(),
       teachersList(BRUNO),
       studentsList(ANA),
       accessOfStudentsHandler(() => [accessUser({ id: 500, studentId: 1, active: false })]),
@@ -593,6 +692,7 @@ describe('acesso do aluno', () => {
     server.use(
       meOk(ADMIN),
       overdueStudentIds(),
+      schedulesByStudent(),
       teachersList(BRUNO),
       studentsList(ANA),
       accessOfStudentsHandler(() => [accessUser({ id: 500, studentId: 1, active: true })]),
@@ -614,6 +714,7 @@ describe('acesso do aluno', () => {
     server.use(
       meOk(ADMIN),
       overdueStudentIds(),
+      schedulesByStudent(),
       teachersList(BRUNO),
       noAccessYet(),
       studentsList(ANA),
@@ -641,6 +742,7 @@ describe('acesso do aluno', () => {
     server.use(
       meOk(ADMIN),
       overdueStudentIds(),
+      schedulesByStudent(),
       teachersList(BRUNO),
       studentsList(ANA),
       http.get('/api/users', async () => {
@@ -665,6 +767,7 @@ describe('acesso do aluno', () => {
     server.use(
       meOk(ADMIN),
       overdueStudentIds(),
+      schedulesByStudent(),
       teachersList(BRUNO),
       studentsList(ANA),
       http.get('/api/users', () => HttpResponse.error()),
@@ -684,6 +787,7 @@ describe('acesso do aluno', () => {
     server.use(
       meOk(ADMIN),
       overdueStudentIds(),
+      schedulesByStudent(),
       teachersList(BRUNO),
       studentsList(ANA),
       http.get('/api/users', () => {
@@ -707,6 +811,7 @@ describe('acesso do aluno', () => {
     server.use(
       meOk(ADMIN),
       overdueStudentIds(),
+      schedulesByStudent(),
       teachersList(BRUNO),
       studentsList(ANA, student({ id: 2, name: 'Bia Barros' })),
       accessOfStudentsHandler(() => [], asked),
@@ -733,6 +838,7 @@ describe('paginação', () => {
     server.use(
       meOk(ADMIN),
       overdueStudentIds(),
+      schedulesByStudent(),
       teachersList(BRUNO),
       noAccessYet(),
       studentsHandler((params) => {

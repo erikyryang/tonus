@@ -3,6 +3,8 @@ package br.com.tonus.scheduling.internal.web;
 import br.com.tonus.scheduling.internal.SchedulingService;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.time.LocalTime;
+import java.util.Map;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -36,6 +38,16 @@ class DefaultScheduleController {
         DefaultScheduleResponse response = DefaultScheduleResponse.from(
                 schedulingService.createDefaultSchedule(request.studentId(), request.time()));
         return ResponseEntity.created(URI.create("/default-schedules/" + response.id())).body(response);
+    }
+
+    /**
+     * O caminho vem antes de qualquer {@code /{id}} — mesma cautela do
+     * {@code overdue-student-ids} de billing: "by-student" não pode ser
+     * confundido com um id.
+     */
+    @GetMapping("/by-student")
+    Map<Long, LocalTime> byStudent() {
+        return schedulingService.schedulesByStudent();
     }
 
     @GetMapping("/{id}")

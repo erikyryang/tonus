@@ -24,6 +24,7 @@ import {
 } from '@/features/billing/api/billingQueries';
 import { BillingStatusBadge } from '@/features/billing/components/BillingStatusBadge';
 import { StudentPlansDialog } from '@/features/billing/components/StudentPlansDialog';
+import { useSchedulesByStudent } from '@/features/scheduling/api/schedulingQueries';
 import type { Student } from '../api/registrationApi';
 import {
   nameById,
@@ -69,6 +70,11 @@ export function StudentsPage() {
    * uma coluna na tela não é motivo para abrir essa aresta. Quem cruza é aqui.
    */
   const overdue = useOverdueStudentIds();
+  /*
+   * O horário padrão vem do módulo dono da agenda, mesma decisão da coluna de
+   * cobrança: `registration` não consulta `scheduling`, quem cruza é aqui.
+   */
+  const schedules = useSchedulesByStudent();
   const plans = usePlansLookup();
   const planStudentId = pending?.kind === 'plans' ? pending.student.id : undefined;
   const enrollments = useEnrollmentsOfStudent(planStudentId);
@@ -138,6 +144,15 @@ export function StudentsPage() {
         />
       )}
 
+      {/* Mesmo cuidado da cobrança: coluna vazia por falha não pode se
+          confundir com "sem horário cadastrado". */}
+      {schedules.isError && (
+        <ErrorNotice
+          message="Não foi possível carregar os horários dos alunos. A coluna fica vazia até a consulta responder."
+          onRetry={schedules.refetch}
+        />
+      )}
+
       <ListFeedback
         state={students}
         loading="Carregando os alunos…"
@@ -151,6 +166,7 @@ export function StudentsPage() {
             teacherNames={teacherNames}
             access={access.data}
             overdueStudentIds={overdue.data}
+            schedulesByStudent={schedules.data}
             onEdit={(student) => setPending({ kind: 'edit', student })}
             onToggle={(student) => setPending({ kind: 'toggle', student })}
             onCreateAccess={(student) => setPending({ kind: 'access', student })}
@@ -295,6 +311,7 @@ function StudentTable({
   teacherNames,
   access,
   overdueStudentIds,
+  schedulesByStudent,
   onEdit,
   onToggle,
   onCreateAccess,
@@ -306,6 +323,8 @@ function StudentTable({
   access: Map<number, AccessUser> | undefined;
   /** Nada enquanto a consulta de cobrança não responde — "não sei" não é "em dia". */
   overdueStudentIds: Set<number> | undefined;
+  /** Nada enquanto a consulta de horários não responde — "não sei" não é "sem horário". */
+  schedulesByStudent: Map<number, string> | undefined;
   onEdit: (student: Student) => void;
   onToggle: (student: Student) => void;
   onCreateAccess: (student: Student) => void;
@@ -327,6 +346,9 @@ function StudentTable({
             Professor
           </th>
           <th scope="col" className="px-3 py-2 font-medium">
+            Horário
+          </th>
+          <th scope="col" className="px-3 py-2 font-medium">
             Situação
           </th>
           <th scope="col" className="px-3 py-2 font-medium">
@@ -345,6 +367,7 @@ function StudentTable({
             {/* O back devolve só o id; o nome vem da lista de apoio. Enquanto
                 ela não chega, o id é melhor que célula em branco. */}
             <td className="px-3 py-2">{teacherNames.get(student.teacherId) ?? `Professor #${student.teacherId}`}</td>
+            <td className="px-3 py-2">{schedulesByStudent && (schedulesByStudent.get(student.id) ?? '—')}</td>
             <td className="px-3 py-2">{student.active ? 'Ativo' : 'Inativo'}</td>
             <td className="px-3 py-2">
               {overdueStudentIds && <BillingStatusBadge overdue={overdueStudentIds.has(student.id)} />}

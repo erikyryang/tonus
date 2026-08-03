@@ -162,6 +162,23 @@ export function deleteDefaultScheduleOk(onRequest?: (id: number) => void) {
   });
 }
 
+/**
+ * GET /default-schedules/by-student — a coluna "Horário" de /students
+ * (SPEC-009). `registration` não passa a consultar `scheduling`: é a tela que
+ * cruza esta lista com a tabela de alunos que já tem em mãos, mesmo padrão da
+ * coluna de cobrança.
+ */
+export function schedulesByStudentHandler(resolve: () => Record<number, string>, log?: string[]) {
+  return http.get('/api/default-schedules/by-student', () => {
+    log?.push('by-student');
+    return HttpResponse.json(resolve());
+  });
+}
+
+export function schedulesByStudent(times: Record<number, string> = {}) {
+  return schedulesByStudentHandler(() => times);
+}
+
 export function announcementsHandler(
   resolve: (params: URLSearchParams) => Page<Announcement>,
   log?: string[],

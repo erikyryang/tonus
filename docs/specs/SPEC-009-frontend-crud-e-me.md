@@ -14,7 +14,7 @@ tela tem de específico.
 - Mutação → invalidate da listagem → toast. Erros: Problem Details.
 
 ## Telas ADMIN
-- /students: colunas nome, telefone, professor, situação e cobrança
+- /students: colunas nome, telefone, professor, horário, situação e cobrança
   ("Atrasado" / "Em dia", de `GET /invoices/overdue-student-ids`). Form:
   nome, telefone, professor (select só de ATIVOS — regra do back refletida).
   Desativar avisa: "o acesso do aluno será revogado". Ações de acesso
@@ -23,6 +23,12 @@ tela tem de específico.
   reativação do login é manual por design (revogar é automático,
   conceder é manual). Se o back não expuser consulta usuário-por-
   vínculo para saber qual ação mostrar, acrescentar (toque documentado).
+  A coluna "Horário" cruza `GET /default-schedules/by-student` (mapa
+  aluno → hora, HH:mm) com a mesma tabela: aluno sem horário mostra "—".
+  Mesmo padrão da coluna de cobrança — `registration` não passa a
+  consultar `scheduling`, quem cruza as duas listas é o cliente, e a coluna
+  fica vazia (não "—") enquanto a consulta não responde, para não confundir
+  "ainda não sei" com "sem horário cadastrado".
 - /teachers: idem sem o select de professor. Desativação avisa que
   alunos dele precisarão de remanejamento.
 - /default-schedules: aluno (select de ativos) + hora (HH:mm).
@@ -95,6 +101,13 @@ tela tem de específico.
   desativado entra na lista como qualquer outro — a fatura sobrevive à saída
   (não há DELETE de aluno, para o histórico de cobrança não sumir), e filtrá-lo
   esconderia o caso mais caro que existe: quem foi embora devendo.
+- `GET /default-schedules/by-student` (ADMIN) → mapa `studentId → time_of_day`
+  (HH:mm) de quem tem horário padrão. Mesmo raciocínio do
+  `overdue-student-ids` acima: **o grafo não muda**, `registration` continua
+  sem consultar `scheduling`, e é o cliente que cruza esta lista com a tabela
+  de alunos para pintar a coluna "Horário". Aluno sem horário simplesmente não
+  aparece no mapa. O caminho vem antes de `/{id}` no controller, mesma cautela
+  do `overdue-student-ids`: "by-student" não pode ser confundido com um id.
 - `GET /me/schedule` passa a devolver o dia do aluno **com** a descrição do
   comunicado e os cancelamentos dele (`SchedulingService.dayOfStudent`, que
   filtra `dayOf` em vez de reexpandir). Sem isso a tela do aluno não teria
@@ -148,6 +161,11 @@ tela tem de específico.
   ser a mesma coisa na tela. Falha na consulta também se explica, com "tentar
   de novo": calada, a coluna vazia faria o ADMIN concluir que ninguém está
   atrasado — a leitura mais cara possível do erro.
+- A coluna "Horário" segue o mesmo padrão da coluna "Cobrança": célula vazia
+  (não "—") enquanto `['scheduling','schedules-by-student']` não responde, e
+  "tentar de novo" quando a consulta falha. Só depois de resolvida é que
+  ausência no mapa vira "—" — traço e "ainda não sei" também não podem ser a
+  mesma coisa aqui.
 - A baixa invalida `['billing','overdue-ids']` além de `['billing','invoices']`.
   A baixa acontece em `/invoices` e o atraso deixa de existir para a
   `/students`, que não estava montada — sem invalidar, ela voltaria do cache

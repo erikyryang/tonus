@@ -90,6 +90,17 @@ public class SchedulingService {
     }
 
     /**
+     * A coluna "Horário" de /students (SPEC-009): mapa aluno → hora, para o
+     * front cruzar com a tabela de alunos que já tem em mãos. O grafo não
+     * muda — quem cruza os dois é o cliente, não registration.
+     */
+    @Transactional(readOnly = true)
+    public Map<Long, LocalTime> schedulesByStudent() {
+        return defaultScheduleRepository.findAll().stream()
+                .collect(Collectors.toMap(DefaultSchedule::getStudentId, DefaultSchedule::getTime));
+    }
+
+    /**
      * Apaga o horário e, junto, todas as exceções do aluno.
      *
      * Sem a limpeza, uma exceção sobrevive ao horário que a originou: como
