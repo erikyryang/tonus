@@ -177,6 +177,16 @@ export function useDeleteAnnouncement() {
 }
 
 /**
+ * Sem invalidação: o disparo não tem listagem própria no front, e nada mais
+ * na tela depende do resultado desta chamada.
+ */
+export function useBroadcast() {
+  return useMutation({
+    mutationFn: (message: string) => schedulingApi.broadcast(message),
+  });
+}
+
+/**
  * A semana do aluno numa chamada só.
  *
  * O aluno precisa da semana e não de um dia só — a pergunta dele é "quando é a

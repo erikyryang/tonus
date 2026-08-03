@@ -172,6 +172,13 @@ export const schedulingApi = {
   deleteAnnouncement: (id: number) => apiClient.delete<void>(`/announcements/${id}`),
 
   /**
+   * Disparo manual (mudança 9): mensagem livre para todo aluno ativo, fora do
+   * ciclo de comunicado de dia/efeito. Não há listagem nem id para o front —
+   * o back não guarda entidade própria, só o evento que ele publica.
+   */
+  broadcast: (message: string) => apiClient.post<void>('/announcements/broadcast', { message }),
+
+  /**
    * O id do aluno e o do professor vêm do token: /me não aceita id nenhum.
    *
    * A janela vem numa chamada só. Era uma por dia, e cada uma custava ao back

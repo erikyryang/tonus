@@ -63,6 +63,12 @@ class MessageTemplateTest {
     }
 
     @Test
+    void broadcastRelaysTheFreeTextMessage() {
+        assertThat(MessageTemplate.BROADCAST.render("Ana", "Aula de sábado cancelada."))
+                .isEqualTo("Olá, Ana! Aula de sábado cancelada.");
+    }
+
+    @Test
     void paymentConfirmsAmountAndDate() {
         String rendered = MessageTemplate.PAYMENT_REGISTERED.render("Ana",
                 MessageTemplate.money(new BigDecimal("250.00")), MessageTemplate.date(MONDAY));

@@ -42,6 +42,17 @@ tela tem de específico.
   ("Aulas suspensas" / "Aulas normais"): sem ela, dois comunicados pareceriam
   a mesma coisa e um deles apaga o dia. Excluir com confirmação, e só promete
   a volta das aulas quando elas estavam suspensas.
+  **"Enviar mensagem" (mudança 9)** abre um diálogo à parte, fora do CRUD de
+  comunicado: textarea livre (contador de caracteres, limite 500, zod
+  espelhando `@Size` do back) e a confirmação "Enviar para N alunos ativos?",
+  onde N vem de `GET /students?active=true` — o back não tem endpoint de
+  contagem próprio, e o `Page` já traz `totalElements`. N fica indefinido
+  (não "0") até a consulta responder, e o envio fica bloqueado até então —
+  mesmo cuidado de "ainda não sei" das outras colunas cruzadas desta spec.
+  Falha na contagem bloqueia o envio e se explica, com "tentar de novo".
+  Confirmar → `POST /announcements/broadcast {message}` → 202 → toast ("serão
+  avisados", não "receberam" — a entrega é assíncrona). Sem listagem nem
+  histórico: o back não guarda entidade própria para o disparo.
 - /plans: nome e valor mensal (R$). A tabela mostra quantos alunos estão
   matriculados, e é esse número que a confirmação de desativar repete — a
   SPEC-012 permite desativar plano com matrícula ativa, e o preço da permissão
@@ -87,6 +98,9 @@ tela tem de específico.
 - Demais CRUDs: um teste de renderização + um de criação cada.
 - /me/schedule e /me/grid: renderização com MSW + guard do papel.
 - Selects de aluno/professor nunca oferecem inativos.
+- Disparo manual (/announcements, "Enviar mensagem"): busca N e envia; zod
+  barra mensagem vazia e acima de 500 antes da rede; envio bloqueado enquanto
+  N não responde ou falha.
 
 ## Toques no back que esta spec exigiu (decididos na implementação)
 - `GET /users?studentIds=1,2,3` → lista dos usuários vinculados àqueles

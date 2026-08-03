@@ -9,11 +9,18 @@ import { ActionMenu } from '@/components/ui/actionMenu';
 import { Button } from '@/components/ui/button';
 import { pageQuery, parsePageParam } from '@/lib/listParams';
 import { formatDate } from '@/lib/formatters';
+import { useActiveStudentCount } from '@/features/registration/api/registrationQueries';
 import type { Announcement } from '../api/schedulingApi';
-import { useAnnouncements, useCreateAnnouncement, useDeleteAnnouncement } from '../api/schedulingQueries';
+import {
+  useAnnouncements,
+  useBroadcast,
+  useCreateAnnouncement,
+  useDeleteAnnouncement,
+} from '../api/schedulingQueries';
 import { AnnouncementFormDialog } from '../components/AnnouncementFormDialog';
+import { BroadcastDialog } from '../components/BroadcastDialog';
 
-type Pending = { kind: 'create' } | { kind: 'delete'; announcement: Announcement };
+type Pending = { kind: 'create' } | { kind: 'delete'; announcement: Announcement } | { kind: 'broadcast' };
 
 export function AnnouncementsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -25,11 +32,14 @@ export function AnnouncementsPage() {
   const announcements = useAnnouncements(page);
   const createAnnouncement = useCreateAnnouncement();
   const deleteAnnouncement = useDeleteAnnouncement();
+  const broadcast = useBroadcast();
+  const activeCount = useActiveStudentCount(pending?.kind === 'broadcast');
 
   function closeDialog() {
     setPending(null);
     createAnnouncement.reset();
     deleteAnnouncement.reset();
+    broadcast.reset();
   }
 
   function succeed(message: string) {
@@ -44,7 +54,12 @@ export function AnnouncementsPage() {
     <section className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-slate-900">Comunicados</h1>
-        <Button onClick={() => setPending({ kind: 'create' })}>Novo comunicado</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setPending({ kind: 'broadcast' })}>
+            Enviar mensagem
+          </Button>
+          <Button onClick={() => setPending({ kind: 'create' })}>Novo comunicado</Button>
+        </div>
       </div>
 
       <Toast message={toast.message} serial={toast.serial} />
@@ -127,6 +142,24 @@ export function AnnouncementsPage() {
               // "serão avisados", não "receberam": a entrega do WhatsApp é
               // assíncrona (evento + reentrega at-least-once).
               onSuccess: () => succeed('Comunicado cadastrado. Os alunos ativos serão avisados por WhatsApp.'),
+            })
+          }
+        />
+      )}
+
+      {pending?.kind === 'broadcast' && (
+        <BroadcastDialog
+          activeCount={activeCount.data}
+          countError={activeCount.error}
+          onRetryCount={activeCount.refetch}
+          pending={broadcast.isPending}
+          error={broadcast.error}
+          onClose={closeDialog}
+          onSubmit={(message) =>
+            broadcast.mutate(message, {
+              // "serão avisados", não "receberam": a entrega do WhatsApp é
+              // assíncrona (evento + reentrega at-least-once).
+              onSuccess: () => succeed('Mensagem enviada. Os alunos ativos serão avisados por WhatsApp.'),
             })
           }
         />

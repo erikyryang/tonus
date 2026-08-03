@@ -42,6 +42,7 @@ Toda mudança entra como migration nova; migration aplicada não se edita.
 | V020 | billing | assinaturas viram planos + matrículas (dado, não schema) |
 | V021 | billing | `invoice.student_id` no lugar de `subscription_id`; troca a UNIQUE |
 | V022 | billing | `DROP TABLE subscription` |
+| V023 | notification | template `BROADCAST` no CHECK de `notification_log` (mudança 9) |
 
 ---
 
@@ -277,9 +278,12 @@ timestamps.
 - `reference_key` é `VARCHAR` e não uma coluna por tipo de evento: cada
   template deriva sua chave do próprio payload (a data em `CLASS_CANCELED` e
   os dois de comunicado, o id da fatura nos três de cobrança, origem+destino em
-  `CLASS_RESCHEDULED`) e não há formato comum entre eles.
+  `CLASS_RESCHEDULED`, e o `broadcastId` — UUID, não data — em `BROADCAST`) e
+  não há formato comum entre eles.
 - `ck_notification_log_template CHECK (template IN (...))` — mesma razão do
-  CHECK de `invoice.status`.
+  CHECK de `invoice.status`. `BROADCAST` entrou na V023 (mudança 9): disparo
+  manual do ADMIN, sem tabela própria — o evento e as linhas daqui são o único
+  registro de que ele aconteceu.
 - **Não há coluna de status nem contador de tentativas.** A linha é gravada
   antes do envio, e falha no envio derruba a transação inteira: uma tentativa
   malsucedida nunca chega a existir no banco. Quem rastreia falha é

@@ -22,6 +22,22 @@ export function useStudents(query: PeopleQuery) {
   });
 }
 
+/**
+ * Quantos alunos ativos existem, para a confirmação do disparo manual
+ * (mudança 9, "Enviar para N alunos ativos?"). O back não tem endpoint de
+ * contagem — reaproveita GET /students?active=true, cujo Page já traz
+ * totalElements. `enabled` é passado pela tela: a consulta só sai quando o
+ * diálogo de disparo abre, não a cada render de /announcements.
+ */
+export function useActiveStudentCount(enabled: boolean) {
+  return useQuery({
+    queryKey: studentsKey({ active: true, page: 0 }),
+    queryFn: () => registrationApi.students({ active: true, page: 0 }),
+    enabled,
+    select: (page) => page.totalElements,
+  });
+}
+
 export function useTeachers(query: PeopleQuery) {
   return useQuery({
     queryKey: teachersKey(query),

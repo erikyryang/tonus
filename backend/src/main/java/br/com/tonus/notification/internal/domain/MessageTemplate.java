@@ -25,7 +25,9 @@ public enum MessageTemplate {
     ANNOUNCEMENT_NOTICE("Olá, %s! Aviso sobre o dia %s: %s. As aulas acontecem normalmente."),
     INVOICE_DUE_SOON("Olá, %s! Sua mensalidade de %s vence em %s."),
     INVOICE_OVERDUE("Olá, %s! Sua mensalidade com vencimento em %s está em aberto."),
-    PAYMENT_REGISTERED("Olá, %s! Recebemos seu pagamento de %s em %s. Obrigado!");
+    PAYMENT_REGISTERED("Olá, %s! Recebemos seu pagamento de %s em %s. Obrigado!"),
+    /** Mensagem livre do ADMIN (mudança 9): o texto vem inteiro do disparo, sem formato próprio. */
+    BROADCAST("Olá, %s! %s");
 
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm");

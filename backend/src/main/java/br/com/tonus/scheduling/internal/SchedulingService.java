@@ -12,6 +12,7 @@ import br.com.tonus.scheduling.internal.domain.Announcement;
 import br.com.tonus.scheduling.internal.domain.AnnouncementRepository;
 import br.com.tonus.scheduling.internal.domain.ScheduleException;
 import br.com.tonus.scheduling.internal.domain.ScheduleExceptionRepository;
+import br.com.tonus.scheduling.BroadcastRequested;
 import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -22,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.context.ApplicationEventPublisher;
@@ -187,6 +189,20 @@ public class SchedulingService {
                 from == null ? null : (root, query, cb) -> cb.greaterThanOrEqualTo(root.get("date"), from),
                 to == null ? null : (root, query, cb) -> cb.lessThanOrEqualTo(root.get("date"), to));
         return announcementRepository.findAll(filter, withStableSort(pageable));
+    }
+
+    /**
+     * O disparo não tem entidade nem tabela própria: não há fato de domínio
+     * atrás dele, é só uma mensagem que precisa sair. O broadcastId (UUID)
+     * nasce aqui e vira reference_key em notification — nunca a data, que
+     * engoliria um segundo disparo legítimo no mesmo dia como se fosse
+     * reentrega do primeiro.
+     */
+    @Transactional
+    public String requestBroadcast(String message) {
+        String broadcastId = UUID.randomUUID().toString();
+        events.publishEvent(new BroadcastRequested(broadcastId, message));
+        return broadcastId;
     }
 
     @Transactional

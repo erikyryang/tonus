@@ -1,8 +1,14 @@
 # SPEC-005 — Notificação (WhatsApp via Evolution API)
 
 ## Objetivo
-Consumir os seis eventos do catálogo e avisar o aluno por WhatsApp sem
-duplicar mensagem. Único módulo que fala com o mundo externo.
+Consumir os eventos do catálogo e avisar o aluno por WhatsApp sem duplicar
+mensagem. Único módulo que fala com o mundo externo.
+
+> **Mudança 9 acrescentou `BroadcastRequested`** — disparo manual de mensagem
+> livre para todo aluno ativo, pedido pelo ADMIN em `/announcements`. Mesmo
+> fan-out de `AnnouncementCreated`, chaveado por `broadcastId` (UUID) em vez
+> de data — o ADMIN pode legitimamente disparar duas vezes no mesmo dia, e as
+> duas mensagens precisam chegar. Contrato completo em docs/eventos.md.
 
 ## Regras
 - `notification` depende de `shared` e `registration` — de onde saem nome,
@@ -20,14 +26,19 @@ duplicar mensagem. Único módulo que fala com o mundo externo.
   chama notification — ele só escuta. Trocar de provedor é um adapter novo,
   sem tocar nos listeners.
 - Um `@ApplicationModuleListener` por evento: `ClassCanceled`,
-  `ClassRescheduled`, `AnnouncementCreated`, `InvoiceDueSoon`, `InvoiceOverdue`,
-  `PaymentRegistered` (contrato em docs/eventos.md).
+  `ClassRescheduled`, `AnnouncementCreated`, `BroadcastRequested`,
+  `InvoiceDueSoon`, `InvoiceOverdue`, `PaymentRegistered` (contrato em
+  docs/eventos.md). `AnnouncementCreated` e `BroadcastRequested` compartilham
+  a mesma implementação de fan-out — só mudam template, reference_key e
+  argumentos da mensagem.
 - `notification_log`: student_id, template, reference_key, sent_at.
   UNIQUE(template, student_id, reference_key) — a idempotência do
   at-least-once vira constraint, mesmo raciocínio de
   `uk_invoice_subscription_period`. `reference_key` identifica o fato dentro
   do payload: a data em `ClassCanceled` e `AnnouncementCreated`, o `invoiceId`
-  nos três de billing, e origem+destino em `ClassRescheduled`.
+  nos três de billing, origem+destino em `ClassRescheduled`, e o `broadcastId`
+  (UUID gerado no disparo, não a data) em `BroadcastRequested` — não há fato
+  de domínio por trás do disparo, e o ADMIN pode repeti-lo no mesmo dia.
 - `ClassRescheduled` leva o destino na chave, e não só a data original,
   porque a mesma aula pode ser remarcada duas vezes a partir do mesmo dia:
   apagar a exceção e recriá-la republica o evento com `originalDate` igual e
@@ -44,6 +55,12 @@ duplicar mensagem. Único módulo que fala com o mundo externo.
   agenda quem tem aula no dia: `notification → scheduling` é aresta que o
   projeto não abre. O custo assumido é avisar também aluno ativo sem horário
   padrão.
+- `BroadcastRequested` (mudança 9) usa o mesmo fan-out — mesma consulta de
+  alunos ativos, mesmas regras de falha consecutiva e reprocessamento — sob o
+  template `BROADCAST`, cuja mensagem é a que veio no disparo, sem formato
+  próprio. É por isso que o listener foi refatorado: o laço de fan-out virou
+  um método privado (`fanOutToActiveStudents`) parametrizado por template e
+  argumentos, e não uma segunda cópia da mesma lógica.
 - **Dois templates, escolhidos pelo `suspendsClasses` do evento**:
   `ANNOUNCEMENT_SUSPENSION` ("não teremos aula: <motivo>") e
   `ANNOUNCEMENT_NOTICE` ("aviso sobre o dia: <motivo>. As aulas acontecem
@@ -135,6 +152,9 @@ duplicar mensagem. Único módulo que fala com o mundo externo.
   deixa passar a versão em que ninguém reprocessa.
 - Comunicado com 3 alunos ativos → 3 linhas em `notification_log`; falha no
   segundo aluno preserva a linha do primeiro.
+- Dois disparos manuais no mesmo dia (`broadcastId` diferentes) chegam os
+  dois ao aluno — chavear pela data engoliria o segundo como reentrega do
+  primeiro.
 - Aluno sumido da fachada não recebe mensagem e não deixa evento preso.
 - Adapter testado com `MockRestServiceServer`; listeners com
   @ApplicationModuleTest e o helper `Eventually`.

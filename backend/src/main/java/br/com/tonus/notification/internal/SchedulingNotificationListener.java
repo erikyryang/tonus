@@ -3,6 +3,7 @@ package br.com.tonus.notification.internal;
 import br.com.tonus.notification.internal.domain.MessageTemplate;
 import br.com.tonus.registration.RegistrationFacade;
 import br.com.tonus.registration.StudentSummary;
+import br.com.tonus.scheduling.BroadcastRequested;
 import br.com.tonus.scheduling.ClassCanceled;
 import br.com.tonus.scheduling.ClassRescheduled;
 import br.com.tonus.scheduling.AnnouncementCreated;
@@ -78,7 +79,6 @@ class SchedulingNotificationListener {
      */
     @ApplicationModuleListener
     public void on(AnnouncementCreated event) {
-        String reference = event.date().toString();
         /*
          * O template é escolhido pelo efeito, e não é só o texto que muda: ele
          * entra na chave de idempotência junto com a data. "Não teremos aula" e
@@ -89,29 +89,62 @@ class SchedulingNotificationListener {
         MessageTemplate template = event.suspendsClasses()
                 ? MessageTemplate.ANNOUNCEMENT_SUSPENSION
                 : MessageTemplate.ANNOUNCEMENT_NOTICE;
+        fanOutToActiveStudents("comunicado", event.date().toString(), template,
+                MessageTemplate.date(event.date()), event.description());
+    }
+
+    /**
+     * Disparo manual (mudança 9): mesmo fan-out do comunicado, mensagem livre
+     * no lugar de data+descrição. A chave de idempotência é o broadcastId, não
+     * a data — o ADMIN pode legitimamente disparar duas vezes no mesmo dia, e
+     * são dois avisos independentes, não uma reentrega do primeiro.
+     */
+    @ApplicationModuleListener
+    public void on(BroadcastRequested event) {
+        fanOutToActiveStudents("disparo", event.broadcastId(), MessageTemplate.BROADCAST, event.message());
+    }
+
+    /**
+     * Um evento vira N mensagens, uma por aluno ativo — quem são eles vem do
+     * registration, não da agenda: notification não depende de scheduling para
+     * consulta, e abrir essa aresta por causa disso não se paga. O preço é
+     * avisar também aluno ativo sem horário padrão.
+     *
+     * A falha de um aluno não interrompe os demais — cada um commita por conta
+     * própria em {@link NotificationService#notifyStudent} —, mas ao final a
+     * exceção é obrigatória: sem ela o Modulith marcaria o evento como
+     * entregue e quem ficou de fora nunca seria avisado.
+     *
+     * Falhas seguidas, porém, interrompem. Não é azar com N alunos, é o
+     * gateway fora do ar, e insistir custa um read timeout por aluno: com 500
+     * alunos e uma Evolution pendurada, o laço segura uma thread do executor
+     * por mais de uma hora. Abortar cedo chega no mesmo lugar — a publicação
+     * fica incompleta e o job de republicação tenta de novo depois — sem pagar
+     * o pedágio.
+     */
+    private void fanOutToActiveStudents(String kind, String reference, MessageTemplate template, Object... args) {
         int limit = properties.consecutiveFailureLimit();
         List<Long> failed = new ArrayList<>();
         int consecutiveFailures = 0;
 
         for (StudentSummary student : registration.findActiveStudents()) {
             try {
-                notifications.notifyStudent(student.studentId(), template,
-                        reference, MessageTemplate.date(event.date()), event.description());
+                notifications.notifyStudent(student.studentId(), template, reference, args);
                 consecutiveFailures = 0;
             } catch (RuntimeException e) {
-                log.warn("Falha ao avisar o aluno {} do comunicado {}", student.studentId(), reference, e);
+                log.warn("Falha ao avisar o aluno {} do {} {}", student.studentId(), kind, reference, e);
                 failed.add(student.studentId());
                 if (++consecutiveFailures >= limit) {
                     throw new WhatsAppDeliveryException(
-                            "Comunicado %s abortado após %d falhas seguidas; pendentes a partir de %s"
-                                    .formatted(reference, consecutiveFailures, failed));
+                            "%s %s abortado após %d falhas seguidas; pendentes a partir de %s"
+                                    .formatted(kind, reference, consecutiveFailures, failed));
                 }
             }
         }
 
         if (!failed.isEmpty()) {
             throw new WhatsAppDeliveryException(
-                    "Comunicado %s não avisado aos alunos %s".formatted(reference, failed));
+                    "%s %s não avisado aos alunos %s".formatted(kind, reference, failed));
         }
     }
 }

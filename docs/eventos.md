@@ -113,6 +113,26 @@ Entrega concluída é apagada depois de `shared.events.retention` (7 dias), pelo
   é avisar também quem está ativo sem horário padrão; a alternativa era mexer
   no grafo de dependências. Ver SPEC-005.
 
+### `BroadcastRequested(String broadcastId, String message)`
+
+- **Publica:** `scheduling`, em `SchedulingService.requestBroadcast` —
+  `POST /announcements/broadcast` (ADMIN), mudança 9.
+- **Significa:** o ADMIN quer mandar uma mensagem livre para todo aluno ativo,
+  fora do ciclo de comunicado de dia/efeito. Não existe fato de domínio atrás
+  dele — nada muda na agenda —, nem tabela própria: o disparo vive só como
+  evento e como as linhas que ele gera em `notification_log`.
+- **Consome:** `notification` (SPEC-005) — mesmo fan-out de `AnnouncementCreated`
+  (todo aluno ativo, via `RegistrationFacade.findActiveStudents()`), template
+  `BROADCAST`, mesmas regras de falha consecutiva e reprocessamento.
+- **A chave de idempotência é `broadcastId` (UUID), não a data.** É a diferença
+  central deste evento para `AnnouncementCreated`: o ADMIN pode legitimamente
+  disparar duas vezes no mesmo dia, e as duas mensagens precisam chegar — a
+  data como `reference_key` faria o segundo disparo ser lido como reentrega do
+  primeiro e a UNIQUE de `notification_log` engoliria o segundo aviso.
+- **Carrega a mensagem inteira** porque não há outro lugar de onde ela viria:
+  ao contrário do comunicado, não existe descrição cadastrada em `scheduling`
+  para o consumidor reconstituir — o texto é o próprio conteúdo do disparo.
+
 ### `InvoiceDueSoon(Long invoiceId, Long studentId, LocalDate dueDate, BigDecimal amount)`
 
 - **Publica:** `billing`, em `BillingService.generateDueInvoices` (job diário),

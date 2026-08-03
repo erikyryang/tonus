@@ -53,4 +53,15 @@ class AnnouncementController {
         schedulingService.deleteAnnouncement(id);
         return ResponseEntity.noContent().build();
     }
+
+    /**
+     * Mensagem livre para todo aluno ativo (mudança 9) — fora do ciclo de
+     * comunicado de dia/efeito. 202: o disparo só publica o evento, o envio de
+     * verdade é assíncrono e não termina dentro desta requisição.
+     */
+    @PostMapping("/broadcast")
+    ResponseEntity<Void> broadcast(@Valid @RequestBody BroadcastRequest request) {
+        schedulingService.requestBroadcast(request.message());
+        return ResponseEntity.accepted().build();
+    }
 }

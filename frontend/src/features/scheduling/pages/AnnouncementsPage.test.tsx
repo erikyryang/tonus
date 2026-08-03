@@ -1,19 +1,26 @@
 import { screen, waitFor, within } from '@testing-library/react';
-import { http } from 'msw';
+import { HttpResponse, http } from 'msw';
 import { describe, expect, it } from 'vitest';
 import type { Announcement, AnnouncementInput } from '@/features/scheduling/api/schedulingApi';
 import { ADMIN, meOk } from '@/test/authHandlers';
 import { pageOf } from '@/test/pageOf';
+import { studentsHandler } from '@/test/registrationHandlers';
 import { renderApp } from '@/test/renderApp';
 import {
   announcement,
   announcementsHandler,
   announcementsList,
+  broadcastOk,
   createAnnouncementOk,
   deleteAnnouncementOk,
   problem,
 } from '@/test/schedulingHandlers';
 import { server } from '@/test/server';
+
+/** GET /students?active=true&page=0 — só a contagem (totalElements) importa aqui. */
+function activeStudentCount(total: number) {
+  return studentsHandler(() => pageOf([], { totalElements: total }));
+}
 
 const INDEPENDENCE = announcement({
   id: 7,
@@ -116,6 +123,135 @@ describe('cadastro de comunicado', () => {
     await user.click(within(dialog).getByLabelText(/suspende as aulas/i));
 
     expect(within(dialog).getByText(/não haverá aula/i)).toBeInTheDocument();
+  });
+});
+
+/**
+ * Disparo manual (mudança 9): mensagem livre para todo aluno ativo, fora do
+ * ciclo de comunicado de dia/efeito. "Enviar para N alunos ativos?" vem de
+ * GET /students?active=true — o back não tem endpoint de contagem próprio.
+ */
+describe('disparo manual', () => {
+  it('busca quantos alunos ativos existem e envia a mensagem', async () => {
+    const sent: string[] = [];
+    server.use(
+      meOk(ADMIN),
+      announcementsList(),
+      activeStudentCount(42),
+      broadcastOk((message) => sent.push(message)),
+    );
+
+    const { user } = renderApp('/admin/announcements');
+
+    await user.click(await screen.findByRole('button', { name: 'Enviar mensagem' }));
+    const dialog = await screen.findByRole('dialog');
+
+    expect(await within(dialog).findByText('Enviar para 42 alunos ativos?')).toBeInTheDocument();
+
+    await user.type(within(dialog).getByLabelText('Mensagem'), 'Aula de sábado cancelada.');
+    await user.click(within(dialog).getByRole('button', { name: 'Enviar' }));
+
+    await waitFor(() => expect(sent).toEqual(['Aula de sábado cancelada.']));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent(/mensagem enviada.*avisados por whatsapp/i),
+    );
+  });
+
+  it('conta os caracteres digitados', async () => {
+    server.use(meOk(ADMIN), announcementsList(), activeStudentCount(1));
+
+    const { user } = renderApp('/admin/announcements');
+
+    await user.click(await screen.findByRole('button', { name: 'Enviar mensagem' }));
+    const dialog = await screen.findByRole('dialog');
+
+    expect(within(dialog).getByText('0/500')).toBeInTheDocument();
+
+    await user.type(within(dialog).getByLabelText('Mensagem'), 'Aviso');
+
+    expect(within(dialog).getByText('5/500')).toBeInTheDocument();
+  });
+
+  /** Critério de aceite: o zod barra antes de qualquer request. */
+  it('recusa mensagem vazia sem chamar a API', async () => {
+    server.use(meOk(ADMIN), announcementsList(), activeStudentCount(1));
+
+    const { user } = renderApp('/admin/announcements');
+
+    await user.click(await screen.findByRole('button', { name: 'Enviar mensagem' }));
+    const dialog = await screen.findByRole('dialog');
+
+    // Sem handler de POST: se a chamada saísse, o MSW derrubaria o teste.
+    await user.click(within(dialog).getByRole('button', { name: 'Enviar' }));
+
+    expect(await within(dialog).findByText(/escreva a mensagem/i)).toBeInTheDocument();
+  });
+
+  it('recusa mensagem acima de 500 caracteres sem chamar a API', async () => {
+    server.use(meOk(ADMIN), announcementsList(), activeStudentCount(1));
+
+    const { user } = renderApp('/admin/announcements');
+
+    await user.click(await screen.findByRole('button', { name: 'Enviar mensagem' }));
+    const dialog = await screen.findByRole('dialog');
+
+    const textarea = within(dialog).getByLabelText('Mensagem') as HTMLTextAreaElement;
+    // maxLength no textarea já barra a digitação; a validação real do zod é o
+    // que impede o envio caso o limite chegue por outro caminho (colar, por
+    // exemplo) — daí definir o value direto, ignorando o maxLength do DOM.
+    await user.click(textarea);
+    textarea.value = 'x'.repeat(501);
+    await user.type(textarea, ' ');
+
+    await user.click(within(dialog).getByRole('button', { name: 'Enviar' }));
+
+    expect(await within(dialog).findByText(/no máximo 500 caracteres/i)).toBeInTheDocument();
+  });
+
+  /** "Ainda não sei" não pode virar "0 alunos" nem liberar o envio. */
+  it('não libera o envio enquanto a contagem não responde', async () => {
+    server.use(
+      meOk(ADMIN),
+      announcementsList(),
+      http.get('/api/students', async () => {
+        await new Promise(() => {});
+      }),
+    );
+
+    const { user } = renderApp('/admin/announcements');
+
+    await user.click(await screen.findByRole('button', { name: 'Enviar mensagem' }));
+    const dialog = await screen.findByRole('dialog');
+
+    expect(within(dialog).getByText(/contando os alunos ativos/i)).toBeInTheDocument();
+    await user.type(within(dialog).getByLabelText('Mensagem'), 'Aviso');
+    expect(within(dialog).getByRole('button', { name: 'Enviar' })).toBeDisabled();
+  });
+
+  /** Sem o número, o envio fica bloqueado — e a falha se explica, com "tentar de novo". */
+  it('explica quando não consegue contar os alunos ativos e refaz a consulta', async () => {
+    let calls = 0;
+    server.use(
+      meOk(ADMIN),
+      announcementsList(),
+      http.get('/api/students', () => {
+        calls += 1;
+        return calls === 1 ? HttpResponse.error() : HttpResponse.json(pageOf([], { totalElements: 3 }));
+      }),
+    );
+
+    const { user } = renderApp('/admin/announcements');
+
+    await user.click(await screen.findByRole('button', { name: 'Enviar mensagem' }));
+    const dialog = await screen.findByRole('dialog');
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(/quantos alunos ativos/i);
+    expect(within(dialog).getByRole('button', { name: 'Enviar' })).toBeDisabled();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Tentar de novo' }));
+
+    expect(await within(dialog).findByText('Enviar para 3 alunos ativos?')).toBeInTheDocument();
   });
 });
 

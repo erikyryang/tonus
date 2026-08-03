@@ -209,6 +209,15 @@ export function deleteAnnouncementOk(onRequest?: (id: number) => void) {
   });
 }
 
+/** POST /announcements/broadcast — mensagem livre, sem entidade nem id de resposta. */
+export function broadcastOk(onRequest?: (message: string) => void) {
+  return http.post('/api/announcements/broadcast', async ({ request }) => {
+    const body = (await request.json()) as { message: string };
+    onRequest?.(body.message);
+    return new HttpResponse(null, { status: 202 });
+  });
+}
+
 /**
  * GET /me/schedule/week — a janela do aluno logado; o id sai do token, nunca
  * da URL.
