@@ -141,6 +141,17 @@ erro, WhatsApp, label — continua em português.
   dois casos contaria a quem tenta que aquele login existe.
 - LGPD por minimização: só nome, telefone e situação. Nada de CPF, endereço ou
   foto. Nunca logar telefone completo nem conteúdo de mensagem.
+- CSP no front: o build de produção (`frontend/vite.config.ts`, plugin
+  `tonus-csp-meta`) injeta `Content-Security-Policy` via `<meta>` só no HTML
+  gerado por `vite build` — em dev quebraria o cliente de HMR, que depende de
+  script inline. `<meta>` não tem efeito para `frame-ancestors`, `sandbox` e
+  `report-uri` (a spec de CSP ignora essas diretivas fora de header HTTP).
+  Quando o Caddyfile de produção for versionado, ele precisa setar por header
+  o que o `<meta>` não cobre: `Content-Security-Policy: frame-ancestors 'none'`,
+  `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`,
+  `Referrer-Policy: strict-origin-when-cross-origin`. Até lá, essa proteção
+  específica (clickjacking) não existe — o resto da CSP (script/style/connect
+  restritos a `'self'`) já está ativo desde o build atual.
 
 ## Tempo
 
