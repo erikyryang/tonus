@@ -94,6 +94,20 @@ class AuthUserCreationIT extends AbstractAuthIntegrationTest {
     }
 
     @Test
+    void rejectsPasswordShorterThanEightCharacters() throws Exception {
+        long studentId = createStudent();
+        String login = uniqueLogin("senha-curta");
+
+        mockMvc.perform(post("/users")
+                        .cookie(admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"login":"%s","password":"s3nha1","role":"STUDENT","studentId":%d}
+                                """.formatted(login, studentId)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void nonAdminCannotCreateUsers() throws Exception {
         Cookie teacher = cookieFor("teacher-users@tonus.com", Role.TEACHER);
 

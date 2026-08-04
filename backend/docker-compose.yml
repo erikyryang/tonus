@@ -5,8 +5,16 @@ services:
       POSTGRES_DB: ${DB_NAME:-tonus}
       POSTGRES_USER: ${DB_USER:-tonus}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-tonus}
+    # Só no loopback: o fluxo de dev documentado no CLAUDE.md roda a
+    # aplicação no host (./mvnw spring-boot:run) falando com DB_HOST=localhost,
+    # então a porta precisa ser alcançável daqui — mas publicá-la em todas as
+    # interfaces (0.0.0.0, o padrão do Compose) expõe o Postgres com a senha
+    # padrão do .env.example a qualquer host na mesma rede, ou à internet
+    # inteira se este compose for reaproveitado numa máquina com IP público.
+    # Mesmo raciocínio do serviço evolution abaixo, que não publica porta
+    # nenhuma por não precisar ser alcançado do host.
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - tonus-db-data:/var/lib/postgresql/data
       # Cria o banco da Evolution na primeira subida do volume. Ver o
