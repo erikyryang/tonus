@@ -1,7 +1,7 @@
 package br.com.tonus.auth;
 
 import br.com.tonus.auth.internal.domain.Role;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import jakarta.servlet.http.Cookie;
 import java.util.Arrays;
 import org.junit.jupiter.api.BeforeEach;

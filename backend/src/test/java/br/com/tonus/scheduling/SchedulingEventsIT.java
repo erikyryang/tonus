@@ -85,8 +85,8 @@ class SchedulingEventsIT {
 
         assertThat(events)
                 .contains(ClassCanceled.class)
-                .matching(ClassCanceled::studentId, studentId)
-                .matching(ClassCanceled::date, MONDAY);
+                .matchingValue(ClassCanceled::studentId, studentId)
+                .matchingValue(ClassCanceled::date, MONDAY);
     }
 
     @Test
@@ -97,10 +97,10 @@ class SchedulingEventsIT {
 
         assertThat(events)
                 .contains(ClassRescheduled.class)
-                .matching(ClassRescheduled::studentId, studentId)
-                .matching(ClassRescheduled::originalDate, MONDAY)
-                .matching(ClassRescheduled::newDate, WEDNESDAY)
-                .matching(ClassRescheduled::newTime, LocalTime.of(8, 0));
+                .matchingValue(ClassRescheduled::studentId, studentId)
+                .matchingValue(ClassRescheduled::originalDate, MONDAY)
+                .matchingValue(ClassRescheduled::newDate, WEDNESDAY)
+                .matchingValue(ClassRescheduled::newTime, LocalTime.of(8, 0));
     }
 
     @Test
@@ -111,9 +111,9 @@ class SchedulingEventsIT {
 
         assertThat(events)
                 .contains(AnnouncementCreated.class)
-                .matching(AnnouncementCreated::date, date)
-                .matching(AnnouncementCreated::description, "Natal")
-                .matching(AnnouncementCreated::suspendsClasses, true);
+                .matchingValue(AnnouncementCreated::date, date)
+                .matchingValue(AnnouncementCreated::description, "Natal")
+                .matchingValue(AnnouncementCreated::suspendsClasses, true);
     }
 
     /**

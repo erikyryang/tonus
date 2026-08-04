@@ -1,6 +1,6 @@
 package br.com.tonus.scheduling;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import jakarta.servlet.http.Cookie;
 import java.util.HashMap;
 import java.util.List;

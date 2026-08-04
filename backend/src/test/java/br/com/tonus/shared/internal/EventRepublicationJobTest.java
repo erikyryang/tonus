@@ -11,6 +11,7 @@ import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 import org.springframework.modulith.events.EventPublication;
 import org.springframework.modulith.events.IncompleteEventPublications;
+import org.springframework.modulith.events.ResubmissionOptions;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -96,6 +97,21 @@ class EventRepublicationJobTest {
             public Optional<Instant> getCompletionDate() {
                 return Optional.empty();
             }
+
+            @Override
+            public Status getStatus() {
+                return Status.PUBLISHED;
+            }
+
+            @Override
+            public Instant getLastResubmissionDate() {
+                return null;
+            }
+
+            @Override
+            public int getCompletionAttempts() {
+                return 0;
+            }
         };
     }
 
@@ -111,6 +127,11 @@ class EventRepublicationJobTest {
         @Override
         public void resubmitIncompletePublicationsOlderThan(Duration duration) {
             throw new UnsupportedOperationException("o job não usa este caminho: só tem piso");
+        }
+
+        @Override
+        public void resubmitIncompletePublications(ResubmissionOptions options) {
+            throw new UnsupportedOperationException("o job não usa este caminho: usa o Predicate direto");
         }
     }
 }

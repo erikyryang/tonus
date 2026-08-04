@@ -14,7 +14,7 @@
 Regra: spec e código mudam no mesmo PR.
 
 ## Stack
-Java 21, Spring Boot 3 (Web MVC, Data JPA, Security), Spring Modulith,
+Java 25 (LTS), Spring Boot 4 (Web MVC, Data JPA, Security), Spring Modulith,
 PostgreSQL, Flyway, Testcontainers, ShedLock, Maven.
 
 ## Arquitetura

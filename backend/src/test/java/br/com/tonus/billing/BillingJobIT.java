@@ -84,7 +84,7 @@ class BillingJobIT {
         // Filtra por aluno: o Postgres é compartilhado entre as classes de teste
         // de billing sem rollback, então outras faturas/eventos da varredura
         // global do job podem coexistir na mesma execução.
-        assertThat(events.ofType(InvoiceDueSoon.class).matching(InvoiceDueSoon::studentId, studentId))
+        assertThat(events.ofType(InvoiceDueSoon.class).matchingValue(InvoiceDueSoon::studentId, studentId))
                 .hasSize(1);
     }
 
@@ -103,7 +103,7 @@ class BillingJobIT {
         // Postgres é compartilhado entre as classes de teste de billing sem
         // rollback — outras faturas OPEN vencidas podem coexistir e também
         // virar OVERDUE nesta mesma chamada.
-        assertThat(events.ofType(InvoiceOverdue.class).matching(InvoiceOverdue::invoiceId, invoiceId))
+        assertThat(events.ofType(InvoiceOverdue.class).matchingValue(InvoiceOverdue::invoiceId, invoiceId))
                 .hasSize(1);
     }
 

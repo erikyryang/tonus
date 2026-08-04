@@ -43,6 +43,7 @@ Toda mudança entra como migration nova; migration aplicada não se edita.
 | V021 | billing | `invoice.student_id` no lugar de `subscription_id`; troca a UNIQUE |
 | V022 | billing | `DROP TABLE subscription` |
 | V023 | notification | template `BROADCAST` no CHECK de `notification_log` (mudança 9) |
+| V024 | shared | `event_publication.{status,last_resubmission_date,completion_attempts}` (Spring Modulith 2.x) |
 
 ---
 
@@ -164,6 +165,14 @@ outra, então divergência derruba o contexto na subida.
 Cada evento entregue a um listener vira uma linha, marcada como completa só
 quando o listener termina. Linha com `completion_date IS NULL` é entrega que
 não fechou — é isso que sustenta o at-least-once. Ver `docs/eventos.md`.
+
+`status`, `last_resubmission_date` e `completion_attempts` (V024) vieram do
+ciclo de vida que o Modulith 2.x acrescentou ao registry. `EventRepublicationJob`
+e `EventPublicationCleanupJob` continuam lendo `completion_date` como antes —
+as consultas internas do Modulith para "incompleto" e "apagar concluído"
+também. `status` existe porque o reenvio interno do Modulith compara
+`status != RESUBMITTED`, e `NULL` nunca bate com esse `!=`; por isso o backfill
+da V024 preenche toda linha existente com `COMPLETED` ou `PUBLISHED`.
 
 ## `plan` (billing)
 

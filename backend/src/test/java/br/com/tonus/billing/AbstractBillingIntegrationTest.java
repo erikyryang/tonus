@@ -1,7 +1,7 @@
 package br.com.tonus.billing;
 
 import br.com.tonus.registration.AbstractRegistrationIntegrationTest;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import jakarta.servlet.http.Cookie;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;

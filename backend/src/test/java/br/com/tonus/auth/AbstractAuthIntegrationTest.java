@@ -4,7 +4,7 @@ import br.com.tonus.AbstractIntegrationTest;
 import br.com.tonus.auth.internal.domain.Role;
 import br.com.tonus.auth.internal.domain.User;
 import br.com.tonus.auth.internal.domain.UserRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import java.time.Clock;
 import java.util.Map;

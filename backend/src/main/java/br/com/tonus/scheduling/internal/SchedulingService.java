@@ -157,9 +157,9 @@ public class SchedulingService {
     @Transactional(readOnly = true)
     public Page<ScheduleException> findExceptions(Long studentId, LocalDate from, LocalDate to, Pageable pageable) {
         Specification<ScheduleException> filter = Specification.allOf(
-                studentId == null ? null : (root, query, cb) -> cb.equal(root.get("studentId"), studentId),
-                from == null ? null : (root, query, cb) -> cb.greaterThanOrEqualTo(root.get("date"), from),
-                to == null ? null : (root, query, cb) -> cb.lessThanOrEqualTo(root.get("date"), to));
+                studentId == null ? Specification.unrestricted() : (root, query, cb) -> cb.equal(root.get("studentId"), studentId),
+                from == null ? Specification.unrestricted() : (root, query, cb) -> cb.greaterThanOrEqualTo(root.get("date"), from),
+                to == null ? Specification.unrestricted() : (root, query, cb) -> cb.lessThanOrEqualTo(root.get("date"), to));
         return scheduleExceptionRepository.findAll(filter, withStableSort(pageable));
     }
 
@@ -186,8 +186,8 @@ public class SchedulingService {
     @Transactional(readOnly = true)
     public Page<Announcement> findAnnouncements(LocalDate from, LocalDate to, Pageable pageable) {
         Specification<Announcement> filter = Specification.allOf(
-                from == null ? null : (root, query, cb) -> cb.greaterThanOrEqualTo(root.get("date"), from),
-                to == null ? null : (root, query, cb) -> cb.lessThanOrEqualTo(root.get("date"), to));
+                from == null ? Specification.unrestricted() : (root, query, cb) -> cb.greaterThanOrEqualTo(root.get("date"), from),
+                to == null ? Specification.unrestricted() : (root, query, cb) -> cb.lessThanOrEqualTo(root.get("date"), to));
         return announcementRepository.findAll(filter, withStableSort(pageable));
     }
 

@@ -54,7 +54,7 @@ Decisões de arquitetura, contrato de eventos e DDL completo estão em
 
 ## Stack
 
-**Backend** — Java 21, Spring Boot 3 (Web MVC, Data JPA, Security), Spring
+**Backend** — Java 25 (LTS), Spring Boot 4 (Web MVC, Data JPA, Security), Spring
 Modulith, PostgreSQL, Flyway, Testcontainers, ShedLock, JWT (jjwt), Bucket4j,
 Maven.
 
@@ -64,7 +64,7 @@ Vitest + React Testing Library + MSW (testes).
 
 ## Como rodar localmente
 
-Pré-requisitos: Java 21, Node 20+, Docker rodando, e o wrapper do Maven
+Pré-requisitos: Java 25, Node 20+, Docker rodando, e o wrapper do Maven
 (`./mvnw`, já incluso no repo — não precisa instalar Maven).
 
 ```bash
