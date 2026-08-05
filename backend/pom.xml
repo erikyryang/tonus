@@ -159,6 +159,16 @@
             <artifactId>spring-modulith-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!--
+          Gera os diagramas PlantUML dos módulos (target/spring-modulith-docs)
+          a partir do allowedDependencies e do Javadoc de cada package-info.java.
+          Só documentação derivada do código, não entra no jar de produção.
+        -->
+        <dependency>
+            <groupId>org.springframework.modulith</groupId>
+            <artifactId>spring-modulith-docs</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>junit-jupiter</artifactId>

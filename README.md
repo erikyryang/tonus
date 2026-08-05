@@ -34,6 +34,9 @@ sentido só. A lista é declarada em `@ApplicationModule(allowedDependencies)`
 no `package-info.java` de cada módulo: aresta nova exige editar o arquivo, e
 é isso que força a decisão a ser consciente.
 
+Esse `allowedDependencies` também gera diagrama — ver "Documentação de
+módulos (diagramas)" abaixo.
+
 Comunicação entre módulos é síncrona (fachada) para consultas, ou assíncrona
 (eventos, at-least-once) para efeitos colaterais. Todo listener é idempotente.
 
@@ -196,6 +199,39 @@ na fronteira HTTP — nunca o TanStack Query ou o cliente HTTP por dentro.
 ```bash
 cd frontend && npm run test:run && npm run typecheck
 ```
+
+## Documentação de módulos (diagramas)
+
+O `allowedDependencies` de cada `package-info.java` (ver "Arquitetura" acima)
+não é só uma trava de teste — também é a fonte de um diagrama gerado, então a
+doc nunca desalinha do código: se o diagrama e o import real divergem, é
+porque a divergência já quebrou `ArchitectureTest`.
+
+Gerar (não precisa de Docker, é só análise estática do bytecode):
+
+```bash
+cd backend && ./mvnw test -Dtest=ApplicationModulesDocumentationTest
+```
+
+Isso escreve em `backend/target/spring-modulith-docs/` (gitignored — é
+build output, regenera a qualquer momento, não faz sentido versionar):
+
+| Arquivo | Conteúdo |
+|---|---|
+| `components.puml` | diagrama geral: todos os módulos e as setas de dependência/evento entre eles |
+| `module-<nome>.puml` | diagrama só das dependências daquele módulo |
+| `module-<nome>.adoc` | "canvas" do módulo em texto: descrição (1ª frase do Javadoc do `package-info.java`), tipos expostos na raiz e eventos publicados/ouvidos |
+| `all-docs.adoc` | os `.adoc` de todos os módulos concatenados |
+
+Para visualizar um `.puml`: colar o conteúdo em
+[plantuml.com/plantuml](https://www.plantuml.com/plantuml) (não precisa
+instalar nada), ou abrir com a extensão PlantUML da IDE (plugin "PlantUML
+Integration" no IntelliJ, "PlantUML" no VS Code) — nesses casos o preview
+renderiza dentro do próprio editor sem precisar colar em lugar nenhum.
+
+Como o Javadoc do `package-info.java` vira a descrição do módulo no
+`.adoc`, mudar essa descrição é a forma de manter o "canvas" útil — não tem
+campo separado para preencher.
 
 ## Estrutura do repositório
 
