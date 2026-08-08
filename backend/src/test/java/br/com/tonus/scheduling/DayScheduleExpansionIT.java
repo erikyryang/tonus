@@ -10,18 +10,18 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * A agenda de um dia é derivada, nunca armazenada:
+ * A day's schedule is derived, never stored:
  *
  * <pre>
- * agenda(D) = template (se D é dia útil)
- *           − feriado em D
- *           − exceções em D
- *           + remarcações cuja nova_data = D
+ * schedule(D) = template (if D is a weekday)
+ *             − holiday on D
+ *             − exceptions on D
+ *             + reschedules whose new_date = D
  * </pre>
  *
- * Guardar aula materializada por dia obrigaria a gerar linhas para o futuro
- * inteiro e a reconciliar tudo a cada troca de horário. Derivar mantém uma
- * verdade só.
+ * Storing a materialized class per day would force generating rows for the
+ * whole future and reconciling everything at every schedule change. Deriving
+ * keeps a single source of truth.
  */
 class DayScheduleExpansionIT extends AbstractSchedulingIntegrationTest {
 
@@ -40,10 +40,10 @@ class DayScheduleExpansionIT extends AbstractSchedulingIntegrationTest {
         assertThat(entry.get("origin").asText()).isEqualTo("TEMPLATE");
     }
 
-    /**
-     * Sábado e domingo são vazios por definição, não por falta de horário
-     * cadastrado — o template é seg–sex e ponto.
-     */
+     /**
+      * Saturday and Sunday are empty by definition, not because of a missing
+      * registered time — the template is Mon–Fri, period.
+      */
     @Test
     void weekendIsEmptyByDefinition() throws Exception {
         long teacherId = createTeacher(unique("Professor Do Sabado"));
@@ -66,10 +66,11 @@ class DayScheduleExpansionIT extends AbstractSchedulingIntegrationTest {
         assertThat(studentIdsOf(daySchedule(MONDAY))).doesNotContain(studentId);
     }
 
-    /**
-     * O cancelamento vale só para o dia marcado — se vazasse para os demais,
-     * seria um cancelamento de matrícula, não de aula.
-     */
+     /**
+      * The cancellation only applies to the marked day — if it leaked into the
+      * others, it would be a registration cancellation, not a class
+      * cancellation.
+      */
     @Test
     void cancellationAffectsOnlyItsOwnDay() throws Exception {
         long teacherId = createTeacher(unique("Professor Do Dia Seguinte"));
@@ -81,10 +82,11 @@ class DayScheduleExpansionIT extends AbstractSchedulingIntegrationTest {
         assertThat(studentIdsOf(daySchedule(TUESDAY))).contains(studentId);
     }
 
-    /**
-     * Aluno desativado sai da agenda: quem saiu do estúdio não tem aula, e o
-     * horário padrão dele continua na tabela até o ADMIN apagar.
-     */
+     /**
+      * A deactivated student leaves the schedule: whoever left the studio has
+      * no class, and their default schedule stays in the table until the ADMIN
+      * deletes it.
+      */
     @Test
     void inactiveStudentIsNotScheduled() throws Exception {
         long teacherId = createTeacher(unique("Professor Do Aluno Inativo"));

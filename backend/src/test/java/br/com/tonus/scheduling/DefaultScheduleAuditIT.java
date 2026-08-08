@@ -11,13 +11,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Mudança em default_schedule gera registro em audit — decisão de arquitetura
- * (docs/ddl.md), junto com invoice.status.
+ * A change in default_schedule generates an audit record — architecture
+ * decision (docs/ddl.md), along with invoice.status.
  *
- * O motivo é concreto: trocar o horário de um aluno muda a agenda de todo mundo
- * daquele horário, e semanas depois ninguém lembra quem mudou o quê. Cadastro
- * de aluno e professor, por contraste, não é auditado — a diferença é
- * proposital e por isso merece teste.
+ * The reason is concrete: changing a student's time changes everyone's
+ * schedule in that time slot, and weeks later no one remembers who changed
+ * what. Student and teacher registration, by contrast, is not audited — the
+ * difference is deliberate and therefore deserves a test.
  */
 class DefaultScheduleAuditIT extends AbstractSchedulingIntegrationTest {
 
@@ -49,11 +49,11 @@ class DefaultScheduleAuditIT extends AbstractSchedulingIntegrationTest {
         assertThat(auditActions(id)).contains("CREATE", "UPDATE");
     }
 
-    /**
-     * A contraprova: aluno não é auditado. Sem isto, o teste acima passaria
-     * mesmo que alguém anotasse @Audited em tudo, e a decisão de auditar só o
-     * que importa viraria letra morta.
-     */
+     /**
+      * The counter-proof: students are not audited. Without this, the test
+      * above would pass even if someone annotated @Audited everywhere, and the
+      * decision to audit only what matters would become dead letter.
+      */
     @Test
     void studentChangesAreNotAudited() throws Exception {
         long studentId = seedStudent("Aluno Nao Auditado");

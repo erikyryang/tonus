@@ -6,15 +6,15 @@ import java.util.function.BooleanSupplier;
 import static org.assertj.core.api.Assertions.fail;
 
 /**
- * Espera por efeito assíncrono em teste.
+ * Waits for an asynchronous effect in a test.
  *
- * {@code @ApplicationModuleListener} é assíncrono — o Modulith habilita o
- * suporte a {@code @Async} por conta própria, sem precisar de
- * {@code @EnableAsync}. Ou seja, quando a resposta HTTP volta, o listener do
- * outro módulo pode ainda não ter rodado; assertar na hora é corrida.
+ * {@code @ApplicationModuleListener} is asynchronous — Modulith enables the
+ * {@code @Async} support on its own, without needing {@code @EnableAsync}.
+ * That is, when the HTTP response returns, the listener in the other module
+ * may not have run yet; asserting right away is a race.
  *
- * Feito à mão em vez de somar Awaitility: são dez linhas e evita uma
- * dependência nova só para isso.
+ * Hand-rolled instead of adding Awaitility: it is ten lines and avoids a new
+ * dependency just for that.
  */
 public final class Eventually {
 

@@ -12,12 +12,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Quem está com fatura atrasada, em ids de aluno.
+ * Who has an overdue invoice, as student ids.
  *
- * Existe para a tela de alunos poder mostrar a situação de cobrança sem que
- * {@code registration} passe a consultar {@code billing} — a pergunta é
- * respondida por quem é dono da fatura, e quem cruza as duas listas é o cliente.
- * A aresta do grafo de módulos continua não existindo.
+ * It exists so the students screen can show the billing status without
+ * {@code registration} starting to query {@code billing} — the question is
+ * answered by whoever owns the invoice, and the one who crosses the two
+ * lists is the client. The edge of the module graph still does not exist.
  */
 class OverdueStudentIdsIT extends AbstractBillingIntegrationTest {
 
@@ -34,9 +34,10 @@ class OverdueStudentIdsIT extends AbstractBillingIntegrationTest {
     }
 
     /**
-     * O aluno aparece uma vez, não uma por fatura. Quem consome monta um
-     * conjunto para cruzar com a lista de alunos, e id repetido é ruído que o
-     * cliente teria de limpar — a resposta é sobre alunos, não sobre faturas.
+     * The student appears once, not once per invoice. The consumer builds a
+     * set to cross with the student list, and a repeated id is noise the
+     * client would have to clean up — the answer is about students, not
+     * invoices.
      */
     @Test
     void studentWithTwoOverdueInvoicesAppearsOnce() throws Exception {
@@ -49,10 +50,11 @@ class OverdueStudentIdsIT extends AbstractBillingIntegrationTest {
     }
 
     /**
-     * Quem saiu devendo continua devendo. A fatura sobrevive à desativação (não
-     * existe DELETE de aluno, justamente para o histórico de cobrança não sumir),
-     * e filtrar o inativo aqui esconderia da tela o caso mais caro que existe:
-     * o aluno que foi embora com fatura em aberto.
+     * Whoever left owing still owes. The invoice survives deactivation (there
+     * is no student DELETE, precisely so the billing history does not
+     * disappear), and filtering out the inactive one here would hide from the
+     * screen the most expensive case there is: the student who left with an
+     * open invoice.
      */
     @Test
     void deactivatedStudentWithOverdueInvoiceStaysInTheList() throws Exception {

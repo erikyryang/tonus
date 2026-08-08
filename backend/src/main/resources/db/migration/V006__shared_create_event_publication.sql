@@ -1,10 +1,11 @@
--- Registry de publicação de eventos do Spring Modulith. Cada evento entregue a
--- um listener vira uma linha aqui, marcada como completa só quando o listener
--- termina; se ele falhar ou o app cair no meio, a linha fica incompleta e o
--- evento pode ser reprocessado. É isso que sustenta a entrega at-least-once.
+-- Spring Modulith event publication registry. Each event delivered to a
+-- listener becomes a row here, marked as completed only when the listener
+-- finishes; if it fails or the app crashes midway, the row stays incomplete
+-- and the event can be reprocessed. That is what sustains at-least-once
+-- delivery.
 --
--- O schema espelha o mapeamento de JpaEventPublication (Modulith 1.4.x) porque
--- ddl-auto=validate faz o Hibernate conferir esta tabela como qualquer outra.
+-- The schema mirrors the JpaEventPublication mapping (Modulith 1.4.x) because
+-- ddl-auto=validate makes Hibernate check this table like any other.
 CREATE TABLE event_publication (
     id UUID NOT NULL,
     listener_id TEXT NOT NULL,
@@ -15,6 +16,6 @@ CREATE TABLE event_publication (
     PRIMARY KEY (id)
 );
 
--- Busca de publicações pendentes (completion_date IS NULL) na retomada.
+-- Lookup of pending publications (completion_date IS NULL) on resume.
 CREATE INDEX idx_event_publication_completion_date ON event_publication (completion_date);
 CREATE INDEX idx_event_publication_listener_id ON event_publication (listener_id);

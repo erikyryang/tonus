@@ -1,14 +1,14 @@
--- Spring Modulith 2.x acrescenta ciclo de vida ao registry de eventos: cada
--- linha passa a carregar status, contador de tentativas de reentrega e data
--- da última reentrega. O schema espelha JpaEventPublication (Modulith 2.1.x),
--- do mesmo jeito que V006 espelhava a versão 1.4.x — ddl-auto=validate confere
--- esta tabela como qualquer outra.
+-- Spring Modulith 2.x adds a lifecycle to the event registry: each row now
+-- carries status, a redelivery attempt counter and the last redelivery date.
+-- The schema mirrors JpaEventPublication (Modulith 2.1.x), the same way V006
+-- mirrored version 1.4.x — ddl-auto=validate checks this table like any
+-- other.
 --
--- EventRepublicationJob e EventPublicationCleanupJob continuam funcionando
--- sem mudança: as consultas internas do Modulith para "incompleto" e "apagar
--- concluído" ainda usam completion_date, não status. O backfill abaixo existe
--- porque status nulo faria o UPDATE interno de reentrega (que compara
--- "status != RESUBMITTED") não achar a linha — NULL não bate com "!=" em SQL.
+-- EventRepublicationJob and EventPublicationCleanupJob keep working without
+-- change: Modulith's internal queries for "incomplete" and "delete completed"
+-- still use completion_date, not status. The backfill below exists because a
+-- null status would make the internal redelivery UPDATE (which compares
+-- "status != RESUBMITTED") not find the row — NULL doesn't match "!=" in SQL.
 ALTER TABLE event_publication
     ADD COLUMN status VARCHAR(255),
     ADD COLUMN last_resubmission_date TIMESTAMP WITH TIME ZONE,

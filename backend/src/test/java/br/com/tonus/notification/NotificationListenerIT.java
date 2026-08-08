@@ -14,13 +14,13 @@ import static br.com.tonus.support.Eventually.eventually;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Os critérios de aceite da SPEC-005 que valem para um aluno só. O fan-out de
- * comunicado tem classe própria (AnnouncementFanOutIT).
+ * The SPEC-005 acceptance criteria that hold for a single student. The
+ * announcement fan-out has its own class (AnnouncementFanOutIT).
  *
- * Os eventos entram por publicação direta, e não chamando SchedulingService ou
- * BillingService: o que está sob teste é o consumo, e amarrar cada caso à
- * operação que publica traria junto as regras de agenda e de cobrança — teste
- * que falha por motivo alheio ao que ele afirma.
+ * The events enter through direct publication, not by calling SchedulingService
+ * or BillingService: what is under test is consumption, and tying each case to
+ * the operation that publishes it would drag in the scheduling and billing
+ * rules — a test that fails for a reason unrelated to what it asserts.
  */
 class NotificationListenerIT extends AbstractNotificationIntegrationTest {
 
@@ -68,11 +68,12 @@ class NotificationListenerIT extends AbstractNotificationIntegrationTest {
     }
 
     /**
-     * Critério de aceite: evento reprocessado com envio já gravado não reenvia.
+     * Acceptance criterion: a reprocessed event with a delivery already
+     * recorded does not resend.
      *
-     * A espera é pelas duas publicações concluídas, não por um tempo fixo: a
-     * segunda entrega tem de ter terminado para a asserção significar
-     * "não reenviou" em vez de "ainda não rodou".
+     * The wait is for the two completed publications, not a fixed time: the
+     * second delivery has to have finished for the assertion to mean "did not
+     * resend" instead of "has not run yet".
      */
     @Test
     void reprocessedEventDoesNotResend() {
@@ -92,9 +93,10 @@ class NotificationListenerIT extends AbstractNotificationIntegrationTest {
     }
 
     /**
-     * A chave de idempotência de remarcação leva origem e destino. Remarcar de
-     * novo, a partir do mesmo dia, é fato novo e precisa de aviso novo — com a
-     * data original sozinha na chave, o aluno ficaria sem saber.
+     * The rescheduling idempotency key carries origin and destination.
+     * Rescheduling again, from the same day, is a new fact and needs a new
+     * notice — with only the original date in the key, the student would never
+     * find out.
      */
     @Test
     void reschedulingAgainFromSameOriginNotifiesAgain() {
@@ -110,8 +112,8 @@ class NotificationListenerIT extends AbstractNotificationIntegrationTest {
     }
 
     /**
-     * Critério de aceite: Evolution fora do ar não grava nada e deixa a
-     * publicação incompleta, para o registry reprocessar depois.
+     * Acceptance criterion: Evolution down records nothing and leaves the
+     * publication incomplete, so the registry can reprocess it later.
      */
     @Test
     void deliveryFailureLogsNothingAndLeavesPublicationIncomplete() {
@@ -128,18 +130,19 @@ class NotificationListenerIT extends AbstractNotificationIntegrationTest {
     }
 
     /**
-     * Critério de aceite: aluno que a fachada não devolve mais não recebe
-     * mensagem e não deixa evento preso. Reprocessar não traria o telefone de
-     * volta — insistir só entupiria o registry.
+     * Acceptance criterion: a student the facade no longer returns receives no
+     * message and does not leave the event stuck. Reprocessing would not bring
+     * the phone number back — insisting would only clog the registry.
      */
     /**
-     * Quem saiu do estúdio não recebe mais nada.
+     * Whoever left the studio receives nothing more.
      *
-     * Caminho distinto do aluno inexistente, e foi por confundir os dois que o
-     * bug passou: {@code findStudentContact} usa {@code findById} e devolve
-     * inativo normalmente, então o aviso saía. O caso realista é cobrança —
-     * aluno sai devendo, a assinatura segue ativa, e ele passa a receber
-     * lembrete de fatura atrasada indefinidamente.
+     * A distinct path from the nonexistent student, and it was by confusing
+     * the two that the bug slipped through: {@code findStudentContact} uses
+     * {@code findById} and returns inactive students normally, so the notice
+     * went out. The realistic case is billing — the student leaves owing, the
+     * subscription stays active, and they start receiving overdue-invoice
+     * reminders indefinitely.
      */
     @Test
     void departedStudentReceivesNothingAndDoesNotBlockTheEvent() {
@@ -167,8 +170,8 @@ class NotificationListenerIT extends AbstractNotificationIntegrationTest {
         eventually("publicação concluída mesmo sem aluno",
                 () -> countCompletedPublications("ClassCanceled", ghostId) == 1);
         assertThat(countLogs(ghostId, "CLASS_CANCELED")).isZero();
-        // Diferencial, e não "está vazio": o dublê é compartilhado pela classe
-        // e um listener de teste anterior pode gravar depois do reset.
+        // The differential, not "is empty": the fake is shared by the class
+        // and an earlier test listener may record after the reset.
         assertThat(sender.sent()).hasSize(sentBefore);
     }
 }

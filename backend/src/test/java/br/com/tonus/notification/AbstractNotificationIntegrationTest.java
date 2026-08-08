@@ -18,14 +18,14 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 /**
- * Base dos testes do módulo notification.
+ * Base of the notification module tests.
  *
- * Roda como {@code @ApplicationModuleTest} de propósito: sobe notification e as
- * dependências que ele declara, e falha se o módulo precisar de alguém que não
- * declarou. Um {@code @SpringBootTest} inteiro esconderia exatamente esse erro.
+ * Deliberately runs as {@code @ApplicationModuleTest}: it boots notification and
+ * the dependencies it declares, and fails if the module needs someone it did
+ * not declare. A full {@code @SpringBootTest} would hide exactly that error.
  *
- * O seed vai por SQL porque a fachada do registration é só de consulta, por
- * decisão de arquitetura — não há como criar aluno por ela.
+ * Seeding goes through SQL because the registration facade is read-only, by
+ * architecture decision — there is no way to create a student through it.
  */
 @ApplicationModuleTest(mode = ApplicationModuleTest.BootstrapMode.ALL_DEPENDENCIES)
 @ActiveProfiles("test")
@@ -36,9 +36,9 @@ abstract class AbstractNotificationIntegrationTest {
     static final PostgreSQLContainer<?> POSTGRES = PostgresContainer.INSTANCE;
 
     /**
-     * O Postgres é compartilhado entre classes de teste e não há rollback entre
-     * elas. Telefone único por aluno é o que deixa cada asserção olhar só para
-     * os seus — sem isso, um aluno criado por outra classe entraria na conta.
+     * Postgres is shared between test classes and there is no rollback between
+     * them. A unique phone per student is what lets each assertion look only at
+     * its own — without it, a student created by another class would be counted.
      */
     private static final AtomicInteger PHONE_SEQUENCE = new AtomicInteger();
 
@@ -60,10 +60,11 @@ abstract class AbstractNotificationIntegrationTest {
     }
 
     /**
-     * Publica dentro de uma transação porque {@code @ApplicationModuleListener}
-     * é {@code @TransactionalEventListener} em AFTER_COMMIT: sem transação que
-     * comite, o evento é descartado e o listener nunca roda. É também o que
-     * cria a linha em event_publication, sem a qual não há reprocessamento.
+     * Publishes inside a transaction because {@code @ApplicationModuleListener}
+     * is a {@code @TransactionalEventListener} on AFTER_COMMIT: without a
+     * committing transaction, the event is discarded and the listener never
+     * runs. This is also what creates the row in event_publication, without
+     * which there is no reprocessing.
      */
     protected void publish(Object event) {
         transactionTemplate.executeWithoutResult(status -> eventPublisher.publishEvent(event));
@@ -92,9 +93,9 @@ abstract class AbstractNotificationIntegrationTest {
     }
 
     /**
-     * As duas contagens abaixo são recortadas pelo aluno dentro do payload
-     * serializado. O Postgres é compartilhado e outras classes publicam os
-     * mesmos tipos de evento: contar por tipo apenas misturaria testes.
+     * Both counts below are trimmed by the student inside the serialized
+     * payload. Postgres is shared and other classes publish the same event
+     * types: counting by type alone would mix tests.
      */
     protected long countCompletedPublications(String eventTypeSuffix, long studentId) {
         return countPublications(eventTypeSuffix, studentId, "completion_date IS NOT NULL");
@@ -105,10 +106,10 @@ abstract class AbstractNotificationIntegrationTest {
     }
 
     /**
-     * O recorte por aluno usa regex, e não LIKE: {@code '%"studentId":15%'}
-     * casa também com 150 e 151. Os ids são sequenciais e uma classe semeia
-     * vários alunos, então o contador inflava de vez em quando e uma espera
-     * terminava cedo — falha que só aparece em certas faixas de id.
+     * The per-student trim uses regex, not LIKE: {@code '%"studentId":15%'}
+     * also matches 150 and 151. The ids are sequential and one class seeds
+     * several students, so the counter would occasionally inflate and a wait
+     * would finish early — a failure that only shows up in certain id ranges.
      */
     private long countPublications(String eventTypeSuffix, long studentId, String completionClause) {
         return jdbcTemplate.queryForObject("""
@@ -121,13 +122,14 @@ abstract class AbstractNotificationIntegrationTest {
     }
 
     /**
-     * Desativa quem estiver ativo e devolve os ids, para o chamador restaurar.
+     * Deactivates whoever is active and returns the ids, so the caller can
+     * restore them.
      *
-     * Só o fan-out precisa disso — ele pergunta ao registration quem está ativo
-     * e a resposta é o banco inteiro, inclusive alunos de outras classes. A
-     * restauração é obrigatória: o Postgres é compartilhado e sem rollback
-     * entre classes, e deixar o estúdio inteiro desativado é a espécie de
-     * pegadinha que quebra um teste distante sem relação aparente.
+     * Only the fan-out needs this — it asks registration who is active and the
+     * answer is the whole database, including students from other classes. The
+     * restoration is mandatory: Postgres is shared with no rollback between
+     * classes, and leaving the whole studio deactivated is the kind of gotcha
+     * that breaks a distant test with no apparent connection.
      */
     protected List<Long> deactivateExistingStudents() {
         List<Long> ids = jdbcTemplate.queryForList(
@@ -140,8 +142,8 @@ abstract class AbstractNotificationIntegrationTest {
         if (studentIds.isEmpty()) {
             return;
         }
-        // IN com placeholders, e não ANY(?): o JdbcTemplate trata o array como
-        // lista de parâmetros posicionais, não como um array de SQL.
+        // IN with placeholders, not ANY(?): JdbcTemplate treats the array as
+        // positional parameters, not as a SQL array.
         String placeholders = String.join(",", Collections.nCopies(studentIds.size(), "?"));
         jdbcTemplate.update("UPDATE student SET active = TRUE WHERE id IN (%s)".formatted(placeholders),
                 studentIds.toArray());

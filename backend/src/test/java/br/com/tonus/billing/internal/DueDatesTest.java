@@ -7,11 +7,12 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Resolução pura de vencimento: dia do cadastro -> data da competência. Sem
- * banco e sem Spring, porque é lógica de domínio sem efeito colateral.
+ * Pure due date resolution: registration day -> competence period date. No
+ * database and no Spring, because it is domain logic without side effects.
  *
- * Herdou o papel de {@code SubscriptionDueDateTest}, que morreu com a
- * assinatura. A regra não morreu junto — só mudou de casa (SPEC-012).
+ * It inherited the role of {@code SubscriptionDueDateTest}, which died with
+ * the subscription. The rule did not die with it — it just changed home
+ * (SPEC-012).
  */
 class DueDatesTest {
 
@@ -23,8 +24,9 @@ class DueDatesTest {
     }
 
     /**
-     * Critério de aceite: dia inexistente no mês (31 em fevereiro) cai no
-     * último dia. 2026 não é bissexto, fevereiro tem 28 dias.
+     * Acceptance criterion: a day that does not exist in the month (31 in
+     * February) falls on the last day. 2026 is not a leap year; February has
+     * 28 days.
      */
     @Test
     void rollsOverToLastDayOfShortMonth() {
@@ -33,7 +35,7 @@ class DueDatesTest {
         assertThat(DueDates.forMonth(registration, YearMonth.of(2026, 2))).isEqualTo(LocalDate.of(2026, 2, 28));
     }
 
-    /** E em ano bissexto o último dia é 29, não 28. */
+    /** And in a leap year the last day is 29, not 28. */
     @Test
     void respectsLeapYear() {
         LocalDate registration = LocalDate.of(2025, 1, 31);

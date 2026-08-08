@@ -22,18 +22,18 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * O que o scheduling promete ao resto do sistema (docs/eventos.md): cancelar,
- * remarcar e cadastrar comunicado publicam evento. É o contrato de que a
- * notificação vai depender — o scheduling não pode chamar WhatsApp, só avisar
- * que algo aconteceu.
+ * What scheduling promises to the rest of the system (docs/eventos.md):
+ * canceling, rescheduling and registering an announcement publish an event.
+ * That is the contract the notification will depend on — scheduling cannot
+ * call WhatsApp, only notify that something happened.
  *
- * Roda como {@code @ApplicationModuleTest} de propósito: sobe o scheduling e
- * suas dependências, e falha se o módulo precisar de alguém que não declarou.
- * Um {@code @SpringBootTest} inteiro esconderia exatamente esse erro.
+ * It runs as {@code @ApplicationModuleTest} on purpose: it starts scheduling
+ * and its dependencies, and fails if the module needs someone it did not
+ * declare. A whole {@code @SpringBootTest} would hide exactly that error.
  *
- * O seed vai por SQL porque aqui não existe camada HTTP: a fachada do
- * registration é só de consulta, por decisão de arquitetura, então não há como
- * criar aluno por ela.
+ * The seed goes through SQL because there is no HTTP layer here: the
+ * registration facade is read-only, by architecture decision, so there is no
+ * way to create a student through it.
  */
 @ApplicationModuleTest(mode = ApplicationModuleTest.BootstrapMode.ALL_DEPENDENCIES)
 @ActiveProfiles("test")
@@ -42,22 +42,24 @@ class SchedulingEventsIT {
     @ServiceConnection
     static final PostgreSQLContainer<?> POSTGRES = PostgresContainer.INSTANCE;
 
-    /**
-     * O Clock entra por uma configuração aninhada, e não por
-     * {@code @Import(TestClockConfig.class)}: o bootstrap do módulo filtra as
-     * definições de bean pelos pacotes do módulo sob teste, e o TestClockConfig
-     * vive em shared — seria descartado. Declarado aqui dentro, sobrevive.
-     *
-     * O bean é necessário para o contexto sequer subir: o AuditListener de
-     * shared é entity listener de toda BaseEntity e recebe Clock no construtor,
-     * então sem ele o entityManagerFactory não é criado.
-     *
-     * {@code @Primary} não é enfeite: sem ele o Clock de produção continua no
-     * contexto e vence a injeção por coincidência de nome do parâmetro
-     * ({@code clock}), deixando o teste preso ao calendário real — foi assim
-     * que {@code reschedulePublishesClassRescheduled} passou a falhar sozinho
-     * quando 2026-07-29 virou passado.
-     */
+     /**
+      * The Clock comes in through a nested configuration, not through
+      * {@code @Import(TestClockConfig.class)}: the module bootstrap filters the
+      * bean definitions by the packages of the module under test, and
+      * TestClockConfig lives in shared — it would be discarded. Declared here
+      * inside, it survives.
+      *
+      * The bean is necessary for the context to even start: the shared
+      * AuditListener is an entity listener for every BaseEntity and receives
+      * Clock in its constructor, so without it the entityManagerFactory is not
+      * created.
+      *
+      * {@code @Primary} is not decoration: without it the production Clock
+      * stays in the context and wins the injection by parameter-name
+      * coincidence ({@code clock}), leaving the test stuck to the real
+      * calendar — that is how {@code reschedulePublishesClassRescheduled}
+      * started failing on its own when 2026-07-29 became the past.
+      */
     @TestConfiguration
     static class FixedClockConfig {
 
@@ -116,11 +118,12 @@ class SchedulingEventsIT {
                 .matchingValue(AnnouncementCreated::suspendsClasses, true);
     }
 
-    /**
-     * Aluno e professor entram por SQL: as tabelas são do registration, e a
-     * fachada dele não cria nada — o que é a decisão certa, não uma limitação a
-     * contornar mexendo no contrato só para o teste.
-     */
+     /**
+      * Student and teacher come in through SQL: the tables belong to
+      * registration, and its facade creates nothing — which is the right
+      * decision, not a limitation to work around by changing the contract just
+      * for the test.
+      */
     private long seedStudent() {
         Long teacherId = jdbcTemplate.queryForObject("""
                 INSERT INTO teacher (name, phone, active, created_at, updated_at)

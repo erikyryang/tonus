@@ -16,14 +16,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * A grade do professor é a agenda dele agrupada por hora.
+ * The teacher's grid is their schedule grouped by time.
  *
- * Não existe entidade turma: o grupo **emerge** de professor + hora. Criar
- * turma como entidade obrigaria a mantê-la em sincronia com os horários
- * individuais, e as duas divergiriam na primeira remarcação.
+ * There is no class-group entity: the group **emerges** from teacher + time.
+ * Creating a class-group as an entity would force keeping it in sync with the
+ * individual schedules, and the two would diverge at the first reschedule.
  *
- * O professor da aula vem do vínculo do aluno, não do horário — por isso trocar
- * o professor de um aluno move a aula de grade sem tocar em nada da agenda.
+ * The class's teacher comes from the student's link, not from the schedule —
+ * that is why changing a student's teacher moves the class between grids
+ * without touching anything in the schedule.
  */
 class TeacherGridIT extends AbstractSchedulingIntegrationTest {
 
@@ -57,10 +58,11 @@ class TeacherGridIT extends AbstractSchedulingIntegrationTest {
                 .doesNotContain(otherStudent);
     }
 
-    /**
-     * O professor sai do vínculo do aluno: mover o aluno para outro professor
-     * tira a aula de uma grade e põe na outra, sem nenhuma alteração de agenda.
-     */
+     /**
+      * The teacher comes from the student's link: moving the student to
+      * another teacher takes the class out of one grid and puts it in the
+      * other, with no schedule change at all.
+      */
     @Test
     void changingStudentTeacherMovesTheClassBetweenGrids() throws Exception {
         long origin = createTeacher(unique("Professor De Origem"));
@@ -96,11 +98,11 @@ class TeacherGridIT extends AbstractSchedulingIntegrationTest {
         assertThat(studentIdsAt(grid(teacher, WEDNESDAY), "21:00")).contains(studentId);
     }
 
-    /**
-     * O professor precisa falar com o aluno da própria aula — desmarcar, avisar
-     * de atraso. O telefone vem na linha dele por essa finalidade, e o telefone
-     * que vem é o daquele aluno, não o de qualquer um.
-     */
+     /**
+      * The teacher needs to talk to the student of their own class — to cancel,
+      * to warn about a delay. The phone is on their row for that purpose, and
+      * the phone that comes is that student's, not anyone's.
+      */
     @Test
     void gridCarriesThePhoneOfEachStudent() throws Exception {
         long teacherId = createTeacher(unique("Professora Do Contato"));
@@ -116,14 +118,14 @@ class TeacherGridIT extends AbstractSchedulingIntegrationTest {
                 .containsEntry(second, "+5511922220000");
     }
 
-    /**
-     * A finalidade é o próprio aluno, e ela delimita o dado: o telefone de aluno
-     * de outro professor não pode aparecer em lugar nenhum da resposta.
-     *
-     * {@link #gridShowsOnlyOwnStudents} olha só os ids do horário consultado, e
-     * passaria mesmo se o telefone alheio viesse pendurado em outro campo. Aqui
-     * a asserção é sobre o corpo inteiro.
-     */
+     /**
+      * The purpose is the student themselves, and it bounds the data: a phone
+      * of another teacher's student cannot appear anywhere in the response.
+      *
+      * {@link #gridShowsOnlyOwnStudents} only looks at the ids of the queried
+      * time, and would pass even if the foreign phone came hanging off another
+      * field. Here the assertion is over the whole body.
+      */
     @Test
     void gridNeverCarriesThePhoneOfAnotherTeachersStudent() throws Exception {
         long mine = createTeacher(unique("Professor Da Finalidade"));
@@ -138,11 +140,12 @@ class TeacherGridIT extends AbstractSchedulingIntegrationTest {
         assertThat(grid).contains("+5511944440000").doesNotContain("+5511955550000");
     }
 
-    /**
-     * O telefone anda pelo caminho que tem finalidade, e só por ele. A agenda do
-     * ADMIN mostra o estúdio inteiro e não é ferramenta de atendimento: dado que
-     * não trafega não vaza (minimização, LGPD).
-     */
+     /**
+      * The phone travels through the path that has a purpose, and only through
+      * it. The ADMIN's schedule shows the whole studio and is not a
+      * customer-service tool: data that does not travel does not leak
+      * (minimization, LGPD).
+      */
     @Test
     void adminDayScheduleStillCarriesNoPhone() throws Exception {
         long teacherId = createTeacher(unique("Professor Do Painel"));

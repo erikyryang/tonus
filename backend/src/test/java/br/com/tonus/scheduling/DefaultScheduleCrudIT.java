@@ -14,11 +14,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * CRUD do horário padrão (ADMIN).
+ * CRUD of the default schedule (ADMIN).
  *
- * O horário não guarda professor_id: o professor da aula é sempre o do vínculo
- * atual do aluno. Duplicar o professor aqui criaria duas verdades que divergem
- * na primeira troca de professor.
+ * The schedule does not store professor_id: the class's teacher is always the
+ * one from the student's current link. Duplicating the teacher here would
+ * create two truths that diverge at the first teacher change.
  */
 class DefaultScheduleCrudIT extends AbstractSchedulingIntegrationTest {
 
@@ -51,10 +51,10 @@ class DefaultScheduleCrudIT extends AbstractSchedulingIntegrationTest {
                 .andExpect(jsonPath("$.time").value("09:00"));
     }
 
-    /**
-     * Horário padrão pode ser apagado de verdade — diferente de aluno, não é
-     * histórico: é a configuração corrente da agenda.
-     */
+     /**
+      * A default schedule can truly be deleted — unlike a student, it is not
+      * history: it is the current configuration of the schedule.
+      */
     @Test
     void deletesSchedule() throws Exception {
         long teacherId = createTeacher(unique("Professor Do Delete"));

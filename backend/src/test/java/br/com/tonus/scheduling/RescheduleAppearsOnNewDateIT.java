@@ -7,11 +7,13 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Critério de aceite: remarcação some da data original e aparece na nova data.
+ * Acceptance criterion: the reschedule disappears from the original date and
+ * appears on the new date.
  *
- * As duas metades importam. Só sumir é cancelamento; só aparecer duplica o
- * aluno na semana. É o caso que prova que a expansão soma e subtrai da mesma
- * fonte, em vez de tratar exceção como um "extra" colado no fim.
+ * Both halves matter. Only disappearing is a cancellation; only appearing
+ * duplicates the student in the week. This is the case that proves the
+ * expansion adds and subtracts from the same source, instead of treating an
+ * exception as an "extra" tacked on at the end.
  */
 class RescheduleAppearsOnNewDateIT extends AbstractSchedulingIntegrationTest {
 
@@ -30,10 +32,11 @@ class RescheduleAppearsOnNewDateIT extends AbstractSchedulingIntegrationTest {
         assertThat(moved.get("origin").asText()).isEqualTo("RESCHEDULED");
     }
 
-    /**
-     * A remarcação carrega a hora nova, não a do template. Se voltasse a hora
-     * padrão, o aluno apareceria no horário errado do dia certo.
-     */
+     /**
+      * The reschedule carries the new time, not the template's. If it fell
+      * back to the default time, the student would appear at the wrong time of
+      * the right day.
+      */
     @Test
     void rescheduledClassKeepsItsOwnTimeNotTheTemplateOne() throws Exception {
         long teacherId = createTeacher(unique("Professor Da Hora Nova"));
@@ -46,10 +49,11 @@ class RescheduleAppearsOnNewDateIT extends AbstractSchedulingIntegrationTest {
                 .isEqualTo("19:00");
     }
 
-    /**
-     * O aluno remarcado para um dia em que já tem aula aparece duas vezes
-     * naquele dia — a do template e a remarcada. São duas aulas de fato.
-     */
+     /**
+      * A student rescheduled to a day where they already have a class appears
+      * twice that day — the template one and the rescheduled one. They are two
+      * real classes.
+      */
     @Test
     void rescheduleIntoADayWithTemplateShowsBothClasses() throws Exception {
         long teacherId = createTeacher(unique("Professor Da Aula Dobrada"));
@@ -62,10 +66,10 @@ class RescheduleAppearsOnNewDateIT extends AbstractSchedulingIntegrationTest {
         assertThat(tuesday).filteredOn(id -> id == studentId).hasSize(2);
     }
 
-    /**
-     * Remarcar para um sábado funciona: fim de semana não tem template, mas
-     * nada impede uma reposição pontual lá.
-     */
+     /**
+      * Rescheduling to a Saturday works: the weekend has no template, but
+      * nothing prevents a one-off make-up class there.
+      */
     @Test
     void rescheduleToWeekendIsVisible() throws Exception {
         long teacherId = createTeacher(unique("Professor Da Reposicao"));
@@ -78,12 +82,13 @@ class RescheduleAppearsOnNewDateIT extends AbstractSchedulingIntegrationTest {
                 .isEqualTo("10:00");
     }
 
-    /**
-     * A origem faz parte da busca, e não é detalhe: o aluno remarcado para um
-     * dia em que já tem aula aparece duas vezes naquele dia. Procurar só pelo
-     * id acharia a aula do template — que vem antes na ordenação por hora — e o
-     * teste passaria a afirmar algo sobre a aula errada.
-     */
+     /**
+      * The origin is part of the lookup, and it is not a detail: a student
+      * rescheduled to a day where they already have a class appears twice that
+      * day. Searching only by id would find the template class — which comes
+      * first in the time ordering — and the test would end up asserting
+      * something about the wrong class.
+      */
     private JsonNode entryOf(JsonNode day, long studentId, String origin) {
         for (JsonNode entry : day.get("entries")) {
             if (entry.get("studentId").asLong() == studentId && entry.get("origin").asText().equals(origin)) {

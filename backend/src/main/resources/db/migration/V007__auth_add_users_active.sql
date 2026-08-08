@@ -1,8 +1,9 @@
--- Acesso revogado quando a pessoa sai do estúdio. Sem esta coluna não havia
--- como negar login a quem foi desativado no cadastro — a única saída era
--- apagar a linha, o que levaria junto o histórico de quem fez o quê.
+-- Access revoked when the person leaves the studio. Without this column there
+-- was no way to deny login to someone deactivated at registration — the only
+-- way out was to delete the row, which would take the history of who did what
+-- along with it.
 ALTER TABLE users ADD COLUMN active BOOLEAN NOT NULL DEFAULT TRUE;
 
--- O listener de revogação busca o usuário pelo vínculo, não pelo login.
+-- The revocation listener looks up the user by the link, not by the login.
 CREATE INDEX idx_users_student_id ON users (student_id);
 CREATE INDEX idx_users_teacher_id ON users (teacher_id);

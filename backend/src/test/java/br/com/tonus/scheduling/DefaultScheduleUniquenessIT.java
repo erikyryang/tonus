@@ -9,14 +9,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Critério de aceite: segundo horário para o mesmo aluno → 409, **via
- * constraint, não só validação**.
+ * Acceptance criterion: second schedule for the same student → 409, **via
+ * constraint, not just validation**.
  *
- * Por isso são dois testes e não um. O primeiro prova o contrato REST; o
- * segundo escreve direto no banco, contornando a API inteira, e prova que a
- * regra "um horário por aluno" continua valendo mesmo se a validação de
- * aplicação for removida por engano. Um teste só que passasse pela API não
- * distinguiria uma coisa da outra.
+ * That is why there are two tests and not one. The first proves the REST
+ * contract; the second writes directly to the database, bypassing the whole
+ * API, and proves that the "one schedule per student" rule still holds even
+ * if the application validation is removed by mistake. A single test going
+ * through the API would not distinguish one from the other.
  */
 class DefaultScheduleUniquenessIT extends AbstractSchedulingIntegrationTest {
 
@@ -45,11 +45,12 @@ class DefaultScheduleUniquenessIT extends AbstractSchedulingIntegrationTest {
                 .isInstanceOf(DuplicateKeyException.class);
     }
 
-    /**
-     * Horário aponta para aluno que existe. Sem FK entre módulos (mesma decisão
-     * de {@code users.student_id}, ver docs/ddl.md), quem garante isso é o
-     * scheduling consultando a RegistrationFacade — então precisa de teste.
-     */
+     /**
+      * A schedule points to a student that exists. Without an FK between
+      * modules (same decision as {@code users.student_id}, see docs/ddl.md),
+      * what guarantees this is scheduling querying the RegistrationFacade — so
+      * it needs a test.
+      */
     @Test
     void scheduleForUnknownStudentIsRejected() throws Exception {
         postDefaultSchedule(999_999_999L, "07:00")

@@ -13,11 +13,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Ler e desfazer exceção.
+ * Read and undo an exception.
  *
- * O DELETE é o que fecha o ciclo: cancelamento marcado por engano precisa ter
- * como voltar atrás pela API, senão a correção só existe no banco — e aí quem
- * corrige é quem tem acesso ao banco, não quem administra o estúdio.
+ * The DELETE is what closes the loop: a cancellation marked by mistake needs a
+ * way to be undone through the API, otherwise the fix only exists in the
+ * database — and then whoever fixes it is whoever has database access, not
+ * whoever administers the studio.
  */
 class ScheduleExceptionCrudIT extends AbstractSchedulingIntegrationTest {
 
@@ -39,10 +40,11 @@ class ScheduleExceptionCrudIT extends AbstractSchedulingIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
-    /**
-     * Apagar a exceção devolve o aluno à agenda daquele dia — é a prova de que
-     * a expansão volta a considerar o template, e não que sobrou algum estado.
-     */
+     /**
+      * Deleting the exception returns the student to that day's schedule — it
+      * is proof that the expansion considers the template again, and not that
+      * some state was left over.
+      */
     @Test
     void deletingCancellationRestoresTheClass() throws Exception {
         long studentId = seedStudent("Aluno Que Volta A Ter Aula");
@@ -57,14 +59,15 @@ class ScheduleExceptionCrudIT extends AbstractSchedulingIntegrationTest {
         assertThat(studentIdsOf(daySchedule(MONDAY))).contains(studentId);
     }
 
-    /**
-     * Apagar a remarcação tira a aula extra da data de destino e devolve a
-     * original — se as duas ficassem, o aluno teria aula nos dois dias.
-     *
-     * A asserção é sobre a origem, não sobre a presença: quarta é dia útil, e o
-     * aluno continua tendo aula lá pelo template. O que não pode sobrar é a
-     * aula RESCHEDULED.
-     */
+     /**
+      * Deleting the reschedule removes the extra class from the destination
+      * date and restores the original one — if both stayed, the student would
+      * have a class on both days.
+      *
+      * The assertion is about the origin, not the presence: Wednesday is a
+      * weekday, and the student still has a class there from the template.
+      * What must not remain is the RESCHEDULED class.
+      */
     @Test
     void deletingRescheduleRemovesTheClassFromTheNewDate() throws Exception {
         long studentId = seedStudent("Aluno Da Remarcacao Desfeita");
@@ -80,10 +83,10 @@ class ScheduleExceptionCrudIT extends AbstractSchedulingIntegrationTest {
         assertThat(studentIdsOf(daySchedule(MONDAY))).contains(studentId);
     }
 
-    /**
-     * Apagada a exceção, o par (aluno, dia) fica livre de novo — a UNIQUE não
-     * pode continuar valendo para uma linha que não existe mais.
-     */
+     /**
+      * Once the exception is deleted, the (student, day) pair becomes free
+      * again — the UNIQUE cannot keep holding for a row that no longer exists.
+      */
     @Test
     void deletingFreesTheStudentDayForANewException() throws Exception {
         long studentId = seedStudent("Aluno Da Segunda Chance");
@@ -177,7 +180,7 @@ class ScheduleExceptionCrudIT extends AbstractSchedulingIntegrationTest {
         return day.get("entries").findValues("studentId").stream().map(JsonNode::asLong).toList();
     }
 
-    /** As origens das aulas daquele aluno no dia — pode haver mais de uma. */
+    /** The origins of that student's classes on the day — there may be more than one. */
     private List<String> originsOf(JsonNode day, long studentId) {
         List<String> origins = new ArrayList<>();
         for (JsonNode entry : day.get("entries")) {

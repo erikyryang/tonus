@@ -33,9 +33,9 @@ class InvoiceListingIT extends AbstractBillingIntegrationTest {
     }
 
     /**
-     * SPEC-008: a tela de faturas é lida por nome de aluno e, na fatura PAGA,
-     * pela data em que o dinheiro entrou. Resolver os dois no front custaria uma
-     * chamada por linha — quem sabe juntar isso é o back.
+     * SPEC-008: the invoice screen is read by student name and, on a PAID
+     * invoice, by the date the money came in. Resolving both in the frontend
+     * would cost one call per row — only the backend can do the joining.
      */
     @Test
     void listingCarriesStudentNameAndPaymentDate() throws Exception {
@@ -43,7 +43,7 @@ class InvoiceListingIT extends AbstractBillingIntegrationTest {
         long studentId = createStudent(name, createTeacher(unique("Professor Nomeado")));
         long openId = seedInvoice(studentId, "2026-07-01", "200.00", "2026-07-10", "OPEN");
         long paidId = seedInvoice(studentId, "2026-06-01", "200.00", "2026-06-10", "PAID");
-        // registered_by não tem FK (billing não pode depender de auth): id solto basta.
+        // registered_by has no FK (billing cannot depend on auth): a loose id is enough.
         seedPayment(paidId, "2026-06-08", 1L);
 
         MvcResult result = mockMvc.perform(get("/invoices").param("size", "100").cookie(admin))

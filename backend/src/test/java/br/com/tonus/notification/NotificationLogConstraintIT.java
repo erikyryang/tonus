@@ -8,13 +8,14 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * As constraints de notification_log, exercitadas direto no banco.
+ * The notification_log constraints, exercised directly against the database.
  *
- * A consulta em NotificationService evita o reenvio no caso comum, mas entre
- * consultar e gravar existe uma janela, e a entrega é at-least-once: o que
- * fecha essa janela é a UNIQUE. Testar por SQL, sem passar pela aplicação, é o
- * que prova que a garantia não depende do código continuar checando antes —
- * mesma decisão de {@code DefaultScheduleUniquenessIT}.
+ * The query in NotificationService avoids the resend in the common case, but
+ * between querying and inserting there is a window, and delivery is
+ * at-least-once: what closes that window is the UNIQUE. Testing by SQL, without
+ * going through the application, is what proves the guarantee does not depend
+ * on the code keeping on checking beforehand — same decision as
+ * {@code DefaultScheduleUniquenessIT}.
  */
 class NotificationLogConstraintIT extends AbstractNotificationIntegrationTest {
 
@@ -28,8 +29,8 @@ class NotificationLogConstraintIT extends AbstractNotificationIntegrationTest {
     }
 
     /**
-     * A chave é a trinca inteira. Feriado e cancelamento no mesmo dia são dois
-     * avisos diferentes, e o aluno precisa dos dois.
+     * The key is the whole triple. Holiday and cancellation on the same day are
+     * two different notices, and the student needs both.
      */
     @Test
     void differentTemplatesShareTheSameReference() {
@@ -51,9 +52,9 @@ class NotificationLogConstraintIT extends AbstractNotificationIntegrationTest {
     }
 
     /**
-     * Template fora da lista não teria significado nenhum, mesma razão do CHECK
-     * de invoice.status. Sem ele, um erro de digitação viraria linha morta que
-     * nunca casa com a consulta de idempotência — e reenvio silencioso.
+     * A template outside the list would have no meaning at all, same reason as
+     * the CHECK on invoice.status. Without it, a typo would become a dead row
+     * that never matches the idempotency query — and silent resending.
      */
     @Test
     void unknownTemplateIsRejected() {

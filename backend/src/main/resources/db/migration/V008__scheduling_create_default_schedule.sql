@@ -1,21 +1,23 @@
--- Horário padrão do aluno: uma linha por aluno, seg-sex.
+-- Student default schedule: one row per student, Mon-Fri.
 --
--- Sem teacher_id de propósito: o professor da aula é sempre o do vínculo atual
--- em student. Guardar aqui também criaria duas verdades, que divergem na
--- primeira troca de professor.
+-- Without teacher_id on purpose: the class teacher is always the one from the
+-- current link in student. Storing it here too would create two truths, which
+-- diverge at the first teacher change.
 --
--- student_id sem FK, mesma decisão de users.student_id (ver docs/ddl.md): FK
--- entre módulos acopla no schema de um jeito que o ApplicationModules.verify()
--- não enxerga. A integridade é garantida em código, via RegistrationFacade.
+-- student_id without FK, same decision as users.student_id (see docs/ddl.md):
+-- FK between modules couples in the schema in a way that
+-- ApplicationModules.verify() doesn't see. Integrity is guaranteed in code,
+-- via RegistrationFacade.
 --
--- time_of_day, e não "time", porque TIME é nome de tipo em SQL.
+-- time_of_day, not "time", because TIME is an SQL type name.
 CREATE TABLE default_schedule (
     id BIGSERIAL PRIMARY KEY,
     student_id BIGINT NOT NULL,
     time_of_day TIME NOT NULL,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL,
-    -- "Um horário por aluno" é regra de negócio, não detalhe de modelagem:
-    -- é o critério de aceite "segundo horário -> 409" expresso no banco.
+    -- "One schedule per student" is a business rule, not a modeling detail:
+    -- it is the acceptance criterion "second schedule -> 409" expressed in the
+    -- database.
     CONSTRAINT uk_default_schedule_student UNIQUE (student_id)
 );

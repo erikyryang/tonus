@@ -1,12 +1,12 @@
--- Registro dos avisos já entregues ao aluno.
+-- Log of notices already delivered to the student.
 --
--- A linha nasce ANTES do envio e só sobrevive se o envio deu certo: a falha
--- derruba a transação inteira. Por isso não há coluna de status nem contador
--- de tentativas — tentativa malsucedida nunca chega a existir aqui. Quem
--- rastreia entrega que não fechou é event_publication.completion_date.
+-- The row is born BEFORE the send and only survives if the send succeeded:
+-- a failure brings down the whole transaction. That is why there is no status
+-- column or attempt counter — a failed attempt never exists here. What tracks
+-- a delivery that didn't close is event_publication.completion_date.
 --
--- student_id sem FK, mesmo padrão de default_schedule/subscription: a
--- integridade é garantida em código, via RegistrationFacade.
+-- student_id without FK, same pattern as default_schedule/subscription:
+-- integrity is guaranteed in code, via RegistrationFacade.
 CREATE TABLE notification_log (
     id BIGSERIAL PRIMARY KEY,
     student_id BIGINT NOT NULL,
@@ -15,9 +15,10 @@ CREATE TABLE notification_log (
     sent_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL,
-    -- O critério de aceite "evento reprocessado não reenvia mensagem" expresso
-    -- no banco. A entrega é at-least-once: a verificação em código sozinha tem
-    -- janela entre consultar e enviar, e é a constraint que fecha essa janela.
+    -- The acceptance criterion "reprocessed event doesn't resend message"
+    -- expressed in the database. Delivery is at-least-once: code-only checks
+    -- have a window between querying and sending, and it is the constraint
+    -- that closes that window.
     CONSTRAINT uk_notification_log_template_student_reference
         UNIQUE (template, student_id, reference_key),
     CONSTRAINT ck_notification_log_template CHECK (template IN (
@@ -26,5 +27,5 @@ CREATE TABLE notification_log (
     ))
 );
 
--- Histórico de avisos de um aluno.
+-- History of a student's notices.
 CREATE INDEX idx_notification_log_student ON notification_log (student_id);

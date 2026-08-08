@@ -6,14 +6,15 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * O que a agenda do dia precisa carregar para o painel de recepção da SPEC-007.
+ * What the day's schedule needs to carry for the reception panel of SPEC-007.
  *
- * A tela não pode remontar a regra do dia por conta própria: se ela cruzasse
- * comunicado, exceção e template no navegador, existiriam duas implementações da
- * mesma expansão e uma delas ficaria para trás. Então o dia já vem com nome do
- * professor (para agrupar), origem da remarcação (para a badge), id da exceção
- * (para desfazer), o comunicado do dia (para o banner) e os cancelamentos —
- * que a agenda esconde por definição e o ADMIN precisa ver para poder desfazer.
+ * The screen cannot rebuild the day's rule on its own: if it crossed
+ * announcement, exception and template in the browser, there would be two
+ * implementations of the same expansion and one would fall behind. So the day
+ * already comes with the teacher's name (to group), the reschedule's origin
+ * (for the badge), the exception id (to undo), the day's announcement (for
+ * the banner) and the cancellations — which the schedule hides by definition
+ * and the ADMIN needs to see in order to undo them.
  */
 class DayScheduleForAdminPanelIT extends AbstractSchedulingIntegrationTest {
 
@@ -29,16 +30,16 @@ class DayScheduleForAdminPanelIT extends AbstractSchedulingIntegrationTest {
         assertThat(entry.get("teacherName").asText()).isEqualTo(teacherName);
     }
 
-    /**
-     * A badge "remarcada de dd/MM" só existe se o dia disser de onde a aula
-     * veio: sem a data de origem, a tela mostraria a aula como se fosse do
-     * horário padrão do aluno.
-     *
-     * O aluno aparece DUAS vezes na quarta — às 07:00 pelo template, que
-     * continua valendo, e às 09:00 pela remarcação. Não é duplicação: ele
-     * perdeu a aula de segunda e ganhou uma a mais na quarta. Por isso o teste
-     * seleciona pela hora, não só pelo aluno.
-     */
+     /**
+      * The "rescheduled from dd/MM" badge only exists if the day says where the
+      * class came from: without the origin date, the screen would show the class
+      * as if it came from the student's default schedule.
+      *
+      * The student appears TWICE on Wednesday — at 07:00 from the template,
+      * which still holds, and at 09:00 from the reschedule. It is not
+      * duplication: they lost Monday's class and gained an extra one on
+      * Wednesday. That is why the test selects by time, not just by student.
+      */
     @Test
     void rescheduledEntryCarriesItsOriginAndExceptionId() throws Exception {
         long teacherId = createTeacher(unique("Professor Da Origem"));
@@ -68,11 +69,12 @@ class DayScheduleForAdminPanelIT extends AbstractSchedulingIntegrationTest {
         assertThat(entry.get("exceptionId").isNull()).isTrue();
     }
 
-    /**
-     * Data exclusiva deste teste. {@code announcement.date} é UNIQUE e o banco é
-     * compartilhado por toda a execução: reaproveitar a data de outro IT faz o
-     * segundo a rodar receber 409 — e qual dos dois quebra depende da ordem.
-     */
+     /**
+      * Date exclusive to this test. {@code announcement.date} is UNIQUE and the
+      * database is shared across the whole run: reusing another IT's date makes
+      * whichever runs second get a 409 — and which one breaks depends on the
+      * order.
+      */
     @Test
     void suspendedDayCarriesItsAnnouncement() throws Exception {
         String date = "2026-10-28";
@@ -90,11 +92,12 @@ class DayScheduleForAdminPanelIT extends AbstractSchedulingIntegrationTest {
         assertThat(daySchedule(TUESDAY).get("announcement").isNull()).isTrue();
     }
 
-    /**
-     * Cancelado sai da agenda e entra na lista de cancelamentos — não some. É a
-     * diferença entre o ADMIN perceber o engano e descobri-lo pelo aluno que
-     * apareceu no estúdio.
-     */
+     /**
+      * The canceled student leaves the schedule and goes into the cancellations
+      * list — it does not disappear. That is the difference between the ADMIN
+      * noticing the mistake and finding out through the student who showed up
+      * at the studio.
+      */
     @Test
     void canceledStudentMovesToTheCancellationList() throws Exception {
         String teacherName = unique("Professor Do Cancelado");
@@ -115,10 +118,11 @@ class DayScheduleForAdminPanelIT extends AbstractSchedulingIntegrationTest {
         assertThat(cancellation.get("time").asText()).isEqualTo("10:00");
     }
 
-    /**
-     * Remarcação não é cancelamento: quem foi remarcado aparece — com o desfazer
-     * disponível — no dia de destino, onde a aula de fato acontece.
-     */
+     /**
+      * A reschedule is not a cancellation: whoever was rescheduled appears —
+      * with the undo available — on the destination day, where the class
+      * actually happens.
+      */
     @Test
     void rescheduledStudentIsNotListedAsCanceled() throws Exception {
         long teacherId = createTeacher(unique("Professor Do Nao Cancelado"));
@@ -143,7 +147,7 @@ class DayScheduleForAdminPanelIT extends AbstractSchedulingIntegrationTest {
         return nodeFor(day.get("entries"), studentId);
     }
 
-    /** O mesmo aluno pode ter mais de uma aula no dia: template + remarcação. */
+    /** The same student can have more than one class in a day: template + reschedule. */
     private JsonNode entryAt(JsonNode day, long studentId, String time) {
         for (JsonNode node : day.get("entries")) {
             if (node.get("studentId").asLong() == studentId && time.equals(node.get("time").asText())) {

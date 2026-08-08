@@ -10,13 +10,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * A exceção tem uma regra que o tipo sozinho não expressa: REMARCADO exige
- * nova data e nova hora, CANCELADO exige que elas sejam nulas. Isso é um CHECK
- * no banco, não só validação de DTO — uma remarcação sem destino seria uma aula
- * que some sem reaparecer, e um cancelamento com destino seria ambíguo.
+ * The exception has a rule that the type alone does not express: RESCHEDULED
+ * requires a new date and new time, CANCELED requires them to be null. This is
+ * a CHECK in the database, not just DTO validation — a reschedule without a
+ * destination would be a class that disappears without reappearing, and a
+ * cancellation with a destination would be ambiguous.
  *
- * Os testes vão pelos dois caminhos de propósito: API para o contrato, SQL
- * direto para provar que a constraint existe mesmo.
+ * The tests go through both paths on purpose: API for the contract, direct SQL
+ * to prove the constraint really exists.
  */
 class ScheduleExceptionConstraintIT extends AbstractSchedulingIntegrationTest {
 

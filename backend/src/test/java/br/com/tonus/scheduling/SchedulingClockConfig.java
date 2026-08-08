@@ -8,22 +8,22 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 
 /**
- * "Hoje" fixo para todos os testes de agenda.
+ * A fixed "today" for all schedule tests.
  *
- * Deixou de ser opcional quando a remarcação passou a recusar data passada: com
- * o relógio do sistema, um teste que remarca para 2026-07-29 passa hoje e
- * começa a falhar sozinho quando essa data virar passado. Teste que apodrece no
- * calendário é pior que teste ausente — quebra longe de qualquer mudança de
- * código, e quem investiga procura no lugar errado.
+ * It stopped being optional when rescheduling started rejecting past dates:
+ * with the system clock, a test that reschedules to 2026-07-29 passes today
+ * and starts failing on its own when that date becomes the past. A test that
+ * rots on the calendar is worse than a missing test — it breaks far from any
+ * code change, and whoever investigates looks in the wrong place.
  *
- * O instante é uma segunda-feira às 23h em São Paulo, que já é terça em UTC —
- * assim a suíte inteira também exercita o fuso do estúdio, e não só o
+ * The instant is a Monday at 23h in São Paulo, which is already Tuesday in
+ * UTC — so the whole suite also exercises the studio's timezone, not just
  * {@link CurrentDayScheduleIT}.
  */
 @TestConfiguration
 public class SchedulingClockConfig {
 
-    /** Segunda-feira, 2026-07-27, 23h em São Paulo. */
+    /** Monday, 2026-07-27, 23h in São Paulo. */
     public static final Instant NOW = Instant.parse("2026-07-28T02:00:00Z");
 
     public static final ZoneId STUDIO_ZONE = ZoneId.of("America/Sao_Paulo");

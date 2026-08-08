@@ -11,22 +11,24 @@ import org.springframework.util.StreamUtils;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * A migração das assinaturas para planos (V020) — a parte mais arriscada da
- * SPEC-012, e a única que não tem como ser conferida depois: quando a suíte
- * roda, `subscription` já foi derrubada pela V022 e não há mais o que migrar.
+ * The migration of subscriptions into plans (V020) — the riskiest part of
+ * SPEC-012, and the only one that cannot be checked later: when the suite
+ * runs, `subscription` has already been dropped by V022 — nothing left to
+ * migrate.
  *
- * Por isso o teste recria a tabela de origem no formato da V011, semeia,
- * executa o <strong>arquivo</strong> da migration e derruba a cópia no fim.
- * Executar o arquivo, e não uma transcrição do SQL, é o que impede o teste de
- * ficar verde enquanto a migration de verdade diverge.
+ * That is why the test recreates the source table in the V011 format, seeds
+ * it, runs the migration's <strong>file</strong> and drops the copy at the
+ * end. Running the file, not a transcription of the SQL, is what keeps the
+ * test from going green while the real migration diverges.
  *
- * <p>As asserções olham só para os planos que <em>esta</em> execução criou, e a
- * marca d'água existe por um motivo específico: a V020 casa assinatura com
- * plano <strong>pelo valor</strong>, e o Postgres é compartilhado pela suíte —
- * outra classe que tenha criado um plano de R$ 350,00 faz o join casar com
- * dois. Em produção isso não acontece (a V019 cria `plan` vazia e a V020 roda
- * em seguida, no mesmo passe do Flyway), mas aqui acontece conforme a ordem das
- * classes, e sem a marca d'água o teste passa ou falha por sorteio.
+ * <p>The assertions look only at the plans that <em>this</em> run created,
+ * and the watermark exists for a specific reason: V020 matches subscription
+ * to plan <strong>by amount</strong>, and the Postgres is shared by the
+ * suite — another class that created a R$ 350.00 plan makes the join match
+ * two. In production this does not happen (V019 creates an empty `plan` and
+ * V020 runs right after, in the same Flyway pass), but here it happens
+ * per class order, and without the watermark the test passes or fails by
+ * luck.
  */
 class PlanMigrationIT extends AbstractBillingIntegrationTest {
 
@@ -49,8 +51,8 @@ class PlanMigrationIT extends AbstractBillingIntegrationTest {
         runMigration();
 
         Map<Long, Long> planByStudent = migratedPlanByStudent(List.of(first, second, third), before);
-        // Mesmo valor, mesmo plano: é a consequência assumida de usar o valor
-        // como identidade (SPEC-012).
+        // Same amount, same plan: the assumed consequence of using the amount
+        // as identity (SPEC-012).
         assertThat(planByStudent.get(first)).isEqualTo(planByStudent.get(second));
         assertThat(planByStudent.get(third)).isNotEqualTo(planByStudent.get(first));
 
@@ -58,7 +60,7 @@ class PlanMigrationIT extends AbstractBillingIntegrationTest {
         assertThat(planNameOf(planByStudent.get(third))).isEqualTo("Plano R$ 400,00");
     }
 
-    /** Assinatura inativa vira matrícula inativa: a migração não ressuscita cobrança. */
+    /** An inactive subscription becomes an inactive enrollment: the migration does not resurrect charges. */
     @Test
     void keepsTheActiveFlagOfTheSubscription() throws Exception {
         recreateSubscriptionTable();
@@ -75,9 +77,10 @@ class PlanMigrationIT extends AbstractBillingIntegrationTest {
     }
 
     /**
-     * O nome do plano não pode depender da configuração do banco: com to_char
-     * usando G/D, o separador sairia do lc_numeric do servidor e o mesmo valor
-     * viraria "Plano R$ 1.500,00" ou "Plano R$ 1,500.00" conforme a máquina.
+     * The plan name cannot depend on the database configuration: with to_char
+     * using G/D, the separator would come from the server's lc_numeric and
+     * the same amount would become "Plano R$ 1.500,00" or "Plano R$ 1,500.00"
+     * depending on the machine.
      */
     @Test
     void formatsThousandsWithoutDependingOnTheDatabaseLocale() throws Exception {
@@ -92,7 +95,7 @@ class PlanMigrationIT extends AbstractBillingIntegrationTest {
                 .isEqualTo("Plano R$ 1500,00");
     }
 
-    /** O formato da V011, para a migration ter de onde ler. */
+    /** The V011 format, so the migration has something to read from. */
     private void recreateSubscriptionTable() {
         jdbcTemplate.execute("""
                 CREATE TABLE subscription (
@@ -126,7 +129,7 @@ class PlanMigrationIT extends AbstractBillingIntegrationTest {
         jdbcTemplate.execute(sql);
     }
 
-    /** O id do último plano existente antes da migration: a marca d'água. */
+    /** The id of the last plan that existed before the migration: the watermark. */
     private long lastPlanId() {
         Long id = jdbcTemplate.queryForObject("SELECT COALESCE(MAX(id), 0) FROM plan", Long.class);
         return id == null ? 0 : id;

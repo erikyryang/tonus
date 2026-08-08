@@ -1,16 +1,16 @@
--- O aviso de feriado virou dois: o comunicado que suspende as aulas e o que só
--- informa (SPEC-005). O CHECK lista os templates existentes, então trocar o
--- nome exige mexer nele.
+-- The holiday notice became two: the announcement that suspends classes and
+-- the one that only informs (SPEC-005). The CHECK lists the existing
+-- templates, so changing the name requires touching it.
 --
--- As linhas antigas são reescritas antes de o CHECK mudar — na ordem inversa o
--- banco recusaria a constraint por causa das linhas que ela não aceita mais.
--- HOLIDAY_CREATED sempre significou "não vai ter aula", então o destino é o
--- template de suspensão.
+-- The old rows are rewritten before the CHECK changes — in the reverse order
+-- the database would reject the constraint because of the rows it no longer
+-- accepts. HOLIDAY_CREATED always meant "there won't be class", so the
+-- destination is the suspension template.
 --
--- A chave de idempotência (template, student_id, reference_key) continua
--- valendo: o reference_key é a data, e quem já foi avisado do feriado de D
--- carrega agora a linha de ANNOUNCEMENT_SUSPENSION com o mesmo D — uma
--- reentrega do evento não manda a mensagem de novo.
+-- The idempotency key (template, student_id, reference_key) still holds: the
+-- reference_key is the date, and whoever was already notified of the D
+-- holiday now carries the ANNOUNCEMENT_SUSPENSION row with the same D — an
+-- event redelivery doesn't send the message again.
 UPDATE notification_log SET template = 'ANNOUNCEMENT_SUSPENSION' WHERE template = 'HOLIDAY_CREATED';
 
 ALTER TABLE notification_log DROP CONSTRAINT ck_notification_log_template;

@@ -9,12 +9,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Quem configura a agenda é o ADMIN. Aluno e professor só leem a própria fatia,
- * pelos endpoints /me.
+ * Who configures the schedule is the ADMIN. Students and teachers only read
+ * their own slice, through the /me endpoints.
  *
- * O caso do professor é o que mais engana: ele é o dono da aula, mas não é
- * quem decide horário nem comunicado. Deixá-lo escrever aqui daria a um professor
- * poder sobre a agenda dos alunos de outro.
+ * The teacher case is the most deceptive: they own the class, but they are
+ * not the ones who decide time or announcement. Letting them write here would
+ * give one teacher power over another teacher's students' schedules.
  */
 class SchedulingAccessControlIT extends AbstractSchedulingIntegrationTest {
 
@@ -68,26 +68,27 @@ class SchedulingAccessControlIT extends AbstractSchedulingIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
-    /**
-     * 401 porque é a resposta que o projeto dá a requisição sem credencial
-     * desde a SPEC-006 (ver {@code AuthInvalidTokenIT}): o SecurityConfig tem
-     * entry point próprio. A agenda não é lugar de inventar convenção diferente
-     * do resto da aplicação.
-     */
+     /**
+      * 401 because that is the response the project gives to a request without
+      * a credential since SPEC-006 (see {@code AuthInvalidTokenIT}):
+      * SecurityConfig has its own entry point. The schedule is not the place to
+      * invent a convention different from the rest of the application.
+      */
     @Test
     void anonymousIsRejected() throws Exception {
         mockMvc.perform(get("/schedule/day").param("date", MONDAY))
                 .andExpect(status().isUnauthorized());
     }
 
-    /**
-     * Cancelar e remarcar é do ADMIN, inclusive para o próprio aluno.
-     *
-     * Sem esta cobertura o prefixo {@code /schedule-exceptions} era o único de
-     * ADMIN sem teste de negação: um engano na regra deixaria qualquer aluno
-     * autenticado cancelando a aula de qualquer outro, e a suíte inteira
-     * continuaria verde.
-     */
+     /**
+      * Canceling and rescheduling is the ADMIN's job, including for their own
+      * student.
+      *
+      * Without this coverage the {@code /schedule-exceptions} prefix was the
+      * only ADMIN one without a negation test: a mistake in the rule would let
+      * any authenticated student cancel any other student's class, and the
+      * whole suite would stay green.
+      */
     @Test
     void studentCannotCancelAnyClass() throws Exception {
         long teacherId = createTeacher(unique("Professor Da Excecao Negada"));

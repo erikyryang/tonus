@@ -7,11 +7,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * A poda apaga o histórico velho e preserva o recente.
+ * The pruning deletes old history and preserves the recent.
  *
- * O recorte é por {@code sent_at}, e não pela idade da linha no banco: é a data
- * do aviso que diz se a publicação correspondente ainda pode ser reentregue, e
- * é essa reentrega que a linha existe para barrar.
+ * The cutoff is by {@code sent_at}, not by the age of the row in the database:
+ * it is the notice date that tells whether the corresponding publication can
+ * still be redelivered, and it is that redelivery the row exists to block.
  */
 class NotificationLogCleanupIT extends AbstractNotificationIntegrationTest {
 
@@ -21,8 +21,8 @@ class NotificationLogCleanupIT extends AbstractNotificationIntegrationTest {
     @Test
     void deletesNoticesBeyondRetentionAndKeepsTheRest() {
         Student student = seedStudent("Aluno Do Historico");
-        // O relógio do teste é fixo; as datas são relativas a ele, e a retenção
-        // padrão é de 180 dias.
+        // The test clock is fixed; the dates are relative to it, and the
+        // default retention is 180 days.
         insertNotice(student.id(), "CLASS_CANCELED", "antigo", "'2025-01-10'");
         insertNotice(student.id(), "ANNOUNCEMENT_SUSPENSION", "recente", "now()");
 
@@ -33,10 +33,10 @@ class NotificationLogCleanupIT extends AbstractNotificationIntegrationTest {
     }
 
     /**
-     * Depois da poda, o mesmo aviso pode ser gravado de novo — a constraint não
-     * guarda memória do que foi apagado. É o motivo de a retenção precisar ser
-     * folgadamente maior que a janela de reentrega: sem isso, podar reabriria a
-     * porta para reenviar o que já saiu.
+     * After the pruning, the same notice can be inserted again — the
+     * constraint keeps no memory of what was deleted. That is why the retention
+     * must be generously longer than the redelivery window: without it,
+     * pruning would reopen the door to resending what already went out.
      */
     @Test
     void prunedNoticeStopsBlockingTheSameReference() {

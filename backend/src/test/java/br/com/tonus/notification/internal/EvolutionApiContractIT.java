@@ -16,22 +16,23 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.InstanceOfAssertFactories.throwable;
 
 /**
- * O adapter contra a Evolution API de verdade.
+ * The adapter against the real Evolution API.
  *
- * {@code EvolutionApiSenderTest} usa MockRestServiceServer e responde o que a
- * gente mandar responder — ele prova que o adapter monta a requisição que a
- * gente acha certa, não que a Evolution concorda. A diferença não é teórica:
- * o campo {@code number} estava indo em E.164 com "+" quando a API documenta
- * dígitos puros, e nenhum teste com dublê pegaria isso.
+ * {@code EvolutionApiSenderTest} uses MockRestServiceServer and answers whatever
+ * we tell it to — it proves the adapter builds the request we think is right,
+ * not that Evolution agrees. The difference is not theoretical: the
+ * {@code number} field was going out in E.164 with "+" when the API documents
+ * plain digits, and no test with a fake would catch that.
  *
- * Não sobe contexto Spring: o que está sob teste é HTTP, e subir a aplicação
- * inteira só somaria tempo a um teste que já paga um container de 1,75 GB.
+ * It does not boot the Spring context: what is under test is HTTP, and booting
+ * the whole application would only add time to a test that already pays for a
+ * 1.75 GB container.
  *
- * O que NÃO dá para cobrir aqui é o envio bem-sucedido — exige uma sessão de
- * WhatsApp pareada por QR code, com um celular do outro lado. O limite deste
- * teste é a última resposta antes disso, e por isso os três casos abaixo são
- * todos de falha: o valor está em serem as falhas REAIS da API, com os códigos
- * e as rotas dela.
+ * What CANNOT be covered here is the successful send — it requires a WhatsApp
+ * session paired by QR code, with a phone on the other side. The limit of this
+ * test is the last response before that, and that is why the three cases below
+ * are all failures: the value is that they are the REAL API failures, with its
+ * codes and routes.
  */
 class EvolutionApiContractIT {
 
@@ -50,10 +51,11 @@ class EvolutionApiContractIT {
                     .withNetworkAliases("db");
 
     /**
-     * Mesma imagem e mesmas variáveis do docker-compose. É metade do valor
-     * deste teste: se a tag sumir ou uma variável for renomeada, quebra aqui e
-     * não no deploy. Foi assim que se descobriu que {@code atendai/evolution-api}
-     * — o repositório antigo do produto — nem existe mais para pull.
+     * Same image and same variables as docker-compose. That is half the value
+     * of this test: if the tag disappears or a variable is renamed, it breaks
+     * here and not in the deploy. That is how it was discovered that
+     * {@code atendai/evolution-api} — the old product repository — no longer
+     * even exists for pull.
      */
     @SuppressWarnings("resource")
     private static final GenericContainer<?> EVOLUTION =
@@ -80,9 +82,9 @@ class EvolutionApiContractIT {
         baseUrl = "http://%s:%d".formatted(EVOLUTION.getHost(), EVOLUTION.getMappedPort(8080));
         rawClient = RestClient.builder().baseUrl(baseUrl).build();
 
-        // A instância nasce com status "close": existe no banco, sem sessão de
-        // WhatsApp. É o estado mais próximo de produção que dá para alcançar
-        // sem parear um celular.
+        // The instance is born with status "close": it exists in the database,
+        // without a WhatsApp session. That is the closest to production this can
+        // get without pairing a phone.
         rawClient.post()
                 .uri("/instance/create")
                 .header("apikey", API_KEY)
@@ -95,15 +97,15 @@ class EvolutionApiContractIT {
     }
 
     /**
-     * A rota que o **adapter** monta é a que a Evolution atende.
+     * The route the **adapter** builds is the one Evolution serves.
      *
-     * A asserção é sobre o corpo da resposta, e não sobre o status: caminho
-     * errado também daria 404, só que de roteamento. Este 404 vem de dentro do
-     * handler de sendText reclamando da instância — prova que a URI, o header e
-     * o corpo construídos pelo adapter chegaram ao lugar certo.
+     * The assertion is about the response body, not the status: a wrong path
+     * would also give 404, only from routing. This 404 comes from inside the
+     * sendText handler complaining about the instance — proof that the URI, the
+     * header and the body built by the adapter reached the right place.
      *
-     * Aponta para uma instância inexistente de propósito: é o único jeito de
-     * fazer a API responder algo específico da rota sem uma sessão pareada.
+     * Points at a nonexistent instance on purpose: it is the only way to make
+     * the API answer something specific to the route without a paired session.
      */
     @Test
     void adapterReachesTheRealSendTextRoute() {
@@ -121,7 +123,7 @@ class EvolutionApiContractIT {
                 });
     }
 
-    /** {@code apikey} é mesmo o mecanismo de autenticação, e no header. */
+    /** {@code apikey} really is the authentication mechanism, and in the header. */
     @Test
     void withoutTheApiKeyHeaderEverythingIsUnauthorized() {
         HttpStatusCode withoutKey = rawClient.get()
@@ -138,12 +140,13 @@ class EvolutionApiContractIT {
     }
 
     /**
-     * O adapter de produção, contra o servidor de verdade.
+     * The production adapter, against the real server.
      *
-     * Sem sessão de WhatsApp a Evolution devolve 500, e o que precisa ser
-     * verdade é que isso vire {@link WhatsAppDeliveryException} — é dela que
-     * dependem o rollback do registro e o reprocessamento. Um erro escapando em
-     * outro tipo passaria por falha de programação e a mensagem se perderia.
+     * Without a WhatsApp session Evolution returns 500, and what has to hold is
+     * that this becomes {@link WhatsAppDeliveryException} — it is what the
+     * record rollback and the reprocessing depend on. An error escaping in
+     * another type would pass as a programming failure and the message would be
+     * lost.
      */
     @Test
     void adapterTurnsARealFailureIntoDeliveryException() {
@@ -154,7 +157,7 @@ class EvolutionApiContractIT {
                 .isInstanceOf(WhatsAppDeliveryException.class);
     }
 
-    /** Credencial errada também precisa virar falha de entrega, não outra coisa. */
+    /** Wrong credentials also have to become a delivery failure, not something else. */
     @Test
     void wrongApiKeyAlsoBecomesDeliveryException() {
         EvolutionApiSender sender = new EvolutionApiSender(

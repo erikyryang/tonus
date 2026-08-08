@@ -5,14 +5,14 @@ import org.junit.jupiter.api.Test;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * A data de destino de uma remarcação precisa ser um dia em que a aula possa
- * acontecer.
+ * The destination date of a reschedule must be a day on which a class can
+ * happen.
  *
- * Nenhuma das duas regras é constraint de banco, e nem poderia ser: as duas
- * dependem de estado fora da linha — a data de hoje e a tabela `announcement`. Por
- * isso vivem no serviço, e por isso têm teste próprio.
+ * Neither rule is a database constraint, and could not be: both depend on
+ * state outside the row — today's date and the `announcement` table. That is
+ * why they live in the service, and why they have their own test.
  *
- * "Hoje" aqui é sempre {@link #MONDAY}, fixado por {@link SchedulingClockConfig}.
+ * "Today" here is always {@link #MONDAY}, fixed by {@link SchedulingClockConfig}.
  */
 class RescheduleDateRulesIT extends AbstractSchedulingIntegrationTest {
 
@@ -26,11 +26,11 @@ class RescheduleDateRulesIT extends AbstractSchedulingIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
-    /**
-     * Hoje é limite inferior inclusive: remarcar para daqui a pouco é legítimo,
-     * e recusar obrigaria o ADMIN a esperar a virada do dia para registrar uma
-     * troca combinada de manhã.
-     */
+     /**
+      * Today is an inclusive lower bound: rescheduling to later today is
+      * legitimate, and refusing would force the ADMIN to wait for the day to
+      * turn to register a change agreed on in the morning.
+      */
     @Test
     void rescheduleToTodayIsAllowed() throws Exception {
         long studentId = seedStudent("Aluno Remarcado Pra Hoje");
@@ -56,11 +56,11 @@ class RescheduleDateRulesIT extends AbstractSchedulingIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
-    /**
-     * O comunicado que não suspende não bloqueia nada: o dia continua tendo
-     * aula, e recusar a remarcação por causa de um aviso confundiria "avisei
-     * algo sobre esse dia" com "esse dia não existe".
-     */
+     /**
+      * An announcement that does not suspend blocks nothing: the day still has
+      * class, and refusing the reschedule because of a notice would confuse "I
+      * announced something about this day" with "this day does not exist".
+      */
     @Test
     void rescheduleOntoAnnouncedButWorkingDayIsAllowed() throws Exception {
         long studentId = seedStudent("Aluno Remarcado Pro Dia Avisado");
@@ -72,12 +72,13 @@ class RescheduleDateRulesIT extends AbstractSchedulingIntegrationTest {
                 .andExpect(status().isCreated());
     }
 
-    /**
-     * A invariante é assumidamente parcial: a suspensão cadastrada **depois** da
-     * remarcação não desfaz nada — a aula só some da agenda daquele dia, porque
-     * a expansão suprime o dia inteiro. A checagem serve para o ADMIN descobrir
-     * na hora, não para garantir consistência que este modelo não tem como dar.
-     */
+     /**
+      * The invariant is admittedly partial: a suspension registered **after**
+      * the reschedule undoes nothing — the class only disappears from that
+      * day's schedule, because the expansion suppresses the whole day. The
+      * check exists for the ADMIN to find out right away, not to guarantee
+      * consistency this model has no way to provide.
+      */
     @Test
     void suspensionRegisteredAfterRescheduleIsNotRejectedRetroactively() throws Exception {
         long studentId = seedStudent("Aluno Do Feriado Posterior");
@@ -86,10 +87,10 @@ class RescheduleDateRulesIT extends AbstractSchedulingIntegrationTest {
         createAnnouncement("2026-09-22", "Feriado cadastrado depois", true);
     }
 
-    /**
-     * Cancelamento não tem data de destino, então nenhuma das duas regras se
-     * aplica: cancelar uma aula que já passou é registro de fato consumado.
-     */
+     /**
+      * A cancellation has no destination date, so neither rule applies:
+      * canceling a class that already happened is recording a fait accompli.
+      */
     @Test
     void cancellationInThePastIsAllowed() throws Exception {
         long studentId = seedStudent("Aluno Que Faltou Semana Passada");

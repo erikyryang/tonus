@@ -8,16 +8,16 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * Dublê do único ponto em que o sistema fala com o mundo externo.
+ * Fake for the only point where the system talks to the external world.
  *
- * Substituir a porta é o que permite testar a regra de não-duplicação sem
- * depender da Evolution API — e é o dublê certo: o que se está exercitando é o
- * listener, não o HTTP. O adapter de verdade tem teste próprio
- * (EvolutionApiSenderTest, com MockRestServiceServer).
+ * Replacing the port is what lets the no-duplication rule be tested without
+ * depending on the Evolution API — and it is the right fake: what is being
+ * exercised is the listener, not the HTTP. The real adapter has its own test
+ * (EvolutionApiSenderTest, with MockRestServiceServer).
  *
- * Feito à mão em vez de Mockito porque a arma "falhe para este telefone"
- * precisa valer entre threads: {@code @ApplicationModuleListener} é assíncrono,
- * então quem grava e quem lê o resultado não são a mesma thread.
+ * Hand-made instead of Mockito because the "fail for this phone" weapon needs
+ * to hold across threads: {@code @ApplicationModuleListener} is asynchronous,
+ * so who records and who reads the result are not the same thread.
  */
 public class RecordingWhatsAppSender implements WhatsAppSender {
 
@@ -34,7 +34,7 @@ public class RecordingWhatsAppSender implements WhatsAppSender {
         sent.add(new Sent(phone, message));
     }
 
-    /** A partir daqui, todo envio para este telefone falha. */
+    /** From now on, every send to this phone fails. */
     public void failFor(String phone) {
         failingPhones.add(phone);
     }
@@ -48,10 +48,10 @@ public class RecordingWhatsAppSender implements WhatsAppSender {
     }
 
     /**
-     * A última mensagem que chegou a um telefone. O fan-out avisa todo aluno
-     * ativo do banco, então {@code sent().getLast()} pode ser de um aluno que
-     * outra classe deixou para trás — quem quer conferir o texto precisa dizer
-     * de quem ele é.
+     * The last message that reached a phone. The fan-out notifies every active
+     * student in the database, so {@code sent().getLast()} may belong to a
+     * student another class left behind — whoever wants to check the text has
+     * to say whose it is.
      */
     public String lastMessageTo(String phone) {
         return sent.stream()
@@ -62,9 +62,9 @@ public class RecordingWhatsAppSender implements WhatsAppSender {
     }
 
     /**
-     * Tentativas, inclusive as que falharam. É o único sinal de que o listener
-     * chegou a rodar quando o envio quebra — o registro em banco é desfeito
-     * pelo rollback, então contar linha não serve para esperar por esse caso.
+     * Attempts, including the failed ones. It is the only signal that the
+     * listener got to run when the send breaks — the database record is undone
+     * by the rollback, so counting rows does not serve to wait for that case.
      */
     public long countAttemptsTo(String phone) {
         return attempted.stream().filter(phone::equals).count();

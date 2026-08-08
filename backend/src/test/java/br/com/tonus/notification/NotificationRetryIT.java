@@ -10,18 +10,19 @@ import static br.com.tonus.support.Eventually.eventually;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * O aluno acaba sendo avisado, mesmo quando o primeiro envio falha.
+ * The student ends up being notified, even when the first delivery fails.
  *
- * Existe porque o teste anterior parava cedo demais: afirmava que a publicação
- * ficava incompleta e dava por encerrado. Ficar incompleta é o mecanismo, não o
- * resultado — e o mecanismo estava certo enquanto ninguém reprocessava, de modo
- * que a suíte ficava verde com o aviso nunca saindo. Teste que descreve o meio
- * em vez do fim não protege o que interessa.
+ * It exists because the earlier test stopped too early: it asserted that the
+ * publication stayed incomplete and called it done. Staying incomplete is the
+ * mechanism, not the result — and the mechanism was right while nobody
+ * reprocessed, so the suite stayed green with the notice never going out. A
+ * test that describes the means instead of the end does not protect what
+ * matters.
  *
- * Reprocessa pela API do Modulith, e não pelo EventRepublicationJob: o job mora
- * em shared e quem o aciona em produção é o cron. O que precisa ser verdade
- * aqui é que a reentrega chega ao aluno; que o job passa a idade configurada é
- * assunto de {@code EventRepublicationJobTest}.
+ * It reprocesses through the Modulith API, not the EventRepublicationJob: the
+ * job lives in shared and what triggers it in production is the cron. What has
+ * to hold here is that the redelivery reaches the student; that the job passes
+ * the configured age is the concern of {@code EventRepublicationJobTest}.
  */
 class NotificationRetryIT extends AbstractNotificationIntegrationTest {
 
@@ -41,7 +42,7 @@ class NotificationRetryIT extends AbstractNotificationIntegrationTest {
         assertThat(countLogs(student.id(), "CLASS_CANCELED")).isZero();
         assertThat(countIncompletePublications("ClassCanceled", student.id())).isEqualTo(1);
 
-        // A Evolution volta, e o job varre o registry.
+        // Evolution comes back, and the job sweeps the registry.
         sender.reset();
         incompletePublications.resubmitIncompletePublications(publication -> true);
 
@@ -53,9 +54,9 @@ class NotificationRetryIT extends AbstractNotificationIntegrationTest {
     }
 
     /**
-     * Reprocessar não reenvia o que já saiu. É a mesma constraint de sempre,
-     * agora exercitada pelo caminho que o job usa — que é por onde um reenvio
-     * em massa aconteceria se a idempotência falhasse.
+     * Reprocessing does not resend what already went out. Same constraint as
+     * always, now exercised through the path the job uses — which is where a
+     * mass resend would happen if idempotency failed.
      */
     @Test
     void reprocessingDoesNotResendWhatAlreadyWentOut() {

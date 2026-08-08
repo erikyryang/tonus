@@ -1,5 +1,5 @@
--- teacher_id é NOT NULL de propósito: o vínculo aluno->professor é regra de
--- negócio da SPEC-002 e precisa valer mesmo para escrita que não passe pela API.
+-- teacher_id is NOT NULL on purpose: the student->teacher link is a SPEC-002
+-- business rule and must hold even for writes that don't go through the API.
 CREATE TABLE student (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,

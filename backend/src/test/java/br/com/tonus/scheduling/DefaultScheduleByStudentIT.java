@@ -8,10 +8,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Consulta usada pela coluna "Horário" de /students (SPEC-009, mudança 6/7).
+ * Query used by the "Horário" column of /students (SPEC-009, change 6/7).
  *
- * O grafo não muda: registration não passa a consultar scheduling. É o
- * frontend que cruza esta lista com a tabela de alunos que já tem em mãos.
+ * The graph does not change: registration does not start querying scheduling.
+ * It is the frontend that crosses this list with the student table it already
+ * has in hand.
  */
 class DefaultScheduleByStudentIT extends AbstractSchedulingIntegrationTest {
 
@@ -48,7 +49,7 @@ class DefaultScheduleByStudentIT extends AbstractSchedulingIntegrationTest {
                 .andExpect(jsonPath("$['%d']".formatted(second)).value("18:30"));
     }
 
-    /** Apagar o horário devolve o aluno a "sem agenda" — some do mapa também. */
+    /** Deleting the schedule returns the student to "sem agenda" — they vanish from the map too. */
     @Test
     void deletingScheduleRemovesStudentFromMap() throws Exception {
         long teacherId = createTeacher(unique("Professor Do Apagado"));

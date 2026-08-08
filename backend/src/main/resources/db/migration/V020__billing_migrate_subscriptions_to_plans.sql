@@ -1,18 +1,18 @@
--- As assinaturas existentes viram planos e matrículas (SPEC-012).
+-- Existing subscriptions become plans and enrollments (SPEC-012).
 --
--- Um plano por VALOR DISTINTO, não um por aluno. A consequência é assumida e
--- está na spec: dois alunos que pagavam 350 passam a compartilhar o plano de
--- 350, e mudar o preço dele depois muda para os dois. Um plano por aluno
--- preservaria independência ao custo de N planos idênticos — exatamente o que
--- a tela de planos existe para evitar.
+-- One plan per DISTINCT AMOUNT, not one per student. The consequence is
+-- assumed and is in the spec: two students who paid 350 now share the 350
+-- plan, and changing its price later changes it for both. One plan per
+-- student would preserve independence at the cost of N identical plans —
+-- exactly what the plans screen exists to avoid.
 --
--- O nome é feio de propósito ("Plano R$ 350,00"): é rótulo de migração, e o
--- ADMIN renomeia na tela. Inventar "Mensal Padrão" seria fingir que essa
--- informação existia em algum lugar.
+-- The name is ugly on purpose ("Plano R$ 350,00"): it is a migration label,
+-- and the ADMIN renames it on the screen. Inventing "Mensal Padrão" would be
+-- pretending that information existed somewhere.
 --
--- A formatação é feita à mão, sem to_char com G/D: aqueles dependem do
--- lc_numeric do servidor, e o nome do plano mudaria conforme a configuração do
--- banco em que a migration roda.
+-- The formatting is done by hand, without to_char with G/D: those depend on
+-- the server lc_numeric, and the plan name would change depending on the
+-- database configuration where the migration runs.
 INSERT INTO plan (name, monthly_price, active, created_at, updated_at)
 SELECT DISTINCT
        'Plano R$ ' || replace(to_char(monthly_amount, 'FM9999990.00'), '.', ','),
@@ -22,15 +22,15 @@ SELECT DISTINCT
        now()
 FROM subscription;
 
--- Cada aluno na matrícula do seu valor, preservando se estava ativa. O
--- created_at vem da assinatura: a matrícula não nasceu agora, ela é a mesma
--- relação com outro nome.
+-- Each student in the enrollment of their amount, preserving whether it was
+-- active. The created_at comes from the subscription: the enrollment wasn't
+-- born now, it is the same relationship under another name.
 --
--- O join por VALOR só é inequívoco porque `plan` está vazia neste ponto: a V019
--- acabou de criá-la e o Flyway aplica as duas no mesmo passe, então não existe
--- plano anterior com o mesmo preço para o join casar duas vezes. Separar as
--- duas migrations no tempo — subir uma versão só com a V019 — quebraria essa
--- garantia.
+-- The join by VALUE is only unambiguous because `plan` is empty at this
+-- point: V019 just created it and Flyway applies both in the same pass, so
+-- there is no earlier plan with the same price for the join to match twice.
+-- Separating the two migrations in time — deploying a version with only
+-- V019 — would break that guarantee.
 INSERT INTO plan_enrollment (student_id, plan_id, active, created_at, updated_at)
 SELECT s.student_id, p.id, s.active, s.created_at, s.updated_at
 FROM subscription s

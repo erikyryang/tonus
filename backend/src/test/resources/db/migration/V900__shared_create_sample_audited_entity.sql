@@ -1,6 +1,6 @@
--- Tabela existe só em ambiente de teste, para exercitar o mecanismo
--- genérico de auditoria do módulo shared (BaseEntity + @Audited) sem
--- depender de entidades de outros módulos ainda não implementados.
+-- Table exists only in the test environment, to exercise the shared module's
+-- generic audit mechanism (BaseEntity + @Audited) without depending on
+-- entities from other modules not yet implemented.
 CREATE TABLE sample_audited_entity (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,

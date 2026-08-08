@@ -21,25 +21,26 @@ import org.testcontainers.utility.MountableFile;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * O seed de desenvolvimento (`scripts/seed-dev.sql`) continua funcionando.
+ * The development seed (`scripts/seed-dev.sql`) keeps working.
  *
- * Ele é a única porta de entrada do ambiente local — `POST /users` exige um
- * ADMIN já autenticado, então sem o seed ninguém faz o primeiro login. E é SQL
- * cru: nada no build o obrigaria a acompanhar uma migration que mudasse
- * `users`. Sem este teste, a quebra apareceria para quem clonou o repo, no pior
- * momento possível.
+ * It is the only entry point of the local environment — `POST /users` requires
+ * an already-authenticated ADMIN, so without the seed nobody makes the first
+ * login. And it is raw SQL: nothing in the build would force it to follow a
+ * migration that changed `users`. Without this test, the breakage would appear
+ * to whoever cloned the repo, at the worst possible moment.
  *
- * Roda o arquivo pelo mesmo caminho documentado no README — `psql -f`, dentro
- * do container — em vez de despejar o conteúdo por JDBC. O `\set ON_ERROR_STOP`
- * do cabeçalho é meta-comando de psql: por JDBC ele nem seria interpretado, e o
- * teste passaria a exercitar um arquivo diferente do que o desenvolvedor roda.
- * O código de saída do psql faz parte da asserção por isso mesmo.
+ * Runs the file through the same path documented in the README — `psql -f`,
+ * inside the container — instead of dumping the content over JDBC. The
+ * `\set ON_ERROR_STOP` in the header is a psql meta-command: over JDBC it would
+ * not even be interpreted, and the test would end up exercising a different
+ * file than the one the developer runs. The psql exit code is part of the
+ * assertion for that very reason.
  *
- * Cada teste trabalha num banco próprio, criado no container compartilhado da
- * suíte e migrado do zero pelo Flyway. Não é preciosismo: o script aplica
- * `UPDATE users SET password = ...` sem WHERE, e apontá-lo para o banco dos
- * outros testes trocaria a senha de todos os usuários que eles criaram — a
- * suíte inteira passaria a falhar no login, longe daqui.
+ * Each test works on its own database, created in the container shared by the
+ * suite and migrated from scratch by Flyway. It is not fussiness: the script
+ * applies `UPDATE users SET password = ...` without WHERE, and pointing it at
+ * the database of the other tests would change the password of all the users
+ * they created — the whole suite would start failing at login, far from here.
  */
 class SeedDevScriptIT {
 
@@ -52,7 +53,7 @@ class SeedDevScriptIT {
 
     @BeforeAll
     static void copyScriptIntoContainer() {
-        // O diretório de trabalho do failsafe é o basedir do módulo (backend/).
+        // The failsafe working directory is the module's basedir (backend/).
         assertThat(SCRIPT)
                 .as("o seed precisa estar em backend/%s — o teste roda a partir de backend/", SCRIPT)
                 .exists();
@@ -81,10 +82,10 @@ class SeedDevScriptIT {
     }
 
     /**
-     * O caso de quem acabou de clonar o repo: banco zerado tem que virar
-     * ambiente utilizável nos três papéis. O ADMIN não é derivado de ninguém —
-     * é ele que destrava o `POST /users` —, e TEACHER e STUDENT não teriam de
-     * quem sair sem um cadastro de demonstração.
+     * The case of someone who just cloned the repo: a zeroed database must
+     * become a usable environment in the three roles. The ADMIN is not derived
+     * from anyone — it is the one that unlocks `POST /users` — and TEACHER and
+     * STUDENT would have nobody to come from without a demo registration.
      */
     @Test
     void buildsAUsableEnvironmentWithAllThreeRolesOnAnEmptyDatabase() throws Exception {
@@ -101,8 +102,8 @@ class SeedDevScriptIT {
                 .contains("ADMIN", "TEACHER", "STUDENT");
         assertThat(users.values()).allSatisfy(user ->
                 assertThat(encoder.matches(SEED_PASSWORD, user.password())).isTrue());
-        // Todo aluno de demonstração tem professor: o vínculo é NOT NULL, e o
-        // seed não pode ser a via que fura uma regra de negócio do cadastro.
+        // Every demo student has a teacher: the link is NOT NULL, and the
+        // seed cannot be the route that breaks a registration business rule.
         assertThat(count(db, "SELECT count(*) FROM student WHERE teacher_id IS NULL")).isZero();
     }
 
@@ -114,16 +115,16 @@ class SeedDevScriptIT {
         runSeed(db);
 
         assertThat(count(db, "SELECT count(*) FROM teacher")).isEqualTo(2);
-        // Cinco alunos: quatro ativos com login e a inativa, que existe para o
-        // filtro de situação ter o que mostrar e não ganha acesso.
+        // Five students: four active with login and the inactive one, which
+        // exists so the status filter has something to show and gets no access.
         assertThat(count(db, "SELECT count(*) FROM student")).isEqualTo(5);
         assertThat(users(db)).hasSize(7);
     }
 
     /**
-     * Banco zerado tem que virar ambiente com as telas cheias, não só com
-     * gente: tela vazia não exercita interface nenhuma, e é para exercitá-la
-     * que o ambiente local existe.
+     * A zeroed database must become an environment with full screens, not just
+     * people: an empty screen exercises no interface, and exercising it is
+     * what the local environment exists for.
      */
     @Test
     void seedsMovementSoEveryScreenHasContent() throws Exception {
@@ -134,14 +135,14 @@ class SeedDevScriptIT {
         assertThat(count(db, "SELECT count(*) FROM default_schedule")).isEqualTo(4);
         assertThat(count(db, "SELECT count(*) FROM schedule_exception WHERE type = 'CANCELED'")).isEqualTo(1);
         assertThat(count(db, "SELECT count(*) FROM schedule_exception WHERE type = 'RESCHEDULED'")).isEqualTo(1);
-        // Os dois tipos de comunicado: sem o par, a diferença entre suspender e
-        // avisar não aparece em tela nenhuma.
+        // The two announcement types: without the pair, the difference between
+        // suspending and notifying does not appear on any screen.
         assertThat(count(db, "SELECT count(*) FROM announcement WHERE suspends_classes")).isEqualTo(1);
         assertThat(count(db, "SELECT count(*) FROM announcement WHERE NOT suspends_classes")).isEqualTo(1);
         assertThat(count(db, "SELECT count(*) FROM plan WHERE active")).isEqualTo(3);
         assertThat(count(db, "SELECT count(*) FROM plan WHERE NOT active")).isEqualTo(1);
-        // Alguém com dois planos, para o desconto de múltiplos planos sair do
-        // zero na tela de configuração e valer para uma fatura de verdade.
+        // Someone with two plans, so the multi-plan discount leaves zero on
+        // the configuration screen and applies to a real invoice.
         assertThat(count(db, """
                 SELECT count(*) FROM (
                     SELECT student_id FROM plan_enrollment WHERE active
@@ -150,12 +151,13 @@ class SeedDevScriptIT {
                 """)).isEqualTo(1);
         assertThat(count(db, "SELECT multi_plan_discount_percent FROM billing_settings")).isEqualTo(10);
 
-        // Uma fatura de cada status: é o que faz o filtro de /invoices e o selo
-        // "Atrasado" de /students terem o que mostrar.
+        // One invoice per status: that is what gives the /invoices filter and
+        // the "Atrasado" badge of /students something to show.
         assertThat(count(db, "SELECT count(*) FROM invoice WHERE status = 'PAID'")).isEqualTo(1);
         assertThat(count(db, "SELECT count(*) FROM invoice WHERE status = 'OPEN'")).isEqualTo(2);
         assertThat(count(db, "SELECT count(*) FROM invoice WHERE status = 'OVERDUE'")).isEqualTo(1);
-        // Fatura paga sem baixa é um estado que o sistema não produz sozinho.
+        // A paid invoice without a payment entry is a state the system does
+        // not produce on its own.
         assertThat(count(db, """
                 SELECT count(*) FROM invoice i
                  WHERE i.status = 'PAID'
@@ -163,7 +165,7 @@ class SeedDevScriptIT {
                 """)).isZero();
     }
 
-    /** A agenda só existe de segunda a sexta — inclusive quando o seed roda no sábado. */
+    /** The schedule only exists Monday to Friday — including when the seed runs on Saturday. */
     @Test
     void anchorsScheduleExceptionsOnAWeekday() throws Exception {
         String db = freshDatabase();
@@ -193,8 +195,9 @@ class SeedDevScriptIT {
     }
 
     /**
-     * Num banco em uso o script não inventa movimento, pelo mesmo motivo que
-     * não inventa gente: seria sujar o ambiente de quem está trabalhando.
+     * On a database in use the script does not invent movement, for the same
+     * reason it does not invent people: it would dirty the environment of
+     * whoever is working.
      */
     @Test
     void doesNotSeedMovementWhenTheRegistrationIsSomeoneElses() throws Exception {
@@ -210,9 +213,9 @@ class SeedDevScriptIT {
     }
 
     /**
-     * Inventar gente num banco que já tem cadastro seria sujar o trabalho de
-     * quem está usando o ambiente. O gatilho é o cadastro vazio, não a ausência
-     * de usuários.
+     * Inventing people in a database that already has registrations would
+     * dirty the work of whoever is using the environment. The trigger is the
+     * empty registration, not the absence of users.
      */
     @Test
     void doesNotInventPeopleWhenTheRegistrationAlreadyHasSomeone() throws Exception {
@@ -241,8 +244,8 @@ class SeedDevScriptIT {
     }
 
     /**
-     * Rodar de novo depois de cadastrar gente nova é o uso previsto — o script
-     * é a ferramenta de dar acesso a quem entrou depois.
+     * Rerunning after registering new people is the intended use — the script
+     * is the tool for granting access to those who joined later.
      */
     @Test
     void isIdempotentAndPicksUpPeopleRegisteredLater() throws Exception {
@@ -262,8 +265,8 @@ class SeedDevScriptIT {
     }
 
     /**
-     * Quem saiu do estúdio perde o acesso por evento, e o seed não é uma porta
-     * dos fundos para ele voltar.
+     * Whoever left the studio loses access through an event, and the seed is
+     * not a back door for them to come back.
      */
     @Test
     void skipsPeopleDeactivatedInTheRegistration() throws Exception {
@@ -280,9 +283,10 @@ class SeedDevScriptIT {
     }
 
     /**
-     * Revogar é automático, reconceder é manual — em produção. Aqui a promessa
-     * do script é que todo mundo que está no estúdio entra, então o login de
-     * quem voltou ao cadastro volta junto; o de quem continua fora, não.
+     * Revoking is automatic, regranting is manual — in production. Here the
+     * promise of the script is that everyone in the studio gets in, so the
+     * login of whoever came back to the registration comes back along; that of
+     * whoever is still out, not.
      */
     @Test
     void reactivatesRevokedAccessOnlyForPeopleStillActiveInTheRegistration() throws Exception {
@@ -300,15 +304,15 @@ class SeedDevScriptIT {
     }
 
     /**
-     * Nome não é único no cadastro, login é. Duas Marias não podem derrubar o
-     * seed inteiro na UNIQUE.
+     * Name is not unique in the registration, login is. Two Marias cannot
+     * bring down the whole seed on the UNIQUE constraint.
      */
     @Test
     void disambiguatesLoginsDerivedFromTheSameFirstName() throws Exception {
         String db = freshDatabase();
         long teacher = insertTeacher(db, "Ana Silva", true);
         insertStudent(db, "Maria Souza", teacher, true);
-        // Acento normalizado: "María" e "Maria" disputam o mesmo login.
+        // Normalized accent: "María" and "Maria" compete for the same login.
         long second = insertStudent(db, "María Costa", teacher, true);
 
         runSeed(db);
@@ -321,9 +325,9 @@ class SeedDevScriptIT {
     }
 
     /**
-     * O Flyway roda quando a aplicação sobe, não quando o Postgres sobe. Quem
-     * rodar o seed logo depois do `docker compose up -d db` tem que receber uma
-     * instrução, não um "relation does not exist".
+     * Flyway runs when the application boots, not when Postgres boots. Whoever
+     * runs the seed right after `docker compose up -d db` should get an
+     * instruction, not a "relation does not exist".
      */
     @Test
     void failsWithAnActionableMessageWhenTheSchemaIsNotThere() throws Exception {
@@ -338,9 +342,9 @@ class SeedDevScriptIT {
                 .contains("./mvnw spring-boot:run");
     }
 
-    // --- infraestrutura do teste ---
+    // --- test infrastructure ---
 
-    /** Banco vazio e migrado do zero, isolado dos outros testes da suíte. */
+    /** Empty database migrated from scratch, isolated from the other tests of the suite. */
     private String freshDatabase() throws Exception {
         String name = "seed_dev_" + suffix();
         execute(POSTGRES.getDatabaseName(), "CREATE DATABASE " + name);

@@ -10,13 +10,15 @@ import static br.com.tonus.support.Eventually.eventually;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Comunicado é o único evento que vira N mensagens, e é onde a transação por aluno
- * se paga: sem ela, falhar no meio desfaria as linhas já gravadas e o
- * reprocessamento reenviaria tudo — falha parcial virando duplicação em massa.
+ * Announcement is the only event that turns into N messages, and that is where
+ * the per-student transaction pays off: without it, failing mid-way would undo
+ * already-inserted rows and reprocessing would resend everything — a partial
+ * failure turning into mass duplication.
  *
- * As asserções olham só para os alunos que cada teste semeia. O fan-out avisa
- * todo aluno ativo do banco, inclusive os que outras classes deixaram para
- * trás, e contar o total amarraria estes testes ao resto da suíte.
+ * The assertions look only at the students each test seeds. The fan-out notifies
+ * every active student in the database, including ones other classes left
+ * behind, and counting the total would couple these tests to the rest of the
+ * suite.
  */
 class AnnouncementFanOutIT extends AbstractNotificationIntegrationTest {
 
@@ -38,13 +40,13 @@ class AnnouncementFanOutIT extends AbstractNotificationIntegrationTest {
     }
 
     /**
-     * A mensagem depende do efeito. "Não teremos aula" e "as aulas acontecem
-     * normalmente" são avisos opostos, e mandar o primeiro para um comunicado
-     * que não suspende esvaziaria a sala num dia de aula.
+     * The message depends on the effect. "There will be no class" and "classes
+     * happen as usual" are opposite notices, and sending the first for an
+     * announcement that does not suspend would empty the room on a class day.
      *
-     * O template também é outro, e não só o texto: ele é a chave de
-     * idempotência junto com a data, e é o que permite ao aluno receber o aviso
-     * certo sem que uma reentrega mande o outro.
+     * The template is also different, not just the text: it is the idempotency
+     * key together with the date, and it is what lets the student receive the
+     * right notice without a redelivery sending the other one.
      */
     @Test
     void announcementWithoutSuspensionSaysClassesHappenNormally() {
@@ -63,10 +65,10 @@ class AnnouncementFanOutIT extends AbstractNotificationIntegrationTest {
     }
 
     /**
-     * O template novo também é idempotente. A entrega é at-least-once e o
-     * `ANNOUNCEMENT_NOTICE` nasceu nesta mudança: a garantia velha era do
-     * template de feriado, e um caminho novo sem a mesma prova é onde a
-     * duplicação aparece.
+     * The new template is also idempotent. Delivery is at-least-once and the
+     * `ANNOUNCEMENT_NOTICE` was born in this change: the old guarantee was for
+     * the holiday template, and a new path without the same proof is where
+     * duplication shows up.
      */
     @Test
     void reprocessingANoticeDoesNotSendItTwice() {
@@ -84,10 +86,11 @@ class AnnouncementFanOutIT extends AbstractNotificationIntegrationTest {
     }
 
     /**
-     * Os dois avisos do mesmo dia convivem no log, porque o template entra na
-     * chave. Não é hipótese: apagar um comunicado e recriá-lo com o outro
-     * efeito republica o evento para a mesma data, e chavear só pela data faria
-     * o aluno continuar acreditando que não teria aula.
+     * The two notices for the same day coexist in the log, because the template
+     * is part of the key. This is not hypothetical: deleting an announcement
+     * and recreating it with the other effect republishes the event for the
+     * same date, and keying by date alone would keep the student believing
+     * there would be no class.
      */
     @Test
     void suspensionAndNoticeForTheSameDayAreIndependent() {
@@ -104,7 +107,7 @@ class AnnouncementFanOutIT extends AbstractNotificationIntegrationTest {
         assertThat(countLogs(student.id(), "ANNOUNCEMENT_NOTICE")).isEqualTo(1);
     }
 
-    /** E a suspensão diz o contrário, com o motivo junto. */
+    /** And the suspension says the opposite, with the reason attached. */
     @Test
     void suspendingAnnouncementSaysThereIsNoClassAndWhy() {
         LocalDate date = LocalDate.parse("2026-11-12");
@@ -120,8 +123,8 @@ class AnnouncementFanOutIT extends AbstractNotificationIntegrationTest {
     }
 
     /**
-     * Critério de aceite: falha no segundo aluno preserva a linha do primeiro.
-     * É a prova de que cada aluno commita por conta própria.
+     * Acceptance criterion: failure on the second student preserves the first
+     * one's row. This is the proof that each student commits on its own.
      */
     @Test
     void failureOnOneStudentPreservesTheOthers() {
@@ -141,9 +144,9 @@ class AnnouncementFanOutIT extends AbstractNotificationIntegrationTest {
     }
 
     /**
-     * O reprocessamento depois de uma falha parcial só avisa quem ficou de
-     * fora. É a razão de a UNIQUE existir: o registry reentrega o evento
-     * inteiro, e quem já recebeu tem de ser barrado no banco.
+     * Reprocessing after a partial failure only notifies who was left out.
+     * That is the reason the UNIQUE exists: the registry redelivers the whole
+     * event, and whoever already received it has to be barred at the database.
      */
     @Test
     void reprocessingAfterPartialFailureOnlyNotifiesWhoIsMissing() {
@@ -167,12 +170,13 @@ class AnnouncementFanOutIT extends AbstractNotificationIntegrationTest {
     }
 
     /**
-     * Gateway fora do ar aborta o laço em vez de percorrer o estúdio inteiro
-     * colecionando timeouts.
+     * Gateway down aborts the loop instead of walking the whole studio
+     * collecting timeouts.
      *
-     * É o único teste que precisa da população ativa sob controle — o limite
-     * conta falhas *seguidas*, e um aluno de outra classe entregue no meio
-     * zeraria o contador. Por isso desativa e devolve tudo no fim.
+     * This is the only test that needs the active population under control —
+     * the limit counts *consecutive* failures, and a student from another
+     * class delivered in the middle would zero the counter. Hence it
+     * deactivates and restores everything at the end.
      */
     @Test
     void consecutiveFailuresAbortTheFanOut() {
@@ -187,10 +191,10 @@ class AnnouncementFanOutIT extends AbstractNotificationIntegrationTest {
 
             publish(new AnnouncementCreated(LocalDate.parse("2026-09-07"), "Independencia", true));
 
-            // O limite default é 5: a sexta tentativa não acontece. A espera é
-            // por "pelo menos 5" e a asserção é por "exatamente 5" — esperar
-            // por igualdade passaria de raspão se o laço estivesse percorrendo
-            // os oito e fosse observado justo ao cruzar o quinto.
+            // The default limit is 5: the sixth attempt never happens. The wait
+            // is for "at least 5" and the assertion is for "exactly 5" —
+            // waiting for equality would pass by a hair if the loop were
+            // walking the eight and were observed right as it crossed the fifth.
             eventually("cinco tentativas de envio", () -> sender.attempts().size() >= 5);
             assertThat(sender.attempts()).hasSize(5);
             assertThat(sender.sent()).isEmpty();

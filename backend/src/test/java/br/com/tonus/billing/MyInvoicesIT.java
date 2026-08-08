@@ -10,9 +10,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * /me/invoices: o id do aluno vem do token, nunca de path ou query — mesmo
- * padrão de {@code MyScheduleController}. Não existe parâmetro de id, então
- * IDOR não é algo que alguém precisa lembrar de prevenir.
+ * /me/invoices: the student id comes from the token, never from path or
+ * query — same pattern as {@code MyScheduleController}. There is no id
+ * parameter, so IDOR is not something anyone needs to remember to prevent.
  */
 class MyInvoicesIT extends AbstractBillingIntegrationTest {
 
@@ -34,9 +34,9 @@ class MyInvoicesIT extends AbstractBillingIntegrationTest {
     }
 
     /**
-     * O aluno lê a mesma resposta do ADMIN, e a data da baixa é o que ele mais
-     * procura ali — é o recibo dele. O lote de SPEC-008 mexeu neste caminho
-     * também, então ele tem asserção própria.
+     * The student reads the same response as the ADMIN, and the write-off date
+     * is what they look for there most — it is their receipt. The SPEC-008
+     * batch changed this path too, so it has its own assertion.
      */
     @Test
     void studentSeesPaymentDateOfSettledInvoice() throws Exception {

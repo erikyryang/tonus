@@ -17,15 +17,15 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withUnauthorizedRequest;
 
 /**
- * O adapter é o único ponto do sistema que fala HTTP com fora, e o que ele
- * promete ao resto do módulo é estreito: entregou, ou levantou
- * {@link WhatsAppDeliveryException}. Traduzir a falha é o que faz o rollback
- * acontecer e a publicação ficar incompleta para o registry reprocessar — um
- * erro que escapasse em outro tipo passaria por falha de programação, não por
- * indisponibilidade.
+ * The adapter is the only point in the system that speaks HTTP with the
+ * outside, and what it promises the rest of the module is narrow: delivered, or
+ * threw {@link WhatsAppDeliveryException}. Translating the failure is what makes
+ * the rollback happen and the publication stay incomplete for the registry to
+ * reprocess — an error that escaped in another type would pass as a programming
+ * failure, not as unavailability.
  *
- * Testado com MockRestServiceServer, do próprio spring-boot-starter-test, em
- * vez de WireMock: não precisa de servidor de verdade nem de dependência nova.
+ * Tested with MockRestServiceServer, from spring-boot-starter-test itself,
+ * instead of WireMock: it needs no real server and no new dependency.
  */
 class EvolutionApiSenderTest {
 
@@ -59,10 +59,11 @@ class EvolutionApiSenderTest {
     }
 
     /**
-     * O cadastro guarda E.164 com "+"; a Evolution documenta o campo em dígitos
-     * puros. A conversão é do adapter, e tem teste próprio porque é invisível
-     * em qualquer outro lugar — nenhum teste de listener olha o corpo HTTP, e o
-     * erro só apareceria como mensagem que não chega ao aluno.
+     * The registration stores E.164 with "+"; Evolution documents the field in
+     * plain digits. The conversion is the adapter's, and has its own test
+     * because it is invisible anywhere else — no listener test looks at the
+     * HTTP body, and the error would only show up as a message that never
+     * reaches the student.
      */
     @Test
     void e164PhoneIsSentAsDigitsOnly() {
@@ -85,9 +86,9 @@ class EvolutionApiSenderTest {
     }
 
     /**
-     * Credencial errada também é falha de entrega, e não erro de programação:
-     * a mensagem não saiu, e reprocessar depois de corrigir a chave é
-     * exatamente o comportamento desejado.
+     * Wrong credentials are also a delivery failure, not a programming error:
+     * the message did not go out, and reprocessing after fixing the key is
+     * exactly the desired behavior.
      */
     @Test
     void unauthorizedBecomesDeliveryException() {
@@ -99,10 +100,10 @@ class EvolutionApiSenderTest {
     }
 
     /**
-     * Evolution inalcançável — container fora do ar, DNS que não resolve — é
-     * IOException dentro do RestClient, não resposta HTTP. Sem esta tradução a
-     * exceção subiria como ResourceAccessException e o listener quebraria por
-     * um tipo que ninguém espera.
+     * Evolution unreachable — container down, DNS that does not resolve — is an
+     * IOException inside RestClient, not an HTTP response. Without this
+     * translation the exception would rise as ResourceAccessException and the
+     * listener would break with a type nobody expects.
      */
     @Test
     void unreachableServerBecomesDeliveryException() {
@@ -113,7 +114,7 @@ class EvolutionApiSenderTest {
                 .isInstanceOf(WhatsAppDeliveryException.class);
     }
 
-    /** Nem telefone nem conteúdo da mensagem na exceção que vai para o log. */
+    /** Neither phone number nor message content in the exception that goes to the log. */
     @Test
     void deliveryExceptionCarriesNoPersonalData() {
         server.expect(requestTo(BASE_URL + "/message/sendText/" + INSTANCE))

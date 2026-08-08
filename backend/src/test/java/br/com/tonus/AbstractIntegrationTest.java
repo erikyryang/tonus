@@ -15,8 +15,8 @@ import org.testcontainers.containers.PostgreSQLContainer;
 public abstract class AbstractIntegrationTest {
 
     /**
-     * Container compartilhado por toda a JVM de teste — ver
-     * {@link PostgresContainer} para o porquê de ele morar fora daqui.
+     * Container shared by the whole test JVM — see
+     * {@link PostgresContainer} for why it lives outside here.
      */
     @ServiceConnection
     static final PostgreSQLContainer<?> POSTGRES = PostgresContainer.INSTANCE;

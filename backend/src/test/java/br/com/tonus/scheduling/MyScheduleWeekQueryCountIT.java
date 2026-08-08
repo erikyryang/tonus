@@ -12,22 +12,24 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * A janela do aluno custa o mesmo que um dia: as consultas são pelo intervalo
- * inteiro, não uma rodada por data.
+ * The student's window costs the same as a single day: the queries run over
+ * the whole range, not one round per date.
  *
- * Sem este teste a garantia não existe. Voltar a expandir dia a dia não quebra
- * nenhuma asserção de comportamento — a resposta fica idêntica —, e o custo só
- * apareceria em produção, na tela que todo aluno abre. Era assim antes: sete
- * chamadas HTTP, cada uma carregando todos os alunos ativos e todos os horários
- * padrão do estúdio para devolver a linha de um aluno.
+ * Without this test the guarantee does not exist. Going back to expanding day
+ * by day breaks no behavioral assertion — the response stays identical — and
+ * the cost would only show up in production, on the screen every student
+ * opens. That is how it was before: seven HTTP calls, each loading all active
+ * students and all the studio's default schedules to return a single
+ * student's row.
  *
- * Classe separada porque `generate_statistics` muda as propriedades do
- * contexto, e ligá-lo para a suíte inteira acrescentaria overhead e um resumo
- * de métricas por sessão em todo log.
+ * Separate class because `generate_statistics` changes the context's
+ * properties, and enabling it for the whole suite would add overhead and a
+ * per-session metrics summary to every log.
  *
- * O teto é folgado de propósito: o número exato depende de detalhes do
- * Hibernate que podem mudar sem que o desenho mude. O que ele separa é "por
- * intervalo" de "por dia" — com 14 dias, uma consulta por dia passaria longe.
+ * The ceiling is deliberately loose: the exact number depends on Hibernate
+ * details that can change without the design changing. What it separates is
+ * "per range" from "per day" — with 14 days, one query per day would blow
+ * past it.
  */
 @SpringBootTest(properties = {
         "spring.jpa.properties.hibernate.generate_statistics=true",
@@ -36,10 +38,10 @@ class MyScheduleWeekQueryCountIT extends AbstractSchedulingIntegrationTest {
 
     private static final int DAYS = 14;
 
-    /**
-     * Folga sobre o desenho em lote: aluno, horário padrão, feriados do
-     * intervalo, exceções do intervalo e remarcações para o intervalo.
-     */
+     /**
+      * Headroom over the batched design: student, default schedule, holidays in
+      * the range, exceptions in the range and reschedules into the range.
+      */
     private static final int CEILING = 12;
 
     @Autowired
@@ -51,8 +53,8 @@ class MyScheduleWeekQueryCountIT extends AbstractSchedulingIntegrationTest {
         long teacherId = createTeacher(marker + " Professor");
         long studentId = createStudent(marker + " Aluno", teacherId);
         createDefaultSchedule(studentId, "07:00");
-        // Alunos vizinhos: a janela não pode ficar mais cara porque o estúdio
-        // tem gente, que é exatamente o que a expansão completa fazia.
+        // Neighbor students: the window cannot get more expensive because the
+        // studio has people, which is exactly what the full expansion used to do.
         for (int i = 0; i < 5; i++) {
             createDefaultSchedule(createStudent(marker + " Vizinho " + i, teacherId), "08:00");
         }

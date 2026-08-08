@@ -1,7 +1,7 @@
--- Tabela de lock do ShedLock: schema padrão exigido pelo
--- JdbcTemplateLockProvider. Fica em shared, não em billing, porque é infra
--- genérica do agendador — mesmo raciocínio de event_publication (V006), que
--- também é infra do Modulith e não dado de domínio de um módulo de negócio.
+-- ShedLock lock table: standard schema required by the
+-- JdbcTemplateLockProvider. It lives in shared, not billing, because it is
+-- generic scheduler infra — same reasoning as event_publication (V006), which
+-- is also Modulith infra and not domain data of a business module.
 CREATE TABLE shedlock (
     name VARCHAR(64) NOT NULL,
     lock_until TIMESTAMP(3) NOT NULL,

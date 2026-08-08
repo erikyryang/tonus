@@ -9,11 +9,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Qual adapter sobe, e quando a aplicação recusa subir.
+ * Which adapter comes up, and when the application refuses to start.
  *
- * A escolha do adapter é decisão de deploy que nenhum outro teste exercita: a
- * suíte inteira roda com o envio desligado, então sem isto o caminho de
- * produção só seria conferido em produção.
+ * The adapter choice is a deploy decision no other test exercises: the whole
+ * suite runs with delivery disabled, so without this the production path would
+ * only be checked in production.
  */
 class NotificationConfigTest {
 
@@ -61,7 +61,7 @@ class NotificationConfigTest {
                         .getFailure().hasMessageContaining("notification.evolution.api-key"));
     }
 
-    /** Os defaults valem mesmo quando nada é configurado. */
+    /** The defaults hold even when nothing is configured. */
     @Test
     void unconfiguredPropertiesFallBackToDefaults() {
         NotificationProperties defaults = new NotificationProperties(null, null, null);
@@ -75,12 +75,12 @@ class NotificationConfigTest {
     }
 
     /**
-     * Retenção curta demais é recusada na subida.
+     * Retention too short is refused at startup.
      *
-     * O histórico é a chave de idempotência e a reentrega vai até 24h; podar
-     * antes disso reenvia mensagem já entregue. Os dois valores vivem em
-     * módulos diferentes e nada além deste piso os relaciona — é o único lugar
-     * onde a configuração perigosa dá para ser barrada.
+     * The history is the idempotency key and the redelivery goes up to 24h;
+     * pruning before that resends already-delivered messages. The two values
+     * live in different modules and nothing but this floor relates them — it is
+     * the only place where the dangerous configuration can be blocked.
      */
     @Test
     void retentionShorterThanTheGuardIsRejected() {

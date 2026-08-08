@@ -11,12 +11,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * A fatura passa a ser uma por aluno, com valor somado dos planos (SPEC-012).
+ * The invoice becomes one per student, with the amount summed across plans
+ * (SPEC-012).
  *
- * O relógio da suíte é fixo em 2026-07-27, e o aluno criado pela API nasce com
- * `created_at` desse dia — então o vencimento dele cai hoje (regra da mudança
- * 3) e o job do dia o fatura. É o que torna estes testes possíveis sem semear
- * data de cadastro à mão.
+ * The suite clock is fixed at 2026-07-27, and a student created via the API is
+ * born with `created_at` on that day — so the due date falls today (rule from
+ * change 3) and the daily job bills it. That is what makes these tests possible
+ * without seeding the registration date by hand.
  */
 class InvoiceFromPlansIT extends AbstractBillingIntegrationTest {
 
@@ -33,7 +34,7 @@ class InvoiceFromPlansIT extends AbstractBillingIntegrationTest {
         assertThat(amountOf(studentId)).isEqualByComparingTo("350.00");
     }
 
-    /** Critério de aceite: 350 + 270 com 10% = 558,00. */
+    /** Acceptance criterion: 350 + 270 with 10% discount = 558.00. */
     @Test
     void twoPlansApplyTheConfiguredDiscount() throws Exception {
         setDiscount("10.00");
@@ -46,7 +47,7 @@ class InvoiceFromPlansIT extends AbstractBillingIntegrationTest {
         assertThat(amountOf(studentId)).isEqualByComparingTo("558.00");
     }
 
-    /** O desconto é configuração, não regra embutida: com zero, soma pura. */
+    /** The discount is configuration, not a hardcoded rule: with zero, it's a pure sum. */
     @Test
     void twoPlansWithoutDiscountSumUp() throws Exception {
         setDiscount("0.00");
@@ -59,7 +60,7 @@ class InvoiceFromPlansIT extends AbstractBillingIntegrationTest {
         assertThat(amountOf(studentId)).isEqualByComparingTo("620.00");
     }
 
-    /** Plano desativado sai da conta, mesmo com a matrícula ativa. */
+    /** A deactivated plan drops out of the bill, even with an active enrollment. */
     @Test
     void inactivePlanIsNotBilled() throws Exception {
         setDiscount("0.00");
@@ -75,7 +76,7 @@ class InvoiceFromPlansIT extends AbstractBillingIntegrationTest {
         assertThat(amountOf(studentId)).isEqualByComparingTo("350.00");
     }
 
-    /** Matrícula desativada sai da conta, mesmo com o plano ativo. */
+    /** A deactivated enrollment drops out of the bill, even with an active plan. */
     @Test
     void inactiveEnrollmentIsNotBilled() throws Exception {
         setDiscount("0.00");
@@ -102,9 +103,9 @@ class InvoiceFromPlansIT extends AbstractBillingIntegrationTest {
     }
 
     /**
-     * Uma fatura por aluno por competência, mesmo com dois planos e mesmo
-     * rodando o job duas vezes: a idempotência é a constraint
-     * uk_invoice_student_period, não a boa vontade do laço.
+     * One invoice per student per period, even with two plans and even
+     * when the job runs twice: idempotence is the
+     * uk_invoice_student_period constraint, not the goodwill of the loop.
      */
     @Test
     void oneInvoicePerStudentPerPeriodEvenWithSeveralPlansAndRuns() throws Exception {
@@ -119,10 +120,10 @@ class InvoiceFromPlansIT extends AbstractBillingIntegrationTest {
     }
 
     /**
-     * Arredondamento uma vez só, no total — e o caso distingue as duas contas:
-     * (100,01 + 0,01) × 0,6667 = 66,6833… → <strong>66,68</strong>, enquanto
-     * arredondar plano a plano daria 66,68 + 0,01 = 66,69. Um centavo por aluno
-     * por mês é o tipo de diferença que ninguém encontra depois.
+     * Rounding only once, on the total — and the case distinguishes the two
+     * calculations: (100.01 + 0.01) × 0.6667 = 66.6833… → <strong>66.68</strong>,
+     * while rounding plan by plan would give 66.68 + 0.01 = 66.69. A cent per
+     * student per month is the kind of difference nobody finds later.
      */
     @Test
     void roundsOnceOnTheTotal() throws Exception {

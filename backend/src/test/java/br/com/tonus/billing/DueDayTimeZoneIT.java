@@ -16,16 +16,18 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * O dia do cadastro é o do fuso do estúdio, não o de UTC.
+ * The registration day is the one in the studio's timezone, not UTC.
  *
- * Tem relógio próprio — 21h30 de Brasília, quando em UTC já é o dia seguinte —
- * e por isso não herda de {@code AbstractBillingIntegrationTest}: aquele traz o
- * {@code BillingClockConfig}, e dois {@code @Primary Clock} não convivem.
+ * It has its own clock — 21:30 in Brasília, when it is already the next day in
+ * UTC — and for that reason it does not extend
+ * {@code AbstractBillingIntegrationTest}: that one brings the
+ * {@code BillingClockConfig}, and two {@code @Primary Clock} beans do not
+ * coexist.
  *
- * Nenhum timestamp literal aparece aqui de propósito. O instante vem do Clock da
- * própria aplicação, atravessa o JPA e volta — é o caminho real, e é ele que
- * decide o dia. Um literal em SQL testaria a convenção de gravação, que é outra
- * coisa.
+ * No literal timestamp appears here on purpose. The instant comes from the
+ * application's own Clock, crosses JPA and comes back — that is the real path,
+ * and it is what decides the day. A literal in SQL would test the write
+ * convention, which is a different thing.
  */
 @Import(DueDayTimeZoneIT.LateNightClockConfig.class)
 class DueDayTimeZoneIT extends AbstractRegistrationIntegrationTest {
@@ -58,8 +60,8 @@ class DueDayTimeZoneIT extends AbstractRegistrationIntegrationTest {
 
         billingService.generateDueInvoices();
 
-        // Dia 27 em São Paulo; em UTC o mesmo instante já é dia 28, e o job não
-        // teria faturado hoje.
+        // Day 27 in São Paulo; in UTC the same instant is already day 28, and the
+        // job would not have billed today.
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT due_date FROM invoice WHERE student_id = ?", java.time.LocalDate.class, studentId))
                 .isEqualTo(java.time.LocalDate.parse("2026-07-27"));
@@ -68,7 +70,7 @@ class DueDayTimeZoneIT extends AbstractRegistrationIntegrationTest {
     @TestConfiguration
     static class LateNightClockConfig {
 
-        /** 2026-07-28T00:30Z = 2026-07-27, 21h30 em São Paulo. */
+        /** 2026-07-28T00:30Z = 2026-07-27, 21:30 in São Paulo. */
         static final Instant NOW = Instant.parse("2026-07-28T00:30:00Z");
 
         @Bean

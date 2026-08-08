@@ -15,11 +15,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * O catálogo de planos do estúdio (SPEC-012).
+ * The studio's plan catalog (SPEC-012).
  *
- * Não existe DELETE, mesma razão de aluno e professor: plano desativado some
- * das listagens e das novas matrículas, mas continua explicando as faturas que
- * já foram emitidas com ele.
+ * There is no DELETE, for the same reason as student and teacher: a deactivated
+ * plan disappears from listings and from new enrollments, but keeps explaining
+ * the invoices already issued with it.
  */
 class PlanCrudIT extends AbstractBillingIntegrationTest {
 
@@ -70,9 +70,10 @@ class PlanCrudIT extends AbstractBillingIntegrationTest {
     }
 
     /**
-     * Desativar plano com matrícula ativa é permitido (decisão da SPEC-012):
-     * encerrar um plano no fim do ano não pode exigir desmatricular aluno por
-     * aluno. Quem avisa do estrago é a tela, com a contagem de afetados.
+     * Deactivating a plan with an active enrollment is allowed (SPEC-012
+     * decision): closing a plan at the end of the year cannot require
+     * unenrolling students one by one. The screen warns about the damage,
+     * with the count of affected students.
      */
     @Test
     void deactivatingPlanWithActiveEnrollmentIsAllowed() throws Exception {
@@ -86,7 +87,7 @@ class PlanCrudIT extends AbstractBillingIntegrationTest {
                 .andExpect(jsonPath("$.active").value(false));
     }
 
-    /** Quantos alunos perdem a cobrança: é o que a tela mostra antes de confirmar. */
+    /** How many students lose the charge: what the screen shows before confirming. */
     @Test
     void listExposesHowManyStudentsAreEnrolled() throws Exception {
         long planId = createPlan(unique("Plano Cheio"), "250.00");

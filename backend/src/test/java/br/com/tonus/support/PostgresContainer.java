@@ -3,32 +3,32 @@ package br.com.tonus.support;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 /**
- * Container único de Postgres para toda a JVM de teste (padrão "singleton
- * container"): iniciado uma vez no static initializer, nunca parado
- * explicitamente — o Ryuk derruba ao fim da JVM.
+ * Single Postgres container for the whole test JVM ("singleton container"
+ * pattern): started once in the static initializer, never stopped explicitly —
+ * Ryuk tears it down at the end of the JVM.
  *
- * Vive aqui, e não dentro de uma classe base de teste, porque há mais de um
- * ponto de entrada: os testes de integração via HTTP e os
- * {@code @ApplicationModuleTest}, que não compartilham hierarquia. Cada um
- * declarando o seu subiria um container por bootstrap.
+ * It lives here, and not inside a test base class, because there is more than
+ * one entry point: the integration tests over HTTP and the
+ * {@code @ApplicationModuleTest}, which do not share a hierarchy. Each one
+ * declaring its own would start one container per bootstrap.
  *
- * Usar {@code @Testcontainers}/{@code @Container} aqui reiniciaria o container
- * a cada classe e deixaria o Spring com um ApplicationContext em cache
- * apontando para uma porta já morta.
+ * Using {@code @Testcontainers}/{@code @Container} here would restart the
+ * container for every class and leave Spring with a cached ApplicationContext
+ * pointing at a dead port.
  */
 public final class PostgresContainer {
 
     /**
-     * O {@code max_connections} sobe porque o gargalo é do servidor, não dos
-     * pools. O Spring cacheia um ApplicationContext por combinação de
-     * configuração de teste, e cada um abre o seu Hikari de 10 conexões — com o
-     * default de 100 do Postgres, o décimo contexto a subir falha com "sorry,
-     * too many clients already", e falha numa classe qualquer da suíte, sem
-     * relação com a que acrescentou o contexto.
+     * {@code max_connections} goes up because the bottleneck is the server, not
+     * the pools. Spring caches one ApplicationContext per test configuration
+     * combination, and each one opens its own Hikari of 10 connections — with
+     * Postgres' default of 100, the tenth context to boot fails with "sorry,
+     * too many clients already", failing in some random class of the suite,
+     * with no relation to the one that added the context.
      *
-     * Apertar o pool em vez disso seria pior: os listeners assíncronos do
-     * Modulith tomam conexão em paralelo com a thread do teste, e um pool curto
-     * troca o erro de subida por timeout de conexão no meio do teste.
+     * Tightening the pool instead would be worse: the Modulith async listeners
+     * grab connections in parallel with the test thread, and a short pool
+     * trades the boot error for a connection timeout in the middle of the test.
      */
     public static final PostgreSQLContainer<?> INSTANCE = new PostgreSQLContainer<>("postgres:16")
             .withCommand("postgres", "-c", "max_connections=300");

@@ -1,9 +1,9 @@
--- Planos, matrículas e a configuração de cobrança do estúdio (SPEC-012).
+-- Plans, enrollments and the studio billing settings (SPEC-012).
 --
--- Aditiva de propósito: nada aqui derruba `subscription` nem mexe em `invoice`.
--- Enquanto o código não existe, estas tabelas ficam vazias e inertes — e é isso
--- que permite a migração acontecer em etapas com o banco consistente no fim de
--- cada uma. A assinatura morre na V022, depois de tudo.
+-- Additive on purpose: nothing here drops `subscription` or touches `invoice`.
+-- While the code doesn't exist, these tables stay empty and inert — and that
+-- is what lets the migration happen in stages with the database consistent at
+-- the end of each one. The subscription dies in V022, after everything.
 CREATE TABLE plan (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -14,10 +14,10 @@ CREATE TABLE plan (
     CONSTRAINT ck_plan_monthly_price CHECK (monthly_price > 0)
 );
 
--- O vínculo aluno -> plano. student_id sem FK, mesma decisão de
--- subscription.student_id (ver docs/ddl.md): FK entre módulos acopla no schema
--- de um jeito que o ApplicationModules.verify() não enxerga. plan_id com FK
--- normal, porque plano e matrícula são do mesmo módulo.
+-- The student -> plan link. student_id without FK, same decision as
+-- subscription.student_id (see docs/ddl.md): FK between modules couples in the
+-- schema in a way that ApplicationModules.verify() doesn't see. plan_id with
+-- a normal FK, because plan and enrollment are in the same module.
 CREATE TABLE plan_enrollment (
     id BIGSERIAL PRIMARY KEY,
     student_id BIGINT NOT NULL,
@@ -25,17 +25,19 @@ CREATE TABLE plan_enrollment (
     active BOOLEAN NOT NULL,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL,
-    -- O mesmo plano não se assina duas vezes: a segunda linha tornaria ambíguo
-    -- quanto cobrar. Para cobrar em dobro, o caminho é um plano de outro preço.
+    -- The same plan is not enrolled twice: a second row would make ambiguous
+    -- how much to charge. To charge double, the way is a plan with another
+    -- price.
     CONSTRAINT uk_plan_enrollment_student_plan UNIQUE (student_id, plan_id)
 );
 
--- O job diário monta a fatura por aluno; a tela do aluno pergunta os planos dele.
+-- The daily job builds the invoice per student; the student screen asks for
+-- their plans.
 CREATE INDEX idx_plan_enrollment_student ON plan_enrollment (student_id);
 
--- Configuração de cobrança do estúdio. Linha única garantida por constraint, e
--- não por convenção: duas linhas tornariam ambíguo qual desconto vale, e a
--- resposta viraria "a que o LIMIT 1 pegou".
+-- Studio billing settings. Single row guaranteed by constraint, not by
+-- convention: two rows would make ambiguous which discount applies, and the
+-- answer would become "whichever LIMIT 1 picked".
 CREATE TABLE billing_settings (
     id BIGINT PRIMARY KEY,
     multi_plan_discount_percent NUMERIC(5, 2) NOT NULL,
@@ -45,7 +47,8 @@ CREATE TABLE billing_settings (
     CONSTRAINT ck_billing_settings_discount CHECK (multi_plan_discount_percent BETWEEN 0 AND 100)
 );
 
--- Nasce sem desconto: o estúdio decide o valor na tela, e um default inventado
--- aqui daria desconto a quem nunca pediu.
+-- Born without discount: the studio decides the value on the screen, and an
+-- invented default here would give a discount to someone who never asked for
+-- one.
 INSERT INTO billing_settings (id, multi_plan_discount_percent, created_at, updated_at)
 VALUES (1, 0, now(), now());

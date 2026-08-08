@@ -7,9 +7,9 @@ import static br.com.tonus.support.Eventually.eventually;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Disparo manual (mudança 9): mesmo fan-out do comunicado, chaveado pelo
- * broadcastId em vez da data — não há fato de domínio atrás do disparo, e o
- * ADMIN pode legitimamente repeti-lo no mesmo dia.
+ * Manual dispatch (change 9): same fan-out as the announcement, keyed by the
+ * broadcastId instead of the date — there is no domain fact behind the
+ * dispatch, and the ADMIN can legitimately repeat it on the same day.
  */
 class BroadcastFanOutIT extends AbstractNotificationIntegrationTest {
 
@@ -42,10 +42,10 @@ class BroadcastFanOutIT extends AbstractNotificationIntegrationTest {
     }
 
     /**
-     * O ponto central do desenho: chavear pelo broadcastId, e não pela data,
-     * é o que permite dois disparos legítimos no mesmo dia chegarem os dois —
-     * chavear pela data faria o segundo ser engolido como se fosse reentrega
-     * do primeiro.
+     * The core point of the design: keying by the broadcastId, not by the
+     * date, is what lets two legitimate dispatches on the same day both reach
+     * the student — keying by date would make the second one be swallowed as
+     * if it were a redelivery of the first.
      */
     @Test
     void twoDifferentBroadcastsSameDayBothReachTheStudent() {

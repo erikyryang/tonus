@@ -11,29 +11,32 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Critério de aceite: GET /me/schedule de um aluno nunca retorna dado de outro.
+ * Acceptance criterion: GET /me/schedule of one student never returns another
+ * student's data.
  *
- * O id do aluno vem do token e não existe caminho para informá-lo — nem path,
- * nem query, nem corpo. É o desenho que previne IDOR: não basta o endpoint
- * conferir se o id pedido é o do usuário, porque essa conferência é justamente
- * o que se esquece de fazer. Aqui não há o que conferir.
+ * The student id comes from the token and there is no way to provide it — not
+ * path, not query, not body. That is the design that prevents IDOR: it is not
+ * enough for the endpoint to check whether the requested id is the user's,
+ * because that check is exactly what gets forgotten. Here there is nothing to
+ * check.
  */
 class MyScheduleIT extends AbstractSchedulingIntegrationTest {
 
-    /**
-     * Quarta-feira sem uso em nenhum outro teste. Comunicado é global e o banco é
-     * compartilhado pela suíte: cadastrar um em MONDAY/TUESDAY apagaria a
-     * agenda daquele dia para todas as outras classes.
-     */
+     /**
+      * Wednesday unused by any other test. An announcement is global and the
+      * database is shared across the suite: registering one on MONDAY/TUESDAY
+      * would wipe that day's schedule for all other classes.
+      */
     private static final String OWN_HOLIDAY = "2026-08-26";
 
-    /**
-     * Uma janela só desta classe, longe das datas que as outras usam.
-     *
-     * Comunicado é global e o banco é compartilhado pela suíte: suspender um dia
-     * dentro de MONDAY..WEDNESDAY apagaria aquele dia para todo mundo, e
-     * WEDNESDAY é justamente o destino das remarcações dos outros testes.
-     */
+     /**
+      * A window exclusive to this class, away from the dates the others use.
+      *
+      * An announcement is global and the database is shared across the suite:
+      * suspending a day inside MONDAY..WEDNESDAY would wipe that day for
+      * everyone, and WEDNESDAY is precisely the destination of the other tests'
+      * reschedules.
+      */
     private static final String WEEK_START = "2026-09-07";
     private static final String WEEK_SECOND = "2026-09-08";
     private static final String WEEK_HOLIDAY = "2026-09-09";
@@ -51,10 +54,11 @@ class MyScheduleIT extends AbstractSchedulingIntegrationTest {
         assertThat(visible).containsOnly(mine);
     }
 
-    /**
-     * Mandar o id de outro aluno na query não muda nada: o parâmetro não existe
-     * no contrato, então é ignorado — nunca vira o id consultado.
-     */
+     /**
+      * Sending another student's id in the query changes nothing: the parameter
+      * does not exist in the contract, so it is ignored — it never becomes the
+      * id being queried.
+      */
     @Test
     void studentIdInQueryIsIgnored() throws Exception {
         long teacherId = createTeacher(unique("Professor Do IDOR"));
@@ -100,11 +104,12 @@ class MyScheduleIT extends AbstractSchedulingIntegrationTest {
         assertThat(studentIdsOf(mySchedule(student, WEDNESDAY))).containsOnly(studentId);
     }
 
-    /**
-     * O aluno precisa saber por que o dia está vazio (SPEC-009). Sem a
-     * descrição do comunicado, a tela dele teria de deduzir "está vazio, deve ser
-     * dia sem aula" — inventando um motivo que não tem como conferir.
-     */
+     /**
+      * The student needs to know why the day is empty (SPEC-009). Without the
+      * announcement's description, their screen would have to guess "it's
+      * empty, must be a day without class" — inventing a reason there is no way
+      * to verify.
+      */
     @Test
     void suspendedDayExplainsTheEmptyDay() throws Exception {
         long teacherId = createTeacher(unique("Professor Do Feriado No Me"));
@@ -118,11 +123,12 @@ class MyScheduleIT extends AbstractSchedulingIntegrationTest {
         assertThat(day.get("announcement").get("description").asText()).isEqualTo("Feriado do Me");
     }
 
-    /**
-     * A aula cancelada some da agenda por definição — e é justamente por isso
-     * que o aluno precisa vê-la em separado: sem o cancelamento na resposta,
-     * "não tem aula hoje" e "sua aula de hoje foi cancelada" ficam idênticos.
-     */
+     /**
+      * The canceled class disappears from the schedule by definition — and that
+      * is precisely why the student needs to see it separately: without the
+      * cancellation in the response, "no class today" and "your class today was
+      * canceled" look identical.
+      */
     @Test
     void ownCancellationIsVisible() throws Exception {
         long teacherId = createTeacher(unique("Professor Do Cancelamento No Me"));
@@ -139,10 +145,11 @@ class MyScheduleIT extends AbstractSchedulingIntegrationTest {
         assertThat(day.get("cancellations").get(0).get("studentId").asLong()).isEqualTo(mine);
     }
 
-    /**
-     * ADMIN não tem aluno vinculado no token. Chamar um endpoint /me sem
-     * vínculo é erro de uso, não uma agenda vazia — vazio esconderia o bug.
-     */
+     /**
+      * The ADMIN has no linked student in the token. Calling a /me endpoint
+      * without a link is a usage error, not an empty schedule — empty would
+      * hide the bug.
+      */
     @Test
     void adminHasNoOwnSchedule() throws Exception {
         mockMvc.perform(get("/me/schedule").param("date", MONDAY).cookie(admin))
@@ -159,14 +166,14 @@ class MyScheduleIT extends AbstractSchedulingIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
-    /**
-     * A janela inteira numa chamada só.
-     *
-     * A tela do aluno mostra os próximos dias, e perguntar dia a dia eram sete
-     * requisições — cada uma expandindo a agenda do estúdio inteiro para
-     * devolver a linha de um aluno. O contrato é o mesmo do dia avulso, repetido
-     * por data: o cliente não recompõe nada.
-     */
+     /**
+      * The whole window in a single call.
+      *
+      * The student's screen shows the upcoming days, and asking day by day was
+      * seven requests — each one expanding the whole studio's schedule to
+      * return a single student's row. The contract is the same as the
+      * standalone day, repeated per date: the client rebuilds nothing.
+      */
     @Test
     void weekReturnsOneDayPerDateInTheWindow() throws Exception {
         long teacherId = createTeacher(unique("Professor Da Semana"));
@@ -178,11 +185,11 @@ class MyScheduleIT extends AbstractSchedulingIntegrationTest {
         assertThat(week).hasSize(3);
         assertThat(week.findValues("date").stream().map(JsonNode::asText).toList())
                 .containsExactly(MONDAY, TUESDAY, WEDNESDAY);
-        // Segunda, terça e quarta são dias úteis: a aula de 07:00 aparece nos três.
+        // Monday, Tuesday and Wednesday are weekdays: the 07:00 class appears on all three.
         assertThat(week.findValues("entries").stream().allMatch(entries -> entries.size() == 1)).isTrue();
     }
 
-    /** A janela do aluno enxerga a mesma fatia que o dia avulso: só ele. */
+    /** The student's window sees the same slice as the standalone day: only them. */
     @Test
     void weekNeverLeaksAnotherStudent() throws Exception {
         long teacherId = createTeacher(unique("Professora Da Semana Alheia"));
@@ -197,7 +204,7 @@ class MyScheduleIT extends AbstractSchedulingIntegrationTest {
                 .containsOnly(mine);
     }
 
-    /** Comunicado e cancelamento explicam o dia vazio também na janela. */
+    /** Announcement and cancellation explain the empty day in the window too. */
     @Test
     void weekCarriesAnnouncementAndCancellation() throws Exception {
         long teacherId = createTeacher(unique("Professor Da Semana Cheia"));
@@ -223,7 +230,7 @@ class MyScheduleIT extends AbstractSchedulingIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
-    /** Janela sem teto seria uma expansão sem teto: o custo é por dia pedido. */
+    /** A window without a cap would be an expansion without a cap: the cost is per requested day. */
     @Test
     void weekRefusesAWindowLargerThanTheMaximum() throws Exception {
         long teacherId = createTeacher(unique("Professor Da Janela Grande"));

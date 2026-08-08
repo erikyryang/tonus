@@ -16,20 +16,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Baixa de fatura: POST /invoices/{id}/payment. Tudo acontece na mesma
- * transação (spec): fatura vira PAGA, pagamento é criado e o evento
- * PaymentRegistered é publicado.
+ * Invoice write-off: POST /invoices/{id}/payment. Everything happens in the
+ * same transaction (spec): the invoice becomes PAID, the payment is created
+ * and the PaymentRegistered event is published.
  *
- * A baixa <strong>não</strong> mexe no vencimento da assinatura. Mexia — o dia
- * do pagamento virava o novo dia de vencimento —, e a regra foi substituída
- * pelo dia do cadastro do aluno (SPEC-004). Os testes daqui seguram a
- * substituição: pagar em qualquer data deixa o {@code due_day} onde estava.
+ * The write-off does <strong>not</strong> touch the subscription due date. It
+ * used to — the payment day became the new due day —, and the rule was
+ * replaced by the student's registration day (SPEC-004). The tests here hold
+ * the replacement: paying on any date leaves the {@code due_day} where it was.
  *
- * {@code ApplicationEvents} (spring-test), e não
- * {@code AssertablePublishedEvents} do Modulith: o resolver deste último é
- * package-private, só disponível dentro de {@code @ApplicationModuleTest}
- * (ver {@code BillingJobIT}). Aqui o teste é MockMvc de ponta a ponta, então a
- * captura genérica do Spring é o que está ao alcance.
+ * {@code ApplicationEvents} (spring-test), not the Modulith's
+ * {@code AssertablePublishedEvents}: the latter's resolver is
+ * package-private, only available inside {@code @ApplicationModuleTest}
+ * (see {@code BillingJobIT}). Here the test is end-to-end MockMvc, so the
+ * Spring generic capture is what is within reach.
  */
 @RecordApplicationEvents
 class PaymentIT extends AbstractBillingIntegrationTest {
@@ -52,13 +52,13 @@ class PaymentIT extends AbstractBillingIntegrationTest {
     }
 
     /**
-     * SPEC-008: a baixa é lançada de um painel, e o dinheiro raramente entra no
-     * mesmo dia em que alguém digita. Quando o ADMIN informa a data, é ela — e
-     * não "hoje" — que vira o pagamento.
+     * SPEC-008: the write-off is posted from a dashboard, and money rarely
+     * comes in on the same day someone types it. When the ADMIN provides a
+     * date, it is that date — not "today" — that becomes the payment.
      *
-     * E é só isso que ela vira: uma data de pagamento distante do vencimento não
-     * move mais o vencimento. Pagar em atraso empurrava a mensalidade para o dia
-     * do atraso, mês após mês.
+     * And that is all it becomes: a payment date far from the due date no
+     * longer moves the due date. Paying late used to push the monthly payment
+     * to the day of the delay, month after month.
      */
     @Test
     void chosenPaymentDateDrivesThePaymentAndNothingElse() throws Exception {
@@ -74,8 +74,9 @@ class PaymentIT extends AbstractBillingIntegrationTest {
     }
 
     /**
-     * Data futura é barrada no back, não só no formulário: aceitá-la mandaria ao
-     * aluno o recibo de um pagamento que ainda não aconteceu.
+     * A future date is blocked in the backend, not just in the form: accepting
+     * it would send the student the receipt of a payment that has not happened
+     * yet.
      */
     @Test
     void futurePaymentDateIsRejected() throws Exception {
@@ -90,9 +91,9 @@ class PaymentIT extends AbstractBillingIntegrationTest {
     }
 
     /**
-     * A data é obrigatória: não existe "omitiu, então é hoje". Este endpoint
-     * dispara recibo por WhatsApp, e um default silencioso o dispararia a partir
-     * de um corpo esquecido.
+     * The date is mandatory: there is no "omitted, so it is today". This
+     * endpoint fires a WhatsApp receipt, and a silent default would fire it
+     * from a forgotten body.
      */
     @Test
     void paymentDateIsRequired() throws Exception {

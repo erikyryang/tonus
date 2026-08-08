@@ -6,12 +6,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 /**
- * A máscara de telefone.
+ * The phone mask.
  *
- * É regra de privacidade do projeto — "nunca logar telefone completo" — e por
- * isso tem teste direto em vez de depender de alguém ler o log e reparar. Os
- * casos degenerados existem porque é justamente neles que uma máscara ingênua
- * estoura ou deixa passar o número inteiro.
+ * It is a project privacy rule — "never log the full phone number" — and so it
+ * has a direct test instead of depending on someone reading the log and
+ * noticing. The degenerate cases exist because it is precisely there that a
+ * naive mask blows up or lets the whole number through.
  */
 class LoggingWhatsAppSenderTest {
 
@@ -33,8 +33,8 @@ class LoggingWhatsAppSenderTest {
     }
 
     /**
-     * O adapter desligado nunca falha: simular indisponibilidade aqui deixaria
-     * o resto do sistema sem caminho feliz em desenvolvimento.
+     * The disabled adapter never fails: simulating unavailability here would
+     * leave the rest of the system without a happy path in development.
      */
     @Test
     void sendingNeverFails() {

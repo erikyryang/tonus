@@ -8,12 +8,12 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * O texto que chega ao aluno.
+ * The text that reaches the student.
  *
- * Vale teste próprio porque é a única parte do módulo que uma pessoa lê: data
- * em formato ISO ou valor com ponto decimal não quebram nada e passariam
- * despercebidos em qualquer teste de integração, mas quem recebe a mensagem
- * nota na hora.
+ * Worth its own test because it is the only part of the module a person reads:
+ * a date in ISO format or a value with a decimal point breaks nothing and would
+ * go unnoticed in any integration test, but whoever receives the message
+ * notices right away.
  */
 class MessageTemplateTest {
 

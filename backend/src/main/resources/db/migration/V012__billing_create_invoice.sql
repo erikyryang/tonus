@@ -1,11 +1,12 @@
--- Fatura de uma competência (mês) de uma assinatura.
+-- Invoice of a competence period (month) of a subscription.
 --
--- reference_month guarda sempre o dia 1 do mês: é a representação de
--- YearMonth no banco, para reaproveitar DATE em vez de duas colunas
--- separadas de ano e mês.
+-- reference_month always stores day 1 of the month: it is the YearMonth
+-- representation in the database, to reuse DATE instead of two separate
+-- columns for year and month.
 --
--- FK normal para subscription: as duas tabelas são do mesmo módulo, então
--- não há o acoplamento entre módulos que se evita em student_id/teacher_id.
+-- Normal FK to subscription: the two tables are in the same module, so
+-- there is no cross-module coupling like the one avoided in
+-- student_id/teacher_id.
 CREATE TABLE invoice (
     id BIGSERIAL PRIMARY KEY,
     subscription_id BIGINT NOT NULL REFERENCES subscription (id),
@@ -15,14 +16,15 @@ CREATE TABLE invoice (
     status VARCHAR(20) NOT NULL,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL,
-    -- Uma fatura por assinatura por competência: é o critério de aceite
-    -- "job rodando 2x não duplica fatura" expresso no banco — a idempotência
-    -- do job vira constraint, não só verificação em código.
+    -- One invoice per subscription per competence period: it is the
+    -- acceptance criterion "job running 2x doesn't duplicate invoice"
+    -- expressed in the database — the job idempotency becomes a constraint,
+    -- not just a code check.
     CONSTRAINT uk_invoice_subscription_period UNIQUE (subscription_id, reference_month),
     CONSTRAINT ck_invoice_status CHECK (status IN ('OPEN', 'PAID', 'OVERDUE'))
 );
 
--- O job diário varre faturas por status (abertas vencendo -> atrasadas) e
--- por vencimento (quem vence hoje).
+-- The daily job scans invoices by status (open expiring -> overdue) and
+-- by due date (who is due today).
 CREATE INDEX idx_invoice_status ON invoice (status);
 CREATE INDEX idx_invoice_due_date ON invoice (due_date);

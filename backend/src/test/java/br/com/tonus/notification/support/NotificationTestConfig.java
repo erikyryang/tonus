@@ -8,15 +8,16 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 
 /**
- * Beans de teste do módulo notification.
+ * Test beans for the notification module.
  *
- * Mora em {@code br.com.tonus.notification.support}, e não em shared, porque o
- * bootstrap do {@code @ApplicationModuleTest} filtra as definições de bean
- * pelos pacotes do módulo sob teste — o TestClockConfig de shared seria
- * descartado. Dentro do pacote do módulo, sobrevive ao filtro.
+ * Lives in {@code br.com.tonus.notification.support}, not in shared, because
+ * the {@code @ApplicationModuleTest} bootstrap filters the bean definitions by
+ * the packages of the module under test — the shared TestClockConfig would be
+ * discarded. Inside the module package, it survives the filter.
  *
- * O Clock é necessário para o contexto sequer subir: o AuditListener de shared
- * é entity listener de toda BaseEntity e recebe Clock no construtor.
+ * The Clock is needed for the context to even boot: the shared AuditListener
+ * is an entity listener for every BaseEntity and receives Clock in the
+ * constructor.
  */
 @TestConfiguration
 public class NotificationTestConfig {

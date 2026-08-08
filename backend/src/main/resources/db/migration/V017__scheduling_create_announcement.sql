@@ -1,13 +1,13 @@
--- Feriado vira comunicado (SPEC-003).
+-- Holiday becomes announcement (SPEC-003).
 --
--- O conceito era estreito demais: o estúdio precisa avisar o aluno de coisas
--- que não cancelam aula (mudança de endereço, festa de fim de ano, obra na
--- rua), e a única ferramenta que existia para falar com todo mundo suprimia o
--- dia como efeito colateral. `suspends_classes` separa as duas coisas: o aviso
--- e a supressão.
+-- The concept was too narrow: the studio needs to notify the student of things
+-- that don't cancel class (address change, year-end party, street
+-- construction), and the only tool that existed to reach everyone suppressed
+-- the day as a side effect. `suspends_classes` separates the two things: the
+-- notice and the suppression.
 --
--- Cada feriado existente vira comunicado que suspende — é exatamente o que ele
--- significava. A tabela antiga morre depois da cópia, não antes.
+-- Each existing holiday becomes an announcement that suspends — exactly what
+-- it meant. The old table dies after the copy, not before.
 CREATE TABLE announcement (
     id BIGSERIAL PRIMARY KEY,
     date DATE NOT NULL,
@@ -15,11 +15,11 @@ CREATE TABLE announcement (
     suspends_classes BOOLEAN NOT NULL,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL,
-    -- Herdada de uk_holiday_date, e pelas mesmas duas razões: "o dia D está
-    -- suspenso?" precisa de resposta única para a expansão da agenda, e a data
-    -- é a chave de idempotência do aviso em notification_log (reference_key).
-    -- Dois comunicados no mesmo dia fariam o segundo aviso ser engolido pela
-    -- UNIQUE de lá, e o aluno não receberia.
+    -- Inherited from uk_holiday_date, and for the same two reasons: "is day D
+    -- suspended?" needs a single answer for the schedule expansion, and the
+    -- date is the notice idempotency key in notification_log (reference_key).
+    -- Two announcements on the same day would make the second notice get
+    -- swallowed by the UNIQUE there, and the student wouldn't receive it.
     CONSTRAINT uk_announcement_date UNIQUE (date)
 );
 
