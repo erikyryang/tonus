@@ -15,12 +15,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * O vínculo aluno → plano vive aqui, e não em {@code /students/{id}/plans}:
- * matrícula é de billing, e pendurá-la sob o caminho do cadastro sugeriria que
- * o registration a conhece — ele não conhece cobrança nenhuma.
+ * The student → plan link lives here, not in {@code /students/{id}/plans}:
+ * enrollment belongs to billing, and hanging it under the registration path
+ * would suggest that registration knows about it — it doesn't know about
+ * billing at all.
  *
- * A listagem não é paginada porque não é listagem: é a resposta a "quais são os
- * planos deste aluno", limitada pelo tamanho do catálogo.
+ * The listing isn't paginated because it isn't a listing: it's the answer to
+ * "what are this student's plans", bounded by the catalog's size.
  */
 @RestController
 @RequestMapping("/plan-enrollments")

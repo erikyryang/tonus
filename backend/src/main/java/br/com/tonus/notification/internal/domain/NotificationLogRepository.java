@@ -12,10 +12,10 @@ public interface NotificationLogRepository extends JpaRepository<NotificationLog
             MessageTemplate template, Long studentId, String referenceKey);
 
     /**
-     * DELETE em massa, e não {@code deleteAll} sobre entidades carregadas: a
-     * poda roda sobre meses de histórico e trazer tudo para a memória para
-     * apagar linha a linha não tem contrapartida — não há callback de ciclo de
-     * vida em {@link NotificationLog} que se perca.
+     * Bulk DELETE, not {@code deleteAll} over loaded entities: the pruning
+     * runs over months of history and bringing it all into memory to delete
+     * row by row has no upside — there's no lifecycle callback on {@link
+     * NotificationLog} that would be missed.
      */
     @Modifying
     @Query("DELETE FROM NotificationLog l WHERE l.sentAt < :threshold")

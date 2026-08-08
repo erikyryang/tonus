@@ -10,12 +10,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * GET /auth/me é o que permite ao front saber quem está logado: a sessão vive
- * em cookie httpOnly e o JS não lê token nenhum.
+ * GET /auth/me is what lets the front know who is logged in: the session
+ * lives in an httpOnly cookie and the JS reads no token at all.
  *
- * A resposta sai do token — role e vínculo são claims — e o nome é o login do
- * próprio usuário. Nada de consulta a registration: o vínculo que vale para
- * autorização é o que o token carrega, e é ele que o front tem de refletir.
+ * The response comes from the token — role and link are claims — and the
+ * name is the user's own login. No querying registration: the link that
+ * counts for authorization is the one the token carries, and that's what
+ * the front has to reflect.
  */
 class AuthMeIT extends AbstractAuthIntegrationTest {
 
@@ -61,8 +62,9 @@ class AuthMeIT extends AbstractAuthIntegrationTest {
     }
 
     /**
-     * 401, não 403: é o 401 que o interceptor do front usa como sinal de
-     * "sessão expirada, tente o refresh". Com 403 ele nunca renovaria a sessão.
+     * 401, not 403: it's the 401 that the front's interceptor uses as the
+     * signal for "session expired, try the refresh". With 403 it would never
+     * renew the session.
      */
     @Test
     void anonymousGetsUnauthorized() throws Exception {
@@ -71,11 +73,13 @@ class AuthMeIT extends AbstractAuthIntegrationTest {
     }
 
     /**
-     * Token legítimo de quem já saiu do estúdio não vale como sessão.
+     * A legitimate token from someone who already left the studio doesn't
+     * count as a session.
      *
-     * O access token é autocontido e sobrevive à revogação até expirar. Sem
-     * esta checagem, quem acabou de ser desligado veria a aplicação montar
-     * inteira e só descobriria o corte na chamada seguinte.
+     * The access token is self-contained and survives revocation until it
+     * expires. Without this check, whoever was just deactivated would see
+     * the application render in full and only discover the cutoff on the
+     * next call.
      */
     @Test
     void revokedUserNoLongerHasSession() throws Exception {

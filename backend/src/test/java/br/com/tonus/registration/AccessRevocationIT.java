@@ -15,14 +15,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Quem sai do estúdio perde o acesso.
+ * Whoever leaves the studio loses access.
  *
- * Hoje desativar um aluno não toca em users, o login só confere senha, e não
- * existe rota para desativar usuário — ou seja, quem saiu continua entrando
- * para sempre. A desativação passa a publicar evento, e o auth revoga.
+ * Today deactivating a student does not touch users, login only checks password, and there
+ * is no route to deactivate a user — that is, whoever left keeps logging in
+ * forever. Deactivation now publishes an event, and auth revokes.
  *
- * Revogar é automático; reconceder é manual: reativar o aluno não devolve o
- * login sozinho, porque conceder acesso não deve ser efeito colateral.
+ * Revoking is automatic; regranting is manual: reactivating the student does not restore the
+ * login by itself, because granting access must not be a side effect.
  */
 class AccessRevocationIT extends AbstractRegistrationIntegrationTest {
 
@@ -63,8 +63,8 @@ class AccessRevocationIT extends AbstractRegistrationIntegrationTest {
     }
 
     /**
-     * Bloquear login novo não basta: quem já estava logado tem refresh token
-     * válido por 7 dias e renovaria o acesso sozinho.
+     * Blocking a new login is not enough: whoever was already logged in has a refresh token
+     * valid for 7 days and would renew access on their own.
      */
     @Test
     void deactivatingStudentRevokesExistingRefreshToken() throws Exception {
@@ -119,8 +119,8 @@ class AccessRevocationIT extends AbstractRegistrationIntegrationTest {
     }
 
     /**
-     * Entrega é at-least-once, então o listener roda mais de uma vez em
-     * cenários de retentativa e precisa ser idempotente.
+     * Delivery is at-least-once, so the listener runs more than once in
+     * retry scenarios and needs to be idempotent.
      */
     @Test
     void revocationIsIdempotent() throws Exception {
@@ -139,8 +139,8 @@ class AccessRevocationIT extends AbstractRegistrationIntegrationTest {
     }
 
     /**
-     * Aluno sem usuário de acesso é o caso comum no começo do estúdio: o
-     * listener não pode explodir por não achar ninguém para revogar.
+     * A student without an access user is the common case at the studio's start: the
+     * listener must not blow up for finding nobody to revoke.
      */
     @Test
     void deactivatingStudentWithoutUserIsHarmless() throws Exception {
@@ -152,9 +152,9 @@ class AccessRevocationIT extends AbstractRegistrationIntegrationTest {
     }
 
     /**
-     * O registry é o que torna o at-least-once verdadeiro: se o listener
-     * tivesse falhado, a linha ficaria sem completion_date e o evento seria
-     * reprocessável em vez de sumir.
+     * The registry is what makes the at-least-once true: if the listener
+     * had failed, the row would be left without a completion_date and the event would be
+     * reprocessable instead of disappearing.
      */
     @Test
     void eventPublicationIsRecordedAndCompleted() throws Exception {
@@ -199,10 +199,10 @@ class AccessRevocationIT extends AbstractRegistrationIntegrationTest {
     }
 
     /**
-     * A revogação chega por evento assíncrono, então a resposta do
-     * PATCH /deactivate volta antes de o listener do auth ter rodado. Esperar
-     * pelo estado no banco — e não tentar login em loop — evita esbarrar no
-     * rate limit de 5 tentativas por minuto e transformar 401 em 429.
+     * The revocation arrives via an asynchronous event, so the response of the
+     * PATCH /deactivate returns before the auth listener has run. Waiting
+     * for the database state — and not attempting login in a loop — avoids hitting the
+     * rate limit of 5 attempts per minute and turning a 401 into a 429.
      */
     private void awaitAccessRevoked(String login) {
         eventually("acesso de " + login + " revogado", () -> Boolean.FALSE.equals(

@@ -5,11 +5,11 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * /auth/login é público e aceita qualquer valor de {@code login} — sem teto no
- * mapa de buckets, um atacante sem credencial nenhuma esgotaria a heap só
- * variando essa string a cada requisição. Este teste prova que o mapa nunca
- * cresce além do teto, mesmo com muito mais chaves distintas do que ele
- * comporta.
+ * /auth/login is public and accepts any value for {@code login} — without a
+ * cap on the bucket map, an attacker with no credentials at all could
+ * exhaust the heap just by varying this string on every request. This test
+ * proves that the map never grows past the cap, even with far more distinct
+ * keys than it can hold.
  */
 class LoginRateLimiterTest {
 

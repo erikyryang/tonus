@@ -8,21 +8,23 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 
 /**
- * Escolhe o adapter de saída conforme a configuração.
+ * Chooses the outbound adapter based on the configuration.
  *
- * As duas condições são explícitas (`true` e `false` com matchIfMissing) em vez
- * de uma delas usar @ConditionalOnMissingBean: dentro de uma mesma classe de
- * configuração, o "missing" depende da ordem de avaliação dos métodos, e uma
- * reordenação inocente trocaria o adapter em produção sem ninguém notar.
+ * The two conditions are explicit (`true` and `false` with matchIfMissing)
+ * instead of one of them using @ConditionalOnMissingBean: within the same
+ * configuration class, "missing" depends on the order the methods are
+ * evaluated, and an innocent reordering would swap the adapter in
+ * production without anyone noticing.
  */
 @Configuration
 class NotificationConfig {
 
     /**
-     * Configuração incompleta derruba a subida, em vez de virar falha em cada
-     * envio. Ligado sem URL ou sem chave, o sistema atenderia normalmente e só
-     * o aviso ao aluno falharia — em silêncio, dentro de um listener
-     * assíncrono. Falhar aqui é o mesmo erro descoberto no deploy.
+     * Incomplete configuration brings down startup, instead of turning into
+     * a failure on every send. Enabled without a URL or key, the system
+     * would serve normally and only the notice to the student would fail —
+     * silently, inside an asynchronous listener. Failing here is the same
+     * error discovered at deploy time.
      */
     @Bean
     @ConditionalOnProperty(prefix = "notification.evolution", name = "enabled", havingValue = "true")

@@ -4,11 +4,12 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 /**
- * Adapter da Evolution API.
+ * Evolution API adapter.
  *
- * Traduz qualquer falha de HTTP para WhatsAppDeliveryException. A tradução é o
- * ponto: quem chama precisa distinguir "não entregou" de erro de programação,
- * porque só o primeiro deve derrubar a transação e voltar pelo reprocessamento.
+ * Translates any HTTP failure into WhatsAppDeliveryException. The
+ * translation is the point: the caller needs to distinguish "didn't
+ * deliver" from a programming error, because only the former should roll
+ * back the transaction and come back through reprocessing.
  */
 class EvolutionApiSender implements WhatsAppSender {
 
@@ -32,21 +33,23 @@ class EvolutionApiSender implements WhatsAppSender {
                     .retrieve()
                     .toBodilessEntity();
         } catch (RestClientException e) {
-            // Sem telefone nem mensagem aqui: a exceção vai para o log.
+            // No phone or message here: the exception goes to the log.
             throw new WhatsAppDeliveryException("Evolution API não entregou a mensagem", e);
         }
     }
 
     /**
-     * O cadastro guarda telefone em E.164, com o "+" ({@code +5511999990000});
-     * a Evolution documenta o campo {@code number} em dígitos puros
-     * ({@code 5511999990000}), que é o formato do JID do WhatsApp.
+     * Registration stores the phone in E.164, with the "+" ({@code
+     * +5511999990000}); Evolution documents the {@code number} field in
+     * plain digits ({@code 5511999990000}), which is the WhatsApp JID
+     * format.
      *
-     * Traduzir é trabalho do adapter, não do domínio: E.164 é a representação
-     * certa para guardar, e cada provedor que queira outra coisa converte na
-     * borda. Há relato de que a própria Evolution tolera o "+", mas depender de
-     * tolerância não documentada para a única saída externa do sistema é apostar
-     * onde não se pode perder.
+     * Translating is the adapter's job, not the domain's: E.164 is the right
+     * representation to store, and each provider that wants something else
+     * converts at the edge. There are reports that Evolution itself
+     * tolerates the "+", but relying on undocumented tolerance for the
+     * system's only external output is betting where you can't afford to
+     * lose.
      */
     private static String digitsOf(String phone) {
         return phone == null ? "" : phone.replaceAll("\\D", "");

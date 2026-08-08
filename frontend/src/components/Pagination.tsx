@@ -1,16 +1,16 @@
 import { Button } from '@/components/ui/button';
 
 /**
- * Nasceu na tela de faturas e virou compartilhado quando a sexta listagem
- * paginada apareceu: todas as listagens do backend são paginadas (regra da
- * raiz), então a barra é a mesma em todas.
+ * Born on the invoices screen and became shared when the sixth paginated
+ * listing showed up: every backend listing is paginated (root rule), so
+ * the bar is the same across all of them.
  */
 export function Pagination({
   page,
   totalPages,
   onChange,
 }: {
-  /** Índice da página, base zero — como o `number` do Page do Spring. */
+  /** Page index, zero-based — like Spring's Page `number`. */
   page: number;
   totalPages: number;
   onChange: (page: number) => void;

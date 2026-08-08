@@ -10,8 +10,8 @@ import { parseMoney } from '@/lib/formatters';
 import type { PlanInput } from '../api/billingApi';
 
 /**
- * Nome e valor. O valor entra como texto porque é assim que se digita dinheiro
- * em pt-BR — "350,50" — e sai número, que é o que a API espera.
+ * Name and value. The value comes in as text because that's how money is typed
+ * in pt-BR — "350,50" — and goes out as a number, which is what the API expects.
  */
 const schema = z.object({
   name: z
@@ -22,9 +22,9 @@ const schema = z.object({
   monthlyPrice: z
     .string()
     .min(1, 'Informe o valor mensal.')
-    // Valida no texto e converte na submissão, mesma razão do formulário
-    // anterior: um transform no schema faria o tipo de entrada divergir do de
-    // saída e o react-hook-form deixaria de tipar o resolver.
+    // Validates on the text and converts on submit, same reason as the previous
+    // form: a transform on the schema would make the input type diverge from the
+    // output type and react-hook-form would stop typing the resolver.
     .refine((value) => {
       const amount = parseMoney(value);
       return Number.isFinite(amount) && amount >= 0.01;
@@ -82,8 +82,8 @@ export function PlanFormDialog({
           {errors.monthlyPrice && <p className="text-sm text-red-600">{errors.monthlyPrice.message}</p>}
         </div>
 
-        {/* Mudar o preço não reescreve fatura emitida: o valor cobrado é cópia
-            do que valia na competência (SPEC-012). */}
+        {/* Changing the price doesn't rewrite an issued invoice: the charged value is a copy
+            of what was in effect for that reference month (SPEC-012). */}
         <p className="text-sm text-slate-600">
           O novo valor vale para as próximas faturas. As já emitidas mantêm o valor cobrado.
         </p>

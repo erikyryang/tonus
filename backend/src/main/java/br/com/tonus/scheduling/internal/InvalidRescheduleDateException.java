@@ -1,11 +1,11 @@
 package br.com.tonus.scheduling.internal;
 
 /**
- * A data de destino de uma remarcação precisa ser um dia em que a aula possa
- * de fato acontecer: não no passado e não num feriado já cadastrado.
+ * The target date of a reschedule needs to be a day on which the class can
+ * actually happen: not in the past and not on an already registered holiday.
  *
- * Nenhuma das duas é constraint de banco, e nem poderia ser — as duas dependem
- * de estado externo à linha (a data de hoje, a tabela announcement).
+ * Neither of the two is a database constraint, nor could it be — both depend
+ * on state external to the row (today's date, the announcement table).
  */
 public class InvalidRescheduleDateException extends RuntimeException {
 

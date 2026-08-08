@@ -58,12 +58,14 @@ public class AuthController {
     }
 
     /**
-     * Quem está logado. Existe porque a sessão vive em cookie httpOnly: o front
-     * não lê o token e não deve decodificar JWT — pergunta aqui.
+     * Who is logged in. Exists because the session lives in an httpOnly
+     * cookie: the front doesn't read the token and shouldn't decode JWT — it
+     * asks here.
      *
-     * Papel e vínculo saem do token, não do banco: é o token que autoriza as
-     * demais chamadas, e a tela tem de refletir exatamente o que a API vai
-     * aceitar. Só o login exige uma leitura, e da própria tabela do auth.
+     * Role and link come from the token, not the database: it's the token
+     * that authorizes the other calls, and the screen has to reflect exactly
+     * what the API will accept. Only the login requires a read, and from
+     * auth's own table.
      */
     @GetMapping("/me")
     public MeResponse me(Authentication authentication) {
@@ -111,8 +113,9 @@ public class AuthController {
     }
 
     /**
-     * 401 e não 403: para o cliente, sessão que não vale mais é
-     * indistinguível de sessão expirada, e o caminho de recuperação é o mesmo.
+     * 401, not 403: to the client, a session that's no longer valid is
+     * indistinguishable from an expired session, and the recovery path is the
+     * same.
      */
     @ExceptionHandler(InvalidSessionException.class)
     public ProblemDetail handleInvalidSession() {
@@ -142,19 +145,22 @@ public class AuthController {
     }
 
     /**
-     * O {@code Secure} sai do transporte da requisição, não de configuração.
+     * The {@code Secure} attribute comes from the request's transport, not
+     * from configuration.
      *
-     * Sob HTTPS o cookie exige HTTPS; em desenvolvimento, onde tudo é HTTP puro
-     * em localhost, o atributo não aparece — e é isso que faz o Safari guardar
-     * a sessão, já que ele, ao contrário de Chrome e Firefox, não abre exceção
-     * para localhost e simplesmente descarta cookie {@code Secure} recebido por
-     * HTTP. A alternativa era uma flag por ambiente, que só funciona enquanto
-     * todo mundo lembra de aplicá-la em toda máquina.
+     * Under HTTPS the cookie requires HTTPS; in development, where
+     * everything is plain HTTP on localhost, the attribute doesn't appear —
+     * and that's what makes Safari keep the session, since, unlike Chrome and
+     * Firefox, it makes no exception for localhost and simply discards a
+     * {@code Secure} cookie received over HTTP. The alternative was a
+     * per-environment flag, which only works as long as everyone remembers
+     * to apply it on every machine.
      *
-     * Em produção quem responde por essa verdade é
-     * {@code server.forward-headers-strategy}: o Caddy termina o TLS e repassa
-     * HTTP, então sem os forwarded headers isto veria HTTP e o cookie sairia
-     * sem {@code Secure}. É o único modo de falha desta abordagem, e tem teste.
+     * In production what backs this truth is
+     * {@code server.forward-headers-strategy}: Caddy terminates TLS and
+     * forwards HTTP, so without the forwarded headers this would see HTTP and
+     * the cookie would go out without {@code Secure}. It's the only failure
+     * mode of this approach, and it has a test.
      */
     private ResponseCookie buildCookie(HttpServletRequest request, String name, String value, Duration maxAge) {
         return ResponseCookie.from(name, value)

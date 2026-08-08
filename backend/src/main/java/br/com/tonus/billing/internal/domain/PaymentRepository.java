@@ -7,8 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     /**
-     * As baixas de uma página inteira de faturas numa consulta só.
-     * uk_payment_invoice garante no máximo uma por fatura.
+     * The payments for a whole page of invoices in a single query.
+     * uk_payment_invoice guarantees at most one per invoice.
      */
     List<Payment> findByInvoiceIdIn(Collection<Long> invoiceIds);
 }

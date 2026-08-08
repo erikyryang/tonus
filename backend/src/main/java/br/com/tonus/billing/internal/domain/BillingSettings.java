@@ -12,18 +12,18 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import jakarta.persistence.EntityListeners;
 
 /**
- * A configuração de cobrança do estúdio. Linha única, com id fixo.
+ * The studio's billing configuration. Single row, with a fixed id.
  *
- * Não herda de {@code BaseEntity} porque o id não é gerado: ele é 1, sempre, e
- * o {@code CHECK (id = 1)} do banco é quem garante que não existe uma segunda
- * linha para discordar desta.
+ * Doesn't extend {@code BaseEntity} because the id isn't generated: it's
+ * always 1, and the database's {@code CHECK (id = 1)} is what guarantees
+ * there's no second row to disagree with this one.
  */
 @Entity
 @Table(name = "billing_settings")
 @EntityListeners(AuditingEntityListener.class)
 public class BillingSettings {
 
-    /** O id da única linha que pode existir. */
+    /** The id of the only row that can exist. */
     public static final long SINGLETON_ID = 1L;
 
     @Id

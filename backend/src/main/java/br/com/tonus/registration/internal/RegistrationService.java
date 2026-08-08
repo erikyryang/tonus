@@ -77,8 +77,8 @@ public class RegistrationService {
     }
 
     /**
-     * O aluno é buscado antes do professor de propósito: se o aluno não existe,
-     * a resposta certa é 404 do recurso pedido, não 400 do corpo enviado.
+     * The student is looked up before the teacher on purpose: if the student does not exist,
+     * the correct response is 404 for the requested resource, not 400 for the submitted body.
      */
     @Transactional
     public Student updateStudent(Long id, String name, String phone, Long teacherId) {
@@ -91,8 +91,8 @@ public class RegistrationService {
     }
 
     /**
-     * Desativação é idempotente: chamar de novo num aluno já inativo devolve o
-     * mesmo estado, sem erro.
+     * Deactivation is idempotent: calling it again on an already inactive student returns the
+     * same state, without error.
      */
     @Transactional
     public Student deactivateStudent(Long id) {
@@ -104,8 +104,8 @@ public class RegistrationService {
     }
 
     /**
-     * Reativar exige que o professor vinculado ainda esteja ativo — senão o
-     * aluno voltaria já apontando para alguém que saiu do estúdio.
+     * Reactivating requires that the linked teacher still be active — otherwise the
+     * student would come back already pointing to someone who left the studio.
      */
     @Transactional
     public Student activateStudent(Long id) {
@@ -129,9 +129,9 @@ public class RegistrationService {
     }
 
     /**
-     * Paginação sem ORDER BY total é não-determinística no Postgres: a mesma
-     * consulta pode repetir ou omitir linhas entre páginas. O id entra como
-     * critério de desempate de qualquer ordenação pedida pelo cliente.
+     * Pagination without a total ORDER BY is non-deterministic in Postgres: the same
+     * query can repeat or omit rows between pages. The id enters as a
+     * tie-breaking criterion for any ordering requested by the client.
      */
     private Pageable withStableSort(Pageable pageable) {
         if (pageable.getSort().getOrderFor("id") != null) {

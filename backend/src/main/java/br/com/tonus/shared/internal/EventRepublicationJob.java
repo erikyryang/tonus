@@ -11,22 +11,22 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Reentrega o que ficou pendente no registry de eventos.
+ * Redelivers what stayed pending in the event registry.
  *
- * Sem este job, "at-least-once" seria só uma frase: a linha em
- * event_publication ficava com completion_date nulo para sempre e ninguém a
- * lia. O sintoma concreto era Evolution fora do ar por dez minutos e os avisos
- * daquele período nunca saindo — registrados como pendentes, sem nada
- * reclamando.
+ * Without this job, "at-least-once" would just be a phrase: the row in
+ * event_publication would keep completion_date null forever and nobody
+ * would read it. The concrete symptom was Evolution being down for ten
+ * minutes and the notices from that period never going out — recorded as
+ * pending, with nothing complaining.
  *
- * Fica em shared porque o registry é de shared: republicar é infra do
- * mecanismo de eventos, não do módulo que por acaso falhou mais. auth também
- * consome eventos, e um job dentro de notification estaria reprocessando
- * entrega alheia.
+ * Lives in shared because the registry belongs to shared: republishing is
+ * infrastructure of the event mechanism, not of whichever module happened
+ * to fail the most. auth also consumes events, and a job inside
+ * notification would be reprocessing someone else's delivery.
  *
- * Complementa {@code spring.modulith.events.republish-outstanding-events-on-restart}:
- * aquilo cobre o que ficou pendente enquanto a aplicação estava fora do ar,
- * isto cobre o que falha com ela no ar — que é o caso comum.
+ * Complements {@code spring.modulith.events.republish-outstanding-events-on-restart}:
+ * that one covers what stayed pending while the application was down, this
+ * one covers what fails while it's up — which is the common case.
  */
 @Component
 public class EventRepublicationJob {
@@ -45,21 +45,23 @@ public class EventRepublicationJob {
     }
 
     /**
-     * Reentrega só o que está dentro da janela.
+     * Redelivers only what's within the window.
      *
-     * O piso ({@code minAge}) separa entrega que falhou de listener que ainda
-     * está trabalhando. O teto ({@code maxAge}) existe porque o registry não
-     * guarda contador de tentativas: sem ele, o que falha em definitivo volta a
-     * ser tentado a cada rodada, indefinidamente. Passado o teto, a linha
-     * continua no banco com completion_date nulo — é o registro de que aquele
-     * aviso nunca saiu, e apagá-la seria esconder a única evidência disso.
+     * The floor ({@code minAge}) separates a delivery that failed from a
+     * listener that's still working. The ceiling ({@code maxAge}) exists
+     * because the registry keeps no attempt counter: without it, whatever
+     * fails for good keeps being retried every round, indefinitely. Past the
+     * ceiling, the row stays in the database with completion_date null — it's
+     * the record that that notice never went out, and deleting it would hide
+     * the only evidence of that.
      *
-     * Usa o predicado, e não {@code resubmitIncompletePublicationsOlderThan},
-     * porque aquela variante só tem piso.
+     * Uses the predicate, not {@code resubmitIncompletePublicationsOlderThan},
+     * because that variant only has a floor.
      *
-     * {@code lockAtLeastFor} zerado de propósito: reprocessar de novo é
-     * inofensivo — todo listener é idempotente — e um piso de tempo tornaria o
-     * job intestável, que é o problema documentado em {@code BillingJobIT}.
+     * {@code lockAtLeastFor} zeroed on purpose: reprocessing again is
+     * harmless — every listener is idempotent — and a time floor would make
+     * the job untestable, which is the problem documented in
+     * {@code BillingJobIT}.
      */
     @Scheduled(cron = "${shared.events.republish-cron:0 */5 * * * *}")
     @SchedulerLock(name = "event-republication-job", lockAtMostFor = "PT5M", lockAtLeastFor = "PT0S")
@@ -79,9 +81,10 @@ public class EventRepublicationJob {
         });
 
         if (abandoned.get() > 0) {
-            // Em WARN, e todo rodada: são avisos que nunca chegaram a ninguém.
-            // O alerta só cala quando alguém olhar as linhas e resolver — que é
-            // exatamente o comportamento desejado para entrega perdida.
+            // At WARN, and every round: these are notices that never reached
+            // anyone. The alert only stops when someone looks at the rows and
+            // resolves it — which is exactly the desired behavior for lost
+            // delivery.
             log.warn("{} entrega(s) pendente(s) há mais de {} — desistido de reentregar; "
                             + "consultar event_publication com completion_date nulo",
                     abandoned.get(), properties.maxAge());

@@ -66,7 +66,7 @@ public class BillingService {
         this.billingProperties = billingProperties;
     }
 
-    // ---------------------------------------------------------------- planos
+    // ---------------------------------------------------------------- plans
 
     @Transactional
     public PlanView createPlan(String name, BigDecimal monthlyPrice) {
@@ -82,9 +82,10 @@ public class BillingService {
     }
 
     /**
-     * Desativar plano com matrícula ativa é permitido (SPEC-012): encerrar um
-     * plano não pode exigir desmatricular aluno por aluno. Quem avisa do
-     * estrago é a tela, com a contagem que {@code activeEnrollments} carrega.
+     * Deactivating a plan with an active enrollment is allowed (SPEC-012):
+     * closing a plan can't require unenrolling students one by one. It's the
+     * screen that warns of the impact, with the count that {@code
+     * activeEnrollments} carries.
      */
     @Transactional
     public PlanView setPlanActive(Long id, boolean active) {
@@ -103,9 +104,9 @@ public class BillingService {
     }
 
     /**
-     * A contagem de matriculados sai de UMA consulta para a página inteira. Uma
-     * por plano seria N+1 justamente na tela em que o ADMIN decide desativar
-     * algo — e é a contagem que ele lê antes de decidir.
+     * The enrollment count comes from ONE query for the whole page. One per
+     * plan would be N+1 exactly on the screen where the ADMIN decides to
+     * deactivate something — and it's the count they read before deciding.
      */
     @Transactional(readOnly = true)
     public Page<PlanView> findPlans(Boolean active, Pageable pageable) {
@@ -125,7 +126,7 @@ public class BillingService {
         return plans.map(plan -> new PlanView(plan, counts.getOrDefault(plan.getId(), 0L)));
     }
 
-    // ------------------------------------------------------------ matrículas
+    // ------------------------------------------------------------ enrollments
 
     @Transactional
     public PlanEnrollment enroll(Long studentId, Long planId) {
@@ -156,7 +157,7 @@ public class BillingService {
         return planEnrollmentRepository.findByStudentId(studentId);
     }
 
-    // ---------------------------------------------------------- configuração
+    // ---------------------------------------------------------- configuration
 
     @Transactional(readOnly = true)
     public BillingSettings findSettings() {
@@ -185,8 +186,8 @@ public class BillingService {
     }
 
     /**
-     * O dia de vencimento vem do cadastro do aluno, não do pedido: é o dia do
-     * mês em que ele entrou no estúdio (SPEC-004).
+     * The due day comes from the student's registration, not the request:
+     * it's the day of the month they joined the studio (SPEC-004).
      */
     @Transactional(readOnly = true)
     public Page<InvoiceView> findInvoices(InvoiceStatus status, Pageable pageable) {
@@ -207,7 +208,7 @@ public class BillingService {
     public Page<InvoiceView> findInvoicesOfStudent(Long studentId, Pageable pageable) {
         Pageable stable = withStableSort(pageable);
         Page<Invoice> invoices = invoiceRepository.findByStudentId(studentId, stable);
-        // Um aluno só: o nome é uma consulta, não uma por linha.
+        // Just one student: the name is one query, not one per row.
         String studentName = studentNameOf(studentId);
         Map<Long, LocalDate> paymentDates = paymentDatesOf(invoices.getContent());
         return invoices.map(invoice ->
@@ -215,15 +216,15 @@ public class BillingService {
     }
 
     /**
-     * Quem está com fatura atrasada, em ids de aluno.
+     * Who has an overdue invoice, as student ids.
      *
-     * Responde à pergunta que a tela de alunos faz sem que {@code registration}
-     * passe a conhecer {@code billing}: quem é dono da fatura responde, e quem
-     * cruza as duas listas é o cliente. A aresta que não existe no grafo de
-     * módulos continua não existindo.
+     * Answers the question the student screen asks without {@code
+     * registration} coming to know {@code billing}: whoever owns the invoice
+     * answers, and whoever cross-references the two lists is the client. The
+     * edge that doesn't exist in the module graph keeps not existing.
      *
-     * Ids distintos e ordenados: a resposta é sobre alunos, não sobre faturas —
-     * dois meses atrasados são o mesmo aluno uma vez só.
+     * Distinct and sorted ids: the answer is about students, not invoices —
+     * two overdue months are the same student just once.
      */
     @Transactional(readOnly = true)
     public List<Long> findOverdueStudentIds() {
@@ -235,15 +236,17 @@ public class BillingService {
     }
 
     /**
-     * Baixa: fatura vira PAGA, pagamento é criado, evento é publicado. Tudo na
-     * mesma transação, como a spec exige.
+     * Payment: invoice becomes PAID, a payment is created, an event is
+     * published. All in the same transaction, as the spec requires.
      *
-     * O vencimento da assinatura <strong>não</strong> se mexe. Mexia — virava o
-     * aniversário do pagamento —, e pagar em atraso empurrava a mensalidade para
-     * o dia do atraso, mês após mês. Ver SPEC-004.
+     * The subscription's due date <strong>does not</strong> move.
+     * It used to — it became the payment's anniversary —, and paying late
+     * pushed the monthly fee to the day of the late payment, month after
+     * month. See SPEC-004.
      *
-     * A data vem sempre de quem chama — o Clock aqui é a autoridade do "hoje"
-     * que decide se ela está no futuro, não um valor padrão.
+     * The date always comes from the caller — the Clock here is the
+     * authority on "today" that decides whether it's in the future, not a
+     * default value.
      */
     @Transactional
     public InvoiceView registerPayment(Long invoiceId, Long registeredBy, LocalDate paymentDate) {
@@ -263,18 +266,18 @@ public class BillingService {
     }
 
     /**
-     * Passo 1 do job diário: gera a fatura da competência para cada aluno com
-     * plano ativo cujo vencimento cai hoje.
+     * Step 1 of the daily job: generates the billing period's invoice for
+     * every student with an active plan whose due date is today.
      *
-     * Uma fatura por aluno, com a soma dos planos — o aluno de três planos
-     * recebe uma cobrança, não três. A checagem de existência é a idempotência
-     * de negócio; uk_invoice_student_period é a rede de segurança do banco por
-     * trás dela.
+     * One invoice per student, with the sum of the plans — the student with
+     * three plans gets one charge, not three. The existence check is the
+     * business idempotency; uk_invoice_student_period is the database safety
+     * net behind it.
      *
-     * As consultas são por conjunto, não por aluno: planos ativos, matrículas
-     * ativas e datas de cadastro vêm em três consultas, e o laço só trabalha em
-     * memória. Perguntar a data de cadastro aluno a aluno seria N+1 no job que
-     * roda sobre o estúdio inteiro.
+     * The queries are set-based, not per student: active plans, active
+     * enrollments and registration dates come in three queries, and the loop
+     * only works in memory. Asking for the registration date student by
+     * student would be N+1 in the job that runs over the whole studio.
      */
     @Transactional
     public void generateDueInvoices() {
@@ -316,11 +319,12 @@ public class BillingService {
     }
 
     /**
-     * A soma dos planos, com desconto a partir do segundo.
+     * The sum of the plans, with a discount from the second one on.
      *
-     * O arredondamento acontece uma vez só, no total. Descontar plano a plano e
-     * somar depois produz centavos diferentes conforme a ordem das parcelas, e
-     * a diferença aparece no valor que o aluno recebe por WhatsApp.
+     * The rounding happens only once, on the total. Discounting plan by plan
+     * and summing afterward produces different cents depending on the order
+     * of the installments, and the difference shows up in the amount the
+     * student receives via WhatsApp.
      */
     private BigDecimal amountOf(List<BigDecimal> prices, BigDecimal discountPercent) {
         BigDecimal total = prices.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -333,9 +337,10 @@ public class BillingService {
     }
 
     /**
-     * Passo 2 do job diário: fatura ABERTA vencida há mais de N dias
-     * (billing.days-overdue) vira ATRASADA. A query só pega quem ainda está
-     * ABERTA, então rodar de novo no mesmo dia não repete a transição.
+     * Step 2 of the daily job: an OPEN invoice overdue by more than N days
+     * (billing.days-overdue) becomes OVERDUE. The query only picks up
+     * whoever is still OPEN, so running it again on the same day doesn't
+     * repeat the transition.
      */
     @Transactional
     public void markOverdueInvoices() {
@@ -348,12 +353,12 @@ public class BillingService {
     }
 
     /**
-     * As datas de baixa da página, em UMA consulta — e só para as faturas PAGAS.
+     * The page's payment dates, in ONE query — and only for PAID invoices.
      *
-     * Fatura que não está PAGA não tem linha em payment: as duas coisas nascem
-     * na mesma transação de {@link #registerPayment}. Consultá-las seria
-     * trabalho garantidamente vazio, justamente no filtro "Atrasadas", que é o
-     * uso mais frequente da tela.
+     * An invoice that isn't PAID has no row in payment: both things are born
+     * in the same transaction as {@link #registerPayment}. Querying them
+     * would be guaranteed wasted work, exactly on the "Overdue" filter, which
+     * is the screen's most frequent use.
      */
     private Map<Long, LocalDate> paymentDatesOf(List<Invoice> invoices) {
         Set<Long> paidIds = invoices.stream()
@@ -363,14 +368,14 @@ public class BillingService {
         if (paidIds.isEmpty()) {
             return Map.of();
         }
-        // uk_payment_invoice garante no máximo uma baixa por fatura: sem colisão.
+        // uk_payment_invoice guarantees at most one payment per invoice: no collision.
         return paymentRepository.findByInvoiceIdIn(paidIds).stream()
                 .collect(Collectors.toMap(Payment::getInvoiceId, Payment::getPaymentDate));
     }
 
     /**
-     * Aluno desativado continua com histórico de fatura (SPEC-002: não há
-     * DELETE), então o nome tem de sair mesmo assim.
+     * A deactivated student still has invoice history (SPEC-002: there is no
+     * DELETE), so the name has to come out anyway.
      */
     private String studentNameOf(Long studentId) {
         return registrationFacade.findStudentContact(studentId)
@@ -379,10 +384,10 @@ public class BillingService {
     }
 
     /**
-     * O dia do mês do cadastro. O aluno já foi conferido como ativo antes daqui,
-     * então "não achei a data" é inconsistência de verdade, não caso de borda —
-     * e vira o mesmo erro de aluno desconhecido em vez de um vencimento
-     * inventado.
+     * The day of the month of registration. The student has already been
+     * checked as active before this point, so "couldn't find the date" is a
+     * real inconsistency, not an edge case — and it becomes the same unknown
+     * student error instead of a made-up due date.
      */
     private int dueDayOfRegistration(Long studentId) {
         return registrationFacade.findRegistrationDate(studentId)

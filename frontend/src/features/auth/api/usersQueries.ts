@@ -2,16 +2,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type AccessUser, type CreateAccessInput, accessKey, accessOfStudentsKey, usersApi } from './usersApi';
 
 /**
- * O acesso de cada aluno da página, indexado pelo id do aluno. É o que decide
- * qual ação a linha oferece: nenhuma (login ativo), "Criar acesso" (nunca teve)
- * ou "Reativar acesso" (teve e foi revogado).
+ * The access of each student on the page, indexed by student id. It's what decides
+ * which action the row offers: none (active login), "Create access" (never had one)
+ * or "Reactivate access" (had one and it was revoked).
  */
 export function useAccessOfStudents(studentIds: number[]) {
   return useQuery({
     queryKey: accessOfStudentsKey(studentIds),
     queryFn: () => usersApi.accessOfStudents(studentIds),
-    // Página vazia não tem o que perguntar — e `studentIds=` sem valor seria
-    // uma requisição sem sentido para o back recusar.
+    // An empty page has nothing to ask — and `studentIds=` with no value would be
+    // a nonsensical request for the back to reject.
     enabled: studentIds.length > 0,
     select: (users: AccessUser[]) =>
       new Map(users.filter((user) => user.studentId != null).map((user) => [user.studentId!, user])),

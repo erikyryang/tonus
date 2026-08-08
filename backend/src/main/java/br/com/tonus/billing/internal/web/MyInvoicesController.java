@@ -12,8 +12,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * /me/invoices: o id do aluno vem do token, nunca de path ou query — mesmo
- * padrão de {@code MyScheduleController}.
+ * /me/invoices: the student id comes from the token, never from path or
+ * query — same pattern as {@code MyScheduleController}.
  */
 @RestController
 @RequestMapping("/me")

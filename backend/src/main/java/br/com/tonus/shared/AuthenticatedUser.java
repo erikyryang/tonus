@@ -1,18 +1,20 @@
 package br.com.tonus.shared;
 
 /**
- * Quem está autenticado, do ponto de vista de qualquer módulo.
+ * Whoever is authenticated, from any module's point of view.
  *
- * Existe para os endpoints {@code /me/...}: o id do aluno/professor tem de vir
- * do token, nunca do path ou da query (previne IDOR), mas o módulo que atende
- * {@code /me/schedule} é o scheduling, e scheduling não pode depender de auth
- * — a aresta permitida é auth -> registration, e a inversa fecharia ciclo.
+ * Exists for the {@code /me/...} endpoints: the student/teacher id has to
+ * come from the token, never from the path or query (prevents IDOR), but the
+ * module that serves {@code /me/schedule} is scheduling, and scheduling
+ * can't depend on auth — the allowed edge is auth -> registration, and the
+ * reverse would close a cycle.
  *
- * A saída é o token carregar o vínculo e o principal ser um tipo de shared, de
- * quem todos podem depender. O auth preenche; os demais só leem.
+ * The way out is for the token to carry the link and for the principal to be
+ * a type from shared, which everyone can depend on. auth fills it in; the
+ * others only read it.
  *
- * {@code studentId} e {@code teacherId} são nulos para ADMIN, que não é nem
- * aluno nem professor.
+ * {@code studentId} and {@code teacherId} are null for ADMIN, who is neither
+ * a student nor a teacher.
  */
 public record AuthenticatedUser(Long userId, Long studentId, Long teacherId) {
 }

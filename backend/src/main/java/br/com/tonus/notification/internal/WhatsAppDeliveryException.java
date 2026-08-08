@@ -1,13 +1,13 @@
 package br.com.tonus.notification.internal;
 
 /**
- * A mensagem não saiu.
+ * The message didn't go out.
  *
- * É exceção de runtime para derrubar a transação do listener: o registro em
- * notification_log volta atrás e a publicação fica com completion_date nulo,
- * que é o que o registry do Modulith reprocessa depois. Tratar a falha em vez
- * de propagá-la marcaria o evento como entregue sem que ninguém tivesse sido
- * avisado.
+ * It's a runtime exception to roll back the listener's transaction: the
+ * record in notification_log is undone and the publication is left with a
+ * null completion_date, which is what Modulith's registry reprocesses
+ * later. Handling the failure instead of propagating it would mark the
+ * event as delivered without anyone having been notified.
  */
 public class WhatsAppDeliveryException extends RuntimeException {
 

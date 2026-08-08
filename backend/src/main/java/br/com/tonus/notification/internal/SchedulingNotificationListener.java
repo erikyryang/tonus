@@ -15,11 +15,11 @@ import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
 /**
- * O que muda na agenda do aluno, ele fica sabendo.
+ * Whatever changes in the student's schedule, they get to know about it.
  *
- * A entrega é at-least-once, então cada método aqui roda mais de uma vez para
- * o mesmo fato; a idempotência mora na constraint única de notification_log,
- * checada em NotificationService.
+ * Delivery is at-least-once, so each method here runs more than once for
+ * the same fact; idempotency lives in notification_log's unique constraint,
+ * checked in NotificationService.
  */
 @Component
 class SchedulingNotificationListener {
@@ -44,10 +44,11 @@ class SchedulingNotificationListener {
     }
 
     /**
-     * A chave leva origem E destino. A mesma aula pode ser remarcada duas
-     * vezes a partir do mesmo dia — apagar a exceção e recriá-la republica o
-     * evento com originalDate igual e destino diferente —, e chavear só pela
-     * origem faria o segundo aviso ser confundido com reentrega do primeiro.
+     * The key carries both origin AND destination. The same class can be
+     * rescheduled twice from the same day — deleting the exception and
+     * recreating it republishes the event with an equal originalDate and a
+     * different destination —, and keying only on the origin would make the
+     * second notice be confused with a redelivery of the first.
      */
     @ApplicationModuleListener
     public void on(ClassRescheduled event) {
@@ -59,32 +60,35 @@ class SchedulingNotificationListener {
     }
 
     /**
-     * Comunicado é o único evento que vira N mensagens.
+     * Announcement is the only event that turns into N messages.
      *
-     * Quem são os avisados vem do registration, não da agenda: o consumidor
-     * natural seria quem sabe quem tem aula no dia, mas notification não
-     * depende de scheduling para consulta e abrir essa aresta por um evento
-     * não se paga. O preço é avisar também aluno ativo sem horário padrão.
+     * Who gets notified comes from registration, not from scheduling: the
+     * natural consumer would be whoever knows who has class that day, but
+     * notification doesn't depend on scheduling for queries, and opening
+     * that edge for one event doesn't pay off. The price is also notifying
+     * an active student with no default schedule.
      *
-     * A falha de um aluno não interrompe os demais — cada um commita por conta
-     * própria —, mas ao final a exceção é obrigatória: sem ela o Modulith
-     * marcaria o evento como entregue e quem ficou de fora nunca seria avisado.
+     * One student's failure doesn't interrupt the others — each commits on
+     * their own —, but at the end the exception is mandatory: without it
+     * Modulith would mark the event as delivered and whoever was left out
+     * would never be notified.
      *
-     * Falhas seguidas, porém, interrompem. Não é azar com N alunos, é o
-     * gateway fora do ar, e insistir custa um read timeout por aluno: com 500
-     * alunos e uma Evolution pendurada, o laço segura uma thread do executor
-     * por mais de uma hora e o feriado seguinte espera atrás dela. Abortar cedo
-     * chega no mesmo lugar — a publicação fica incompleta e o job de
-     * republicação tenta de novo depois — sem pagar o pedágio.
+     * Consecutive failures, however, do interrupt. It's not bad luck with N
+     * students, it's the gateway being down, and retrying costs one read
+     * timeout per student: with 500 students and a hung Evolution, the loop
+     * holds an executor thread for over an hour and the next holiday waits
+     * behind it. Aborting early reaches the same place — the publication
+     * stays incomplete and the republication job tries again later — without
+     * paying the toll.
      */
     @ApplicationModuleListener
     public void on(AnnouncementCreated event) {
         /*
-         * O template é escolhido pelo efeito, e não é só o texto que muda: ele
-         * entra na chave de idempotência junto com a data. "Não teremos aula" e
-         * "as aulas acontecem normalmente" são avisos opostos, e mandar o
-         * primeiro por um comunicado que não suspende esvaziaria a sala num dia
-         * de aula.
+         * The template is chosen by the effect, and it's not just the text
+         * that changes: it enters the idempotency key together with the
+         * date. "We won't have class" and "classes happen normally" are
+         * opposite notices, and sending the former for an announcement that
+         * doesn't suspend classes would empty the room on a class day.
          */
         MessageTemplate template = event.suspendsClasses()
                 ? MessageTemplate.ANNOUNCEMENT_SUSPENSION
@@ -94,10 +98,11 @@ class SchedulingNotificationListener {
     }
 
     /**
-     * Disparo manual (mudança 9): mesmo fan-out do comunicado, mensagem livre
-     * no lugar de data+descrição. A chave de idempotência é o broadcastId, não
-     * a data — o ADMIN pode legitimamente disparar duas vezes no mesmo dia, e
-     * são dois avisos independentes, não uma reentrega do primeiro.
+     * Manual trigger (change 9): same fan-out as the announcement, free-form
+     * message instead of date+description. The idempotency key is the
+     * broadcastId, not the date — the ADMIN can legitimately trigger it
+     * twice on the same day, and those are two independent notices, not a
+     * redelivery of the first.
      */
     @ApplicationModuleListener
     public void on(BroadcastRequested event) {
@@ -105,22 +110,23 @@ class SchedulingNotificationListener {
     }
 
     /**
-     * Um evento vira N mensagens, uma por aluno ativo — quem são eles vem do
-     * registration, não da agenda: notification não depende de scheduling para
-     * consulta, e abrir essa aresta por causa disso não se paga. O preço é
-     * avisar também aluno ativo sem horário padrão.
+     * One event turns into N messages, one per active student — who they
+     * are comes from registration, not from scheduling: notification
+     * doesn't depend on scheduling for queries, and opening that edge
+     * because of this doesn't pay off. The price is also notifying an
+     * active student with no default schedule.
      *
-     * A falha de um aluno não interrompe os demais — cada um commita por conta
-     * própria em {@link NotificationService#notifyStudent} —, mas ao final a
-     * exceção é obrigatória: sem ela o Modulith marcaria o evento como
-     * entregue e quem ficou de fora nunca seria avisado.
+     * One student's failure doesn't interrupt the others — each commits on
+     * their own in {@link NotificationService#notifyStudent} —, but at the
+     * end the exception is mandatory: without it Modulith would mark the
+     * event as delivered and whoever was left out would never be notified.
      *
-     * Falhas seguidas, porém, interrompem. Não é azar com N alunos, é o
-     * gateway fora do ar, e insistir custa um read timeout por aluno: com 500
-     * alunos e uma Evolution pendurada, o laço segura uma thread do executor
-     * por mais de uma hora. Abortar cedo chega no mesmo lugar — a publicação
-     * fica incompleta e o job de republicação tenta de novo depois — sem pagar
-     * o pedágio.
+     * Consecutive failures, however, do interrupt. It's not bad luck with N
+     * students, it's the gateway being down, and retrying costs one read
+     * timeout per student: with 500 students and a hung Evolution, the loop
+     * holds an executor thread for over an hour. Aborting early reaches the
+     * same place — the publication stays incomplete and the republication
+     * job tries again later — without paying the toll.
      */
     private void fanOutToActiveStudents(String kind, String reference, MessageTemplate template, Object... args) {
         int limit = properties.consecutiveFailureLimit();

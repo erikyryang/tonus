@@ -1,13 +1,14 @@
 /**
- * Avisos ao aluno por WhatsApp. Único módulo que fala com o mundo externo.
+ * Notices to the student via WhatsApp. The only module that talks to the
+ * outside world.
  *
- * Depende de registration para resolver nome e telefone do aluno, e dos
- * módulos cujos eventos consome — consumir um evento é referenciar o record
- * que o publicador expõe na raiz, e isso é dependência de compilação como
- * qualquer outra. O acoplamento em tempo de execução continua assíncrono: o
- * caminho de volta não existe, ninguém chama notification.
+ * Depends on registration to resolve the student's name and phone, and on
+ * the modules whose events it consumes — consuming an event means
+ * referencing the record the publisher exposes at its root, and that's a
+ * compile-time dependency like any other. The runtime coupling stays
+ * asynchronous: there's no path back, nobody calls notification.
  *
- * Todas as arestas são acíclicas: nenhum desses módulos conhece notification.
+ * All edges are acyclic: none of these modules know about notification.
  */
 @org.springframework.modulith.ApplicationModule(
         allowedDependencies = {"shared", "registration", "scheduling", "billing"})

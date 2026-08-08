@@ -52,8 +52,8 @@ class RegistrationListingFilterIT extends AbstractRegistrationIntegrationTest {
     }
 
     /**
-     * Paginação sem ORDER BY total é não-determinística no Postgres. Varrendo
-     * as páginas de duas em duas, nenhum id pode se repetir nem sumir.
+     * Pagination without a total ORDER BY is non-deterministic in Postgres. Scanning
+     * pages two at a time, no id may repeat or disappear.
      */
     @Test
     void pagesDoNotOverlapOrLoseRows() throws Exception {
@@ -78,10 +78,10 @@ class RegistrationListingFilterIT extends AbstractRegistrationIntegrationTest {
     }
 
     /**
-     * Os nomes são minúsculos, sem espaço e sem acento de propósito: o Postgres
-     * ordena com a collation do banco (en_US ignora caixa e pontuação no nível
-     * primário), que não coincide com String::compareTo. Restringir o alfabeto
-     * torna a ordem esperada a mesma nas duas.
+     * The names are lowercase, without spaces and without accents on purpose: Postgres
+     * sorts with the database's collation (en_US ignores case and punctuation at the
+     * primary level), which does not match String::compareTo. Restricting the alphabet
+     * makes the expected order the same in both.
      */
     @Test
     void sortsByNameByDefault() throws Exception {

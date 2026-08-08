@@ -8,9 +8,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Aluno que volta ao estúdio. A SPEC-002 só descreve a saída; a volta é o
- * caminho inverso do mesmo campo, sem criar registro novo — o histórico de
- * fatura do aluno continua ligado ao mesmo id.
+ * Student who comes back to the studio. SPEC-002 only describes leaving; coming back is the
+ * reverse path of the same field, without creating a new record — the student's
+ * invoice history stays linked to the same id.
  */
 class RegistrationActivationIT extends AbstractRegistrationIntegrationTest {
 
@@ -44,8 +44,8 @@ class RegistrationActivationIT extends AbstractRegistrationIntegrationTest {
     }
 
     /**
-     * Reativar aluno cujo professor saiu traria de volta um vínculo quebrado:
-     * o admin precisa remanejar antes.
+     * Reactivating a student whose teacher left would bring back a broken link:
+     * the admin needs to reassign first.
      */
     @Test
     void rejectsReactivatingStudentOfInactiveTeacher() throws Exception {

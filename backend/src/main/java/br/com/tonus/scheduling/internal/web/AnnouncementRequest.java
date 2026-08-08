@@ -5,9 +5,9 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 
 /**
- * {@code suspendsClasses} é obrigatório e não tem default: é a diferença entre
- * "não vai ter aula" e "aviso, mas a agenda segue", e um default silencioso
- * faria um comunicado esvaziar o dia sem ninguém ter pedido.
+ * {@code suspendsClasses} is mandatory and has no default: it is the difference between
+ * "there will be no class" and "notice, but the schedule continues", and a silent
+ * default would make an announcement empty the day without anyone having asked for it.
  */
 public record AnnouncementRequest(@NotNull LocalDate date,
                                   @NotBlank String description,

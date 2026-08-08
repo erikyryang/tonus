@@ -3,9 +3,9 @@ package br.com.tonus.billing.internal;
 import java.time.LocalDate;
 
 /**
- * Baixa com data futura. Aceitá-la mandaria ao aluno o recibo de um pagamento
- * que ainda não aconteceu e jogaria o vencimento da assinatura para frente —
- * duas coisas que não têm desfazer.
+ * Payment with a future date. Accepting it would send the student the
+ * receipt for a payment that hasn't happened yet and would push the
+ * subscription's due date forward — two things that have no undo.
  */
 public class FuturePaymentDateException extends RuntimeException {
 

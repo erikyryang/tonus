@@ -1,9 +1,9 @@
 package br.com.tonus.scheduling.internal;
 
 /**
- * Não há FK de default_schedule/schedule_exception para student — decisão de
- * arquitetura para não acoplar módulos no schema (docs/ddl.md). Quem garante
- * que o aluno existe é esta validação, contra a RegistrationFacade.
+ * There is no FK from default_schedule/schedule_exception to student — an architectural
+ * decision to avoid coupling modules in the schema (docs/ddl.md). What guarantees
+ * that the student exists is this validation, against the RegistrationFacade.
  */
 public class UnknownStudentException extends RuntimeException {
 

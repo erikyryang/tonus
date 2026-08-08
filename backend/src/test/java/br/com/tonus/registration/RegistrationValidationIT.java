@@ -8,8 +8,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Entrada inválida tem que virar 400 com Problem Details. Sem os limites no
- * DTO, um nome maior que a coluna só estouraria no INSERT e viraria 500.
+ * Invalid input has to turn into a 400 with Problem Details. Without the limits in the
+ * DTO, a name longer than the column would only overflow on the INSERT and turn into a 500.
  */
 class RegistrationValidationIT extends AbstractRegistrationIntegrationTest {
 
@@ -65,8 +65,8 @@ class RegistrationValidationIT extends AbstractRegistrationIntegrationTest {
     }
 
     /**
-     * Teto de página: sem limite, um size gigante viraria varredura da tabela
-     * inteira numa única resposta.
+     * Page cap: without a limit, a huge size would turn into a scan of the whole
+     * table in a single response.
      */
     @Test
     void capsPageSize() throws Exception {

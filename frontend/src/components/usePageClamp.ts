@@ -2,20 +2,20 @@ import { useEffect, useRef } from 'react';
 import type { Page } from '@/lib/page';
 
 /**
- * Recua quando a página deixa de existir debaixo de quem está nela.
+ * Steps back when the page it's on stops existing.
  *
- * Acontece de verdade: o ADMIN está na última página dos ativos, desativa o
- * único registro dela, e aquela página some do resultado. Sem recuar, a tela
- * diria "nenhum aluno ativo" com a página 1 cheia. Cobre também `?page=` fora
- * do intervalo digitado na URL.
+ * It really happens: the ADMIN is on the last page of the active ones, deactivates the
+ * only record on it, and that page vanishes from the result. Without stepping back, the screen
+ * would say "no active students" with page 1 full. Also covers `?page=` outside
+ * the range typed into the URL.
  *
- * O alvo é um número (ou null), e não uma função, para o efeito depender só de
- * primitivos. O callback mora num ref pela mesma razão: as telas o montam
- * inline (ele carrega o filtro atual), então a identidade muda a cada render e,
- * na lista de dependências, faria o efeito navegar em loop.
+ * The target is a number (or null), not a function, so the effect depends only on
+ * primitives. The callback lives in a ref for the same reason: screens mount it
+ * inline (it carries the current filter), so its identity changes on every render and,
+ * in the dependency list, would make the effect navigate in a loop.
  *
- * Devolve se está recuando — enquanto isso o vazio da página inexistente
- * mentiria, e quem chama o esconde.
+ * Returns whether it's stepping back — while that happens, the empty state of the nonexistent page
+ * would lie, and the caller hides it.
  */
 export function usePageClamp<T>(data: Page<T> | undefined, onClamp: (page: number) => void): boolean {
   const handler = useRef(onClamp);
@@ -30,8 +30,8 @@ export function usePageClamp<T>(data: Page<T> | undefined, onClamp: (page: numbe
       : null;
 
   useEffect(() => {
-    // replace: a página inexistente não merece entrada no histórico — voltar
-    // nela só provocaria o mesmo recuo de novo.
+    // replace: the nonexistent page doesn't deserve a history entry — going back
+    // to it would only trigger the same step-back again.
     if (target != null) handler.current(target);
   }, [target]);
 

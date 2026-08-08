@@ -4,14 +4,14 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 /**
- * Uma aula de um dia já expandida. Não é entidade: não existe linha no banco
- * que corresponda a isto — é o resultado de template − feriado − exceções +
- * remarcações, calculado a cada consulta.
+ * An already expanded class for a day. It is not an entity: there is no database row
+ * that corresponds to this — it is the result of template - holiday - exceptions +
+ * reschedules, computed on every query.
  *
- * {@code originDate} e {@code exceptionId} são nulos quando a aula veio do
- * template. Quando veio de uma remarcação, dizem de que dia ela saiu e qual
- * exceção a trouxe — sem os dois, quem exibe a agenda não teria como mostrar a
- * procedência da aula nem como desfazê-la.
+ * {@code originDate} and {@code exceptionId} are null when the class came from the
+ * template. When it came from a reschedule, they say what day it came from and which
+ * exception brought it — without both, whoever displays the schedule would have no way to show the
+ * origin of the class nor how to undo it.
  */
 public record ScheduleEntry(Long studentId,
                             String studentName,
@@ -22,7 +22,7 @@ public record ScheduleEntry(Long studentId,
                             LocalDate originDate,
                             Long exceptionId) {
 
-    /** De onde a aula veio: do horário recorrente ou de uma remarcação. */
+    /** Where the class came from: the recurring schedule or a reschedule. */
     public enum Origin {
         TEMPLATE,
         RESCHEDULED

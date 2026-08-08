@@ -55,23 +55,23 @@ public abstract class AbstractAuthIntegrationTest extends AbstractIntegrationTes
     }
 
     /**
-     * Garante um usuário com o role pedido e devolve o cookie de access dele.
-     * Existe para que testes de outros módulos obtenham uma sessão autenticada
-     * sem importar {@code auth.internal.*} — o acoplamento com os detalhes do
-     * auth fica confinado aqui.
+     * Guarantees a user with the requested role and returns their access
+     * cookie. Exists so that tests in other modules get an authenticated
+     * session without importing {@code auth.internal.*} — coupling to auth's
+     * details stays confined here.
      *
-     * O cookie é cacheado para a JVM inteira: o POST /auth/login tem rate limit
-     * de 5 tentativas/minuto por usuário, e autenticar de novo a cada
-     * @BeforeEach estouraria o limite (429) em qualquer classe com mais de
-     * cinco testes. O access token vale 10 min, de sobra para a suíte.
+     * The cookie is cached for the whole JVM: POST /auth/login has a rate
+     * limit of 5 attempts/minute per user, and authenticating again on every
+     * @BeforeEach would blow past the limit (429) in any class with more than
+     * five tests. The access token is valid for 10 min, plenty for the suite.
      *
-     * A chave inclui o {@code Clock} do contexto, e não só o login. Um token
-     * nasce e é conferido contra o relógio de quem o emitiu, e as classes de
-     * teste não compartilham relógio — billing, scheduling e os testes de
-     * relógio real sobem contextos com {@code Clock} próprio. Cacheado só por
-     * login, o cookie emitido sob um relógio vazaria para um contexto com
-     * outro e chegaria expirado. Identidade do bean é o recorte exato de "o
-     * contexto que emitiu este token".
+     * The key includes the context's {@code Clock}, not just the login. A
+     * token is born and checked against the clock of whoever issued it, and
+     * test classes don't share a clock — billing, scheduling, and the
+     * real-clock tests bring up contexts with their own {@code Clock}. Cached
+     * only by login, a cookie issued under one clock would leak into a
+     * context with another and arrive expired. Bean identity is the exact
+     * cut of "the context that issued this token".
      */
     protected Cookie cookieFor(String login, Role role) throws Exception {
         String key = login + "#" + System.identityHashCode(clock);
@@ -108,16 +108,16 @@ public abstract class AbstractAuthIntegrationTest extends AbstractIntegrationTes
     }
 
     /**
-     * Aluno e professor de verdade, criados pela API do cadastro.
+     * A real student and teacher, created through the registration API.
      *
-     * Moram aqui porque os testes de auth precisam de um vínculo que exista:
-     * criar usuário confere o aluno contra o cadastro. Eram uma cópia por
-     * classe de teste, e uma mudança no contrato de POST /students obrigaria a
-     * caçar todas — a segunda que ficasse para trás falharia por um motivo que
-     * nada tem a ver com o que ela testa.
+     * They live here because auth tests need a link that actually exists:
+     * creating a user checks the student against registration. They used to
+     * be a copy per test class, and a change to POST /students's contract
+     * would require hunting down all of them — the second one left behind
+     * would fail for a reason that has nothing to do with what it's testing.
      *
-     * O nome carrega System.nanoTime() porque o banco é compartilhado pela
-     * suíte e o telefone tem unicidade própria.
+     * The name carries System.nanoTime() because the database is shared by
+     * the suite and the phone number has its own uniqueness constraint.
      */
     protected long createTeacher(Cookie admin) throws Exception {
         MvcResult result = mockMvc.perform(post("/teachers")
@@ -151,7 +151,7 @@ public abstract class AbstractAuthIntegrationTest extends AbstractIntegrationTes
         return objectMapper.readTree(result.getResponse().getContentAsString()).get("id").asLong();
     }
 
-    /** Login único por chamada: o banco é compartilhado e o login é UNIQUE. */
+    /** Unique login per call: the database is shared and login is UNIQUE. */
     protected String uniqueLogin(String prefix) {
         return prefix + "-" + System.nanoTime() + "@tonus.com";
     }

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ApiError } from '@/lib/apiClient';
 import { type Role, type SessionUser, authApi, sessionQueryKey } from './api/authApi';
 
-/** Destino padrão de cada papel — usado no login, na raiz e nos guards. */
+/** Default destination for each role — used in login, at the root and in the guards. */
 const DESTINATION: Record<Role, string> = {
   ADMIN: '/admin/schedule',
   STUDENT: '/me/schedule',
@@ -18,8 +18,8 @@ export function useSession() {
   return useQuery<SessionUser>({
     queryKey: sessionQueryKey,
     queryFn: authApi.me,
-    // 401 já é tratado pelo apiClient (refresh + retry). Insistir aqui só
-    // multiplicaria a chamada.
+    // 401 is already handled by apiClient (refresh + retry). Insisting here would only
+    // multiply the call.
     retry: false,
     staleTime: 5 * 60 * 1000,
   });
@@ -32,12 +32,12 @@ export type SessionState =
   | { status: 'ready'; user: SessionUser };
 
 /**
- * Separa "não sei quem você é" de "não consegui perguntar".
+ * Separates "I don't know who you are" from "I couldn't ask".
  *
- * A diferença muda o que o usuário vê: 401 é sessão de fato encerrada e o
- * destino é o login; API fora do ar ou 500 é falha temporária, e mandar para o
- * login nesse caso encerraria uma sessão que continua válida — o usuário
- * digitaria a senha à toa e ainda assim não passaria.
+ * The difference changes what the user sees: 401 means the session is actually over and the
+ * destination is login; API down or 500 is a temporary failure, and sending to
+ * login in that case would end a session that's still valid — the user
+ * would type the password for nothing and still wouldn't get through.
  */
 export function useSessionState(): SessionState {
   const { data, error, isPending, refetch } = useSession();
@@ -55,7 +55,7 @@ export function useLogout() {
   return useMutation({
     mutationFn: authApi.logout,
     onSettled: () => {
-      // Cache sujo não pode vazar para o próximo login.
+      // Dirty cache can't leak into the next login.
       queryClient.clear();
       navigate('/login', { replace: true });
     },

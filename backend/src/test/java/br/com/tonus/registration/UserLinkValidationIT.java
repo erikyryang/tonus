@@ -9,13 +9,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * POST /users cria o usuário de acesso de um aluno/professor já cadastrado.
- * Hoje ele aceita qualquer coisa: id que não existe, role sem id, role com o id
- * do tipo errado. Cada uma dessas combinações produz um login que aponta para
- * lugar nenhum, e nada no sistema reclama depois.
+ * POST /users creates the access user of an already registered student/teacher.
+ * Today it accepts anything: an id that does not exist, a role without an id, a role with an id
+ * of the wrong type. Each of these combinations produces a login that points to
+ * nowhere, and nothing in the system complains later.
  *
- * Mora no pacote de registration porque precisa dos helpers de cadastro — o
- * comportamento verificado é do auth.
+ * It lives in the registration package because it needs the registration helpers — the
+ * behavior verified is auth's.
  */
 class UserLinkValidationIT extends AbstractRegistrationIntegrationTest {
 
@@ -72,8 +72,8 @@ class UserLinkValidationIT extends AbstractRegistrationIntegrationTest {
     }
 
     /**
-     * Role e id têm que concordar: um usuário STUDENT carregando teacher_id
-     * seria resolvido como professor por qualquer consumidor do vínculo.
+     * Role and id must agree: a STUDENT user carrying teacher_id
+     * would be resolved as a teacher by any consumer of the link.
      */
     @Test
     void rejectsStudentRoleCarryingTeacherId() throws Exception {
@@ -104,9 +104,9 @@ class UserLinkValidationIT extends AbstractRegistrationIntegrationTest {
     }
 
     /**
-     * Criar login para quem já saiu do estúdio produz um acesso que nasce
-     * devendo ser revogado: a desativação já passou, então o evento que revoga
-     * não vai acontecer de novo. O usuário ficaria ativo indefinidamente.
+     * Creating a login for whoever already left the studio produces access that is born
+     * already needing to be revoked: the deactivation already happened, so the event that revokes
+     * will not happen again. The user would remain active indefinitely.
      */
     @Test
     void rejectsUserForInactiveStudent() throws Exception {
@@ -131,8 +131,8 @@ class UserLinkValidationIT extends AbstractRegistrationIntegrationTest {
     }
 
     /**
-     * Quem voltou ao estúdio pode ter login de novo — a recusa é sobre a
-     * situação atual, não sobre já ter sido desativado um dia.
+     * Whoever came back to the studio can have a login again — the rejection is about the
+     * current situation, not about having been deactivated once.
      */
     @Test
     void acceptsUserForReactivatedStudent() throws Exception {

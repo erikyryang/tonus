@@ -12,12 +12,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Critério de aceite: "Desativar aluno não afeta faturas existentes".
+ * Acceptance criterion: "Deactivating a student does not affect existing invoices".
  *
- * O módulo billing ainda não existe, então o que se testa aqui é o invariante
- * do qual esse critério depende: desativar é UPDATE (active=false), a linha
- * sobrevive com o vínculo intacto e não existe DELETE físico para apagar o
- * histórico. O teste com fatura real entra na spec de billing.
+ * The billing module does not exist yet, so what is tested here is the invariant
+ * that this criterion depends on: deactivating is an UPDATE (active=false), the row
+ * survives with the link intact and there is no physical DELETE to erase the
+ * history. The test with a real invoice belongs to the billing spec.
  */
 class RegistrationDeactivationIT extends AbstractRegistrationIntegrationTest {
 

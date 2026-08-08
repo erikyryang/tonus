@@ -7,17 +7,17 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Token que não presta é tratado como ausência de token, nunca como erro do
- * servidor.
+ * A bad token is treated as the absence of a token, never as a server error.
  *
- * O {@code catch} do JwtService.parse é a porta da frente da autenticação: se
- * alguém trocá-lo por um throw, a API passa a devolver 500 para qualquer cookie
- * malformado — e vazar o motivo da falha para quem está sondando.
+ * The {@code catch} in JwtService.parse is authentication's front door: if
+ * someone swaps it for a throw, the API starts returning 500 for any
+ * malformed cookie — and leaking the failure reason to whoever is probing.
  *
- * O status é 401 e não 403 porque aqui ninguém se autenticou: 403 é para quem
- * está autenticado e não tem permissão (ver AuthRoleAccessIT). A distinção não
- * é cosmética — o front trata 401 como "sessão expirada, tente o refresh", e
- * com 403 a sessão nunca seria renovada.
+ * The status is 401, not 403, because here nobody authenticated: 403 is for
+ * someone who is authenticated and lacks permission (see AuthRoleAccessIT).
+ * The distinction isn't cosmetic — the front treats 401 as "session
+ * expired, try the refresh", and with 403 the session would never be
+ * renewed.
  */
 class AuthInvalidTokenIT extends AbstractAuthIntegrationTest {
 
@@ -42,9 +42,9 @@ class AuthInvalidTokenIT extends AbstractAuthIntegrationTest {
     }
 
     /**
-     * Assinatura adulterada é o caso que interessa de verdade: o payload
-     * continua legível e bem-formado, e só a verificação criptográfica separa
-     * um token legítimo de um forjado.
+     * A tampered signature is the case that really matters: the payload
+     * remains readable and well-formed, and only the cryptographic check
+     * separates a legitimate token from a forged one.
      */
     @Test
     void tamperedSignatureIsRejected() throws Exception {

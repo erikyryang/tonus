@@ -5,16 +5,16 @@ import { formatMoney } from '@/lib/formatters';
 import type { Plan, PlanEnrollment } from '../api/billingApi';
 
 /**
- * Os planos de um aluno: matricular é marcar a caixa, sem botão de salvar —
- * cada caixa é uma decisão isolada, e o back tem endpoint para cada uma. Um
- * "salvar" no fim exigiria calcular o diff aqui e mandar N chamadas mesmo
- * assim — com a diferença de que uma falha no meio deixaria a tela mentindo
- * sobre o que foi gravado.
+ * A student's plans: enrolling is checking the box, with no save button —
+ * each checkbox is an isolated decision, and the back has an endpoint for each one. A
+ * "save" at the end would require computing the diff here and sending N calls
+ * anyway — with the difference that a failure in the middle would leave the screen lying
+ * about what was persisted.
  *
- * Encerrar é ação à parte, por linha, com confirmação (mudança 8): diferente
- * de matricular, tem efeito sobre cobrança futura, e a caixa sozinha nunca
- * perguntava "tem certeza?". Enquanto ativo, o plano fica com a caixa marcada
- * e travada — quem desliga é o botão "Encerrar", nunca o clique na caixa.
+ * Ending is a separate action, per row, with confirmation (change 8): unlike
+ * enrolling, it has an effect on future billing, and the checkbox alone never
+ * asked "are you sure?". While active, the plan keeps its checkbox checked
+ * and locked — the one that turns it off is the "End" button, never a click on the checkbox.
  */
 export function StudentPlansDialog({
   studentName,
@@ -28,15 +28,15 @@ export function StudentPlansDialog({
   onClose,
 }: {
   studentName: string;
-  /** Só os ativos: matricular em plano desativado não geraria cobrança. */
+  /** Only the active ones: enrolling in a deactivated plan wouldn't generate billing. */
   plans: Plan[];
   enrollments: PlanEnrollment[] | undefined;
-  /** Configuração do estúdio; ausente enquanto a consulta não responde. */
+  /** Studio configuration; absent while the query hasn't responded. */
   discountPercent: number | undefined;
   pending: boolean;
   error: unknown;
   onToggle: (plan: Plan, enrollment: PlanEnrollment | undefined) => void;
-  /** Pede confirmação antes de encerrar — quem desativa de fato é o ADMIN, depois. */
+  /** Asks for confirmation before ending — the one who actually deactivates it is the ADMIN, afterward. */
   onRequestDeactivate: (plan: Plan, enrollment: PlanEnrollment) => void;
   onClose: () => void;
 }) {
@@ -60,9 +60,9 @@ export function StudentPlansDialog({
                     type="checkbox"
                     className="h-4 w-4 rounded border-slate-300"
                     checked={active}
-                    // Ativo: só o botão "Encerrar" desliga. A caixa aqui vira
-                    // indicador, não controle — dois caminhos para a mesma
-                    // ação, um deles sem confirmação, derrotaria o propósito.
+                    // Active: only the "End" button turns it off. The checkbox here becomes an
+                    // indicator, not a control — two paths to the same
+                    // action, one of them without confirmation, would defeat the purpose.
                     disabled={pending || enrollments === undefined || active}
                     onChange={() => onToggle(plan, enrollment)}
                   />
@@ -87,11 +87,11 @@ export function StudentPlansDialog({
         )}
 
         {/*
-          * O desconto configurado aparece como informação, e o total NÃO é
-          * calculado aqui: o valor da fatura é regra do back (soma, desconto e
-          * arredondamento uma vez só no total), e recomputá-lo na tela criaria
-          * uma segunda verdade que diverge no primeiro centavo. Quando o valor
-          * previsto for necessário de fato, quem deve respondê-lo é o back.
+          * The configured discount appears as information, and the total is NOT
+          * computed here: the invoice value is the back's rule (sum, discount and
+          * rounding just once on the total), and recomputing it on the screen would create
+          * a second truth that diverges at the first cent. When the projected value
+          * is actually needed, the back is the one who should answer it.
           */}
         {activeCount > 1 && discountPercent !== undefined && discountPercent > 0 && (
           <p className="text-sm text-slate-700">

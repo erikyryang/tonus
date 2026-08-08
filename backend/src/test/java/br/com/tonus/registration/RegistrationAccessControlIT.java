@@ -7,8 +7,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * A SPEC-002 restringe o CRUD de cadastro ao ADMIN. Aluno e professor logados
- * não podem listar nem ler o cadastro alheio.
+ * SPEC-002 restricts the registration CRUD to the ADMIN. Logged-in student and teacher
+ * cannot list nor read someone else's registration.
  */
 class RegistrationAccessControlIT extends AbstractRegistrationIntegrationTest {
 
@@ -29,10 +29,10 @@ class RegistrationAccessControlIT extends AbstractRegistrationIntegrationTest {
     }
 
     /**
-     * Anônimo é 401 em toda a API desde a SPEC-006: o entry point próprio do
-     * SecurityConfig substituiu o 403 padrão do Spring Security, porque é o 401
-     * que o front usa como sinal de "sessão expirada, tente o refresh". 403
-     * ficou para quem está autenticado e não tem permissão.
+     * Anonymous is 401 across the whole API since SPEC-006: SecurityConfig's own
+     * entry point replaced Spring Security's default 403, because it is the 401
+     * that the frontend uses as a signal of "session expired, try the refresh". 403
+     * is left for whoever is authenticated and has no permission.
      */
     @Test
     void anonymousCannotAccessRegistrationCrud() throws Exception {

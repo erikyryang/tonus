@@ -61,9 +61,9 @@ class StudentCrudIT extends AbstractRegistrationIntegrationTest {
     }
 
     /**
-     * Trocar o professor de um aluno é operação individual válida — a spec só
-     * põe a troca em lote fora de escopo. Até agora só os caminhos de recusa
-     * (professor inexistente, professor inativo) tinham teste.
+     * Changing a student's teacher is a valid individual operation — the spec only
+     * puts the bulk change out of scope. Until now only the rejection paths
+     * (nonexistent teacher, inactive teacher) had a test.
      */
     @Test
     void movesStudentToAnotherActiveTeacher() throws Exception {
@@ -87,7 +87,7 @@ class StudentCrudIT extends AbstractRegistrationIntegrationTest {
     }
 
     /**
-     * Minimização LGPD: a API não aceita campo fora do escopo da spec.
+     * LGPD minimization: the API does not accept a field outside the spec's scope.
      */
     @Test
     void ignoresFieldsOutsideSpecScope() throws Exception {

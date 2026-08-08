@@ -1,31 +1,33 @@
 spring:
   application:
     name: tonus
-  # "Moments" é uma feature do Spring Modulith (eventos de troca de dia/semana)
-  # que o projeto não usa. Vem transitiva de spring-modulith-starter-core e,
-  # em teste, quebra a resolução de Clock: dentro de @ApplicationModuleTest,
-  # ObjectProvider<Clock> encontra dois beans (clock de produção + Clock fixo
-  # do teste) e não decide por @Primary do jeito que o restante da aplicação
-  # decide — sintoma só visível depois de shared virar sharedModule (ver
-  # TonusApplication). Excluída por não ser usada, não por contornar bug.
+  # "Moments" is a Spring Modulith feature (day/week change events) that this
+  # project doesn't use. It comes in transitively via
+  # spring-modulith-starter-core and, in tests, breaks Clock resolution:
+  # inside @ApplicationModuleTest, ObjectProvider<Clock> finds two beans
+  # (the production clock + the test's fixed Clock) and doesn't pick one via
+  # @Primary the way the rest of the application does — a symptom only
+  # visible after shared became sharedModule (see TonusApplication). Excluded
+  # because it's unused, not to work around a bug.
   autoconfigure:
     exclude:
       - org.springframework.modulith.moments.autoconfigure.MomentsAutoConfiguration
   modulith:
     events:
-      # Desligado, e o EventRepublicationJob é o único caminho de reentrega.
+      # Disabled, with EventRepublicationJob as the only redelivery path.
       #
-      # Na subida o Modulith faz resubmitIncompletePublications(__ -> true):
-      # TUDO que está incompleto, sem olhar idade. Isso fura o teto de
-      # shared.events.max-age — uma pendência de seis meses, já desistida,
-      # voltaria a ser entregue a cada restart — e, pior, impediria podar
-      # notification_log: no fan-out de feriado as linhas de log convivem com
-      # uma publicação incompleta, e apagá-las com a publicação ainda
-      # republicável faria o aluno receber a mensagem de novo.
+      # On startup, Modulith runs resubmitIncompletePublications(__ -> true):
+      # EVERYTHING that's incomplete, regardless of age. That blows past
+      # shared.events.max-age — a six-month-old, already-abandoned pending
+      # event would be redelivered on every restart — and, worse, it would
+      # block pruning notification_log: in an announcement fan-out, log rows
+      # coexist with an incomplete publication, and deleting them while the
+      # publication is still re-publishable would make the student receive
+      # the message again.
       #
-      # O job cobre o mesmo caso: depois de um restart, o primeiro tique do
-      # cron (até 5 min) reentrega o que está na janela. Troca-se recuperação
-      # imediata por uma garantia que vale sempre.
+      # The job covers the same case: after a restart, the cron's first tick
+      # (up to 5 min) redelivers whatever's in the window. Trading immediate
+      # recovery for a guarantee that always holds.
       republish-outstanding-events-on-restart: false
   mvc:
     problemdetails:
@@ -49,33 +51,37 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
-  # O Caddy termina o TLS e fala HTTP com a aplicação. Sem isto, toda
-  # requisição parece HTTP aqui dentro e o cookie de sessão sairia sem Secure
-  # em produção — ver AuthController.buildCookie, que decide o atributo pelo
-  # transporte da requisição. AuthCookieSecureIT cobre.
+  # Caddy terminates TLS and talks HTTP to the application. Without this,
+  # every request looks like HTTP in here and the session cookie would go out
+  # without Secure in production — see AuthController.buildCookie, which
+  # decides the attribute based on the request's transport. AuthCookieSecureIT
+  # covers it.
   forward-headers-strategy: framework
 
 shared:
   events:
-    # De quanto em quanto tempo varrer o registry atrás de entrega pendente.
+    # How often to sweep the registry for pending deliveries.
     republish-cron: "0 */5 * * * *"
-    # Idade mínima para uma pendência contar como falha, e não como listener
-    # ainda trabalhando. Uma entrega que falha espera entre 5 e 10 minutos para
-    # ser tentada de novo — folgado para aviso de WhatsApp, e conservador o
-    # bastante para não competir com o listener em curso.
+    # Minimum age for a pending item to count as a failure, rather than a
+    # listener still working. A failed delivery waits between 5 and 10
+    # minutes before being retried — generous enough for a WhatsApp notice,
+    # and conservative enough not to compete with a listener already in
+    # progress.
     min-age: 5m
-    # Teto: passado isso, desiste de reentregar. A tabela não tem contador de
-    # tentativas, então sem teto uma entrega perdida em definitivo é retentada
-    # a cada 5 minutos para sempre. Um dia porque aviso de aula cancelada não
-    # vale mais nada depois disso. A linha continua no banco com
-    # completion_date nulo — é a evidência de que aquele aviso nunca saiu.
+    # Ceiling: past this, stop trying to redeliver. The table has no attempt
+    # counter, so without a ceiling a permanently lost delivery would be
+    # retried every 5 minutes forever. One day, because a canceled-class
+    # notice isn't worth anything anymore after that. The row stays in the
+    # database with a null completion_date — that's the evidence that notice
+    # never went out.
     max-age: 24h
-    # Poda das entregas já concluídas: o registry não apaga nada sozinho, e a
-    # tabela está no caminho de toda publicação. Meia hora depois do job de
-    # cobrança, para as duas varreduras noturnas não disputarem a mesma tabela.
+    # Pruning of already-completed deliveries: the registry doesn't delete
+    # anything on its own, and the table sits on the path of every
+    # publication. Half an hour after the billing job, so the two nightly
+    # sweeps don't contend for the same table.
     cleanup-cron: "0 30 3 * * *"
-    # Uma semana é o que se costuma querer para responder "esse aviso saiu?"
-    # depois de um aluno reclamar.
+    # A week is what people usually want in order to answer "did that notice
+    # go out?" after a student complains.
     retention: 7d
 
 auth:
@@ -86,36 +92,39 @@ auth:
     ttl: 7d
 
 billing:
-  # Dias de tolerância após o vencimento antes de uma fatura ABERTA virar
-  # ATRASADA (ver SPEC-004).
+  # Grace period in days after the due date before an OPEN invoice becomes
+  # OVERDUE (see SPEC-004).
   days-overdue: 1
-  # Cron do job diário de cobrança (@Scheduled + ShedLock): 3h da manhã,
-  # fuso do estúdio.
+  # Cron for the daily billing job (@Scheduled + ShedLock): 3am, studio's
+  # timezone.
   job-cron: "0 0 3 * * *"
 
 notification:
-  # Falhas seguidas num fan-out de feriado abortam o laço. Não é azar com N
-  # alunos, é o gateway fora do ar — e insistir custa um read timeout por
-  # aluno. O que sobrou volta pelo job de republicação.
+  # Consecutive failures in an announcement fan-out abort the loop. It's not
+  # bad luck with N students, it's the gateway being down — and retrying
+  # costs one read timeout per student. Whatever's left comes back through
+  # the republication job.
   consecutive-failure-limit: 5
-  # Poda do histórico de avisos. Só é segura porque a reentrega tem teto
-  # (shared.events.max-age): a tabela é a chave de idempotência, e apagar linha
-  # de aviso ainda republicável reenviaria a mensagem. Seis meses deixa a
-  # distância entre as duas grande demais para alguém encostar por engano.
+  # Pruning of notice history. Only safe because redelivery has a ceiling
+  # (shared.events.max-age): the table is the idempotency key, and deleting a
+  # notice row that's still re-publishable would resend the message. Six
+  # months keeps the distance between the two large enough that nobody
+  # bumps into it by accident.
   cleanup-cron: "0 45 3 * * *"
   log-retention: 180d
   evolution:
-    # Nasce desligado. Ligado sem querer, o primeiro job de cobrança manda
-    # WhatsApp de verdade para aluno de verdade — errar para o lado do
-    # silêncio é o único erro reversível aqui.
+    # Starts disabled. Turned on by accident, the first billing job sends a
+    # real WhatsApp message to a real student — erring on the side of
+    # silence is the only reversible mistake here.
     enabled: ${NOTIFICATION_ENABLED:false}
-    # Sem valor de desenvolvimento: com enabled=true, a aplicação recusa subir
-    # se faltar qualquer um dos dois. Chave de API em application.yml seria
-    # segredo versionado.
+    # No development default: with enabled=true, the application refuses to
+    # start if either is missing. An API key in application.yml would be a
+    # versioned secret.
     base-url: ${EVOLUTION_BASE_URL:}
     api-key: ${EVOLUTION_API_KEY:}
     instance: ${EVOLUTION_INSTANCE:tonus}
-    # Timeout nos dois lados: sem eles, uma Evolution que aceita a conexão e
-    # nunca responde trava um listener assíncrono para sempre.
+    # Timeouts on both sides: without them, an Evolution instance that
+    # accepts the connection and never responds hangs an async listener
+    # forever.
     connect-timeout: 3s
     read-timeout: 10s

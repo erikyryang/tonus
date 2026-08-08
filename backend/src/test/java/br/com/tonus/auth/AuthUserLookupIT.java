@@ -18,16 +18,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Consulta usuário-por-vínculo (SPEC-009).
+ * User-by-link query (SPEC-009).
  *
- * A tela de alunos escolhe entre "Criar acesso" e "Reativar acesso" linha a
- * linha, e a diferença entre as duas é exatamente o que só o auth sabe: se já
- * existe usuário para aquele aluno e se ele continua ativo. Sem esta consulta o
- * front não teria nem como reativar — a reativação é por id de usuário, e o id
- * nunca chegava até ele.
+ * The students screen chooses between "Create access" and "Reactivate
+ * access" row by row, and the difference between the two is exactly what
+ * only auth knows: whether a user already exists for that student and
+ * whether it's still active. Without this query the front wouldn't even be
+ * able to reactivate — reactivation is by user id, and the id would never
+ * reach it.
  *
- * A consulta é em lote, por uma lista de alunos: uma chamada por linha da
- * listagem seriam vinte requisições para montar vinte botões.
+ * The query is batched, over a list of students: one call per listing row
+ * would be twenty requests just to build twenty buttons.
  */
 class AuthUserLookupIT extends AbstractAuthIntegrationTest {
 
@@ -53,16 +54,17 @@ class AuthUserLookupIT extends AbstractAuthIntegrationTest {
         assertThat(user.get("id").asLong()).isEqualTo(userId);
         assertThat(user.get("studentId").asLong()).isEqualTo(withAccess);
         assertThat(user.get("active").asBoolean()).isTrue();
-        // Nunca o hash de senha, nem por acidente de serialização.
+        // Never the password hash, not even by serialization accident.
         assertThat(user.has("password")).isFalse();
     }
 
     /**
-     * Acesso revogado precisa ser distinguível de "nunca teve acesso": é a
-     * diferença entre oferecer "Reativar acesso" e "Criar acesso".
+     * Revoked access needs to be distinguishable from "never had access":
+     * that's the difference between offering "Reactivate access" and
+     * "Create access".
      *
-     * A revogação é assíncrona (evento do cadastro consumido pelo auth), então
-     * a espera é pelo efeito, não pela resposta HTTP da desativação.
+     * Revocation is asynchronous (a registration event consumed by auth), so
+     * the wait is for the effect, not for the deactivation's HTTP response.
      */
     @Test
     void reportsRevokedAccessAsInactive() throws Exception {
@@ -94,7 +96,7 @@ class AuthUserLookupIT extends AbstractAuthIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
-    /** Sem alunos não há pergunta a responder — e uma lista vazia esconderia o engano. */
+    /** Without students there's no question to answer — an empty list would hide the mistake. */
     @Test
     void requiresTheStudentIdsParameter() throws Exception {
         mockMvc.perform(get("/users").cookie(admin))
@@ -102,9 +104,10 @@ class AuthUserLookupIT extends AbstractAuthIntegrationTest {
     }
 
     /**
-     * A resposta não é paginada porque o tamanho da pergunta a limita — e é
-     * este teto que faz disso uma promessa, não uma esperança. Sem ele a lista
-     * vira uma cláusula IN de um parâmetro por id, e o excesso volta como 500.
+     * The response isn't paginated because the size of the question limits
+     * it — and it's this cap that makes it a promise, not a hope. Without it
+     * the list turns into an IN clause with one parameter per id, and the
+     * excess comes back as a 500.
      */
     @Test
     void rejectsMoreStudentsThanAPageCouldHold() throws Exception {

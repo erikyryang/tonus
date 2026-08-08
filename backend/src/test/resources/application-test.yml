@@ -7,23 +7,25 @@ spring:
 
 shared:
   events:
-    # Crons que não rodam durante a suíte (3h de 1º de janeiro). Os testes que
-    # exercitam reprocessamento chamam a API do Modulith na mão; deixar os jobs
-    # soltos acrescentaria reentrega — ou apagamento — imprevisível no meio de
-    # outro teste.
+    # Crons that don't run during the suite (3am on January 1st). Tests that
+    # exercise reprocessing call the Modulith API by hand; leaving the jobs
+    # unchecked would add unpredictable redelivery — or deletion — in the
+    # middle of another test.
     republish-cron: "0 0 3 1 1 *"
     cleanup-cron: "0 0 3 1 1 *"
 
 notification:
-  # Mesma razão: a poda do histórico é chamada na mão pelo teste que a
-  # exercita, e um job solto apagaria linha no meio de outro teste.
+  # Same reason: the history pruning is called by hand by the test that
+  # exercises it, and an unchecked job would delete a row in the middle of
+  # another test.
   cleanup-cron: "0 0 3 1 1 *"
 
 billing:
-  # O job diário roda às 3h em produção — e rodaria no meio da suíte para quem
-  # a executasse de madrugada, gerando fatura e publicando evento por baixo dos
-  # testes. BillingJobIT chama BillingService direto (ver o javadoc de lá sobre
-  # o lock), então nada aqui depende do agendamento.
+  # The daily job runs at 3am in production — and would run in the middle of
+  # the suite for whoever runs it overnight, generating an invoice and
+  # publishing an event underneath the tests. BillingJobIT calls
+  # BillingService directly (see its javadoc about the lock), so nothing
+  # here depends on the schedule.
   job-cron: "0 0 3 1 1 *"
 
 auth:

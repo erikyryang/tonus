@@ -1,9 +1,9 @@
 package br.com.tonus.registration.internal;
 
 /**
- * Professor que saiu do estúdio não recebe aluno novo. Como a desativação é a
- * forma de registrar a saída, vincular um aluno a um professor inativo é erro
- * de entrada (400), não recurso ausente.
+ * A teacher who left the studio does not receive new students. Since deactivation is the
+ * way to record the departure, linking a student to an inactive teacher is an input
+ * error (400), not a missing resource.
  */
 public class InactiveTeacherException extends RuntimeException {
 

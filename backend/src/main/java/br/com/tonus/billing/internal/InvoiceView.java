@@ -4,14 +4,14 @@ import br.com.tonus.billing.internal.domain.Invoice;
 import java.time.LocalDate;
 
 /**
- * Fatura pareada com o que a web precisa e a linha de invoice não guarda.
+ * Invoice paired with what the web needs and the invoice row doesn't hold.
  *
- * studentId e studentName porque quem sabe do aluno é subscription +
- * registration; paymentDate porque a baixa mora na tabela payment, que não tem
- * endpoint próprio. Resolver os três no cliente custaria uma chamada por linha
- * da listagem (SPEC-008).
+ * studentId and studentName because whoever knows about the student is
+ * subscription + registration; paymentDate because the payment lives in the
+ * payment table, which has no endpoint of its own. Resolving the three on
+ * the client would cost one call per row of the listing (SPEC-008).
  *
- * {@code paymentDate} é nulo enquanto a fatura não foi paga.
+ * {@code paymentDate} is null while the invoice hasn't been paid.
  */
 public record InvoiceView(Invoice invoice, Long studentId, String studentName, LocalDate paymentDate) {
 }

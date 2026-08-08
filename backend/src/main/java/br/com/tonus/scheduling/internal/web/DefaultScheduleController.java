@@ -19,9 +19,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Configuração da agenda é do ADMIN. O professor é dono da aula, mas não de
- * quem tem horário: deixá-lo escrever aqui lhe daria poder sobre a agenda dos
- * alunos dos outros.
+ * Schedule configuration belongs to the ADMIN. The teacher owns the class, but not
+ * who has a schedule: letting them write here would give them power over the schedule of
+ * other teachers' students.
  */
 @RestController
 @RequestMapping("/default-schedules")
@@ -41,9 +41,9 @@ class DefaultScheduleController {
     }
 
     /**
-     * O caminho vem antes de qualquer {@code /{id}} — mesma cautela do
-     * {@code overdue-student-ids} de billing: "by-student" não pode ser
-     * confundido com um id.
+     * The path comes before any {@code /{id}} — same caution as billing's
+     * {@code overdue-student-ids}: "by-student" must not be
+     * confused with an id.
      */
     @GetMapping("/by-student")
     Map<Long, LocalTime> byStudent() {
@@ -67,9 +67,9 @@ class DefaultScheduleController {
     }
 
     /**
-     * Aqui DELETE existe de verdade, diferente de aluno e professor: horário
-     * padrão é configuração corrente, não histórico. O histórico de aula dada
-     * é da fatura.
+     * Here DELETE really exists, unlike student and teacher: default
+     * schedule is current configuration, not history. The history of a class given
+     * belongs to the invoice.
      */
     @DeleteMapping("/{id}")
     ResponseEntity<Void> delete(@PathVariable Long id) {

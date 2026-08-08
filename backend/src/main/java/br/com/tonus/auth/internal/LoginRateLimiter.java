@@ -9,9 +9,9 @@ import java.util.Map;
 import org.springframework.stereotype.Component;
 
 /**
- * Limita tentativas de login por identificador (login informado), não por
- * IP — isola cenários de teste/usuários diferentes e evita que uma conta
- * sob ataque consuma o limite de outra.
+ * Limits login attempts per identifier (the provided login), not per IP —
+ * isolates test scenarios/different users and prevents an account under
+ * attack from consuming another account's limit.
  */
 @Component
 public class LoginRateLimiter {
@@ -20,20 +20,21 @@ public class LoginRateLimiter {
     private static final Duration WINDOW = Duration.ofMinutes(1);
 
     /**
-     * Teto do próprio mapa de buckets, não do rate limit em si.
+     * Cap on the bucket map itself, not on the rate limit.
      *
-     * /auth/login é público e aceita qualquer valor de {@code login} — sem
-     * teto, cada valor distinto vira uma entrada que nunca é removida, e um
-     * atacante sem credencial nenhuma esgota a heap da instância só variando
-     * essa string a cada requisição. LinkedHashMap em modo de acesso (o
-     * {@code true} do construtor) descarta a entrada menos recentemente usada
-     * quando o mapa passa do teto: quem está de fato tentando logar continua
-     * dentro da janela de um minuto e nunca é o descartado.
+     * /auth/login is public and accepts any value for {@code login} — without
+     * a cap, every distinct value becomes an entry that is never removed, and
+     * an attacker with no credentials at all can exhaust the instance's heap
+     * just by varying this string on every request. LinkedHashMap in access
+     * order (the {@code true} in the constructor) evicts the least recently
+     * used entry when the map goes past the cap: whoever is actually trying
+     * to log in stays within the one-minute window and is never the one
+     * evicted.
      *
-     * Acesso é síncrono de propósito: bucket4j já serializa a decisão dentro
-     * de cada bucket, e o mapa em si só precisa de exclusão mútua na hora de
-     * criar ou promover uma entrada — não é o caminho quente de uma aplicação
-     * deste tamanho.
+     * Access is synchronized on purpose: bucket4j already serializes the
+     * decision inside each bucket, and the map itself only needs mutual
+     * exclusion when creating or promoting an entry — not the hot path of an
+     * application of this size.
      */
     private static final int MAX_TRACKED_KEYS = 10_000;
 
@@ -48,7 +49,7 @@ public class LoginRateLimiter {
         return buckets.computeIfAbsent(key, k -> newBucket()).tryConsume(1);
     }
 
-    /** Só para o teste do teto — nada em produção consulta o tamanho do mapa. */
+    /** Only for the cap test — nothing in production checks the map's size. */
     synchronized int trackedKeyCount() {
         return buckets.size();
     }

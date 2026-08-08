@@ -12,17 +12,17 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Os dois caminhos da SPEC-012 que prometem trabalhar em lote: a listagem de
- * planos (que conta matriculados por plano) e o job diário (que resolve preço e
- * data de cadastro do estúdio inteiro).
+ * The two paths in SPEC-012 that promise to work in bulk: the plan listing
+ * (which counts enrollments per plan) and the daily job (which resolves
+ * price and registration date for the whole studio).
  *
- * Sem estes testes as duas promessas são só comentário: voltar ao N+1 não
- * quebra nenhuma asserção de comportamento, e o custo aparece em produção, no
- * job que roda de madrugada sobre todo mundo.
+ * Without these tests the two promises are just a comment: going back to
+ * N+1 breaks no behavior assertion, and the cost shows up in production, in
+ * the job that runs overnight over everyone.
  *
- * As asserções são tetos, não contagens exatas — o número certo depende de
- * detalhes do Hibernate que mudam sem o desenho mudar. O teto separa "lote" de
- * "por linha", que é o que importa.
+ * The assertions are ceilings, not exact counts — the exact number depends
+ * on Hibernate details that change without the design changing. The ceiling
+ * separates "bulk" from "per row", which is what matters.
  */
 @SpringBootTest(properties = {
         "spring.jpa.properties.hibernate.generate_statistics=true",
@@ -38,9 +38,9 @@ class BillingQueryCountIT extends AbstractBillingIntegrationTest {
     private br.com.tonus.billing.internal.BillingService billingService;
 
     /**
-     * A contagem de matriculados sai de uma consulta para a página inteira, e
-     * não de uma por plano — era assim que estava escrito primeiro, e o teto
-     * abaixo é o que impede a volta.
+     * The enrollment count comes from one query for the whole page, not one
+     * per plan — that's how it was written first, and the ceiling below is
+     * what prevents going back.
      */
     @Test
     void planListingDoesNotCountPerPlan() throws Exception {
@@ -62,22 +62,24 @@ class BillingQueryCountIT extends AbstractBillingIntegrationTest {
     }
 
     /**
-     * O job resolve planos, matrículas, desconto e datas de cadastro **por
-     * conjunto**, antes de decidir quem faturar. Perguntar a data de cadastro
-     * aluno a aluno seria N consultas a mais na única rotina que trabalha com o
-     * estúdio inteiro de madrugada.
+     * The job resolves plans, enrollments, discount and registration dates
+     * **as sets**, before deciding who to bill. Asking the registration
+     * date student by student would be N extra queries in the only routine
+     * that works over the whole studio overnight.
      *
-     * Os alunos daqui vencem em outro dia de propósito: assim o job faz todas
-     * as buscas e não gera nada, e a contagem isola o que se quer garantir — o
-     * caminho de leitura — do custo de inserir fatura, que é proporcional por
-     * natureza (insert + auditoria + registro do evento) e não é N+1.
+     * These students' due dates fall on another day on purpose: this way
+     * the job does all the lookups and generates nothing, and the count
+     * isolates what we want to guarantee — the read path — from the cost
+     * of inserting an invoice, which is proportional by nature (insert +
+     * audit + event recording) and isn't N+1.
      */
     @Test
     void dailyJobResolvesEverythingInBulkBeforeDeciding() throws Exception {
-        // O job varre o estúdio inteiro e o Postgres é compartilhado pela
-        // suíte: matrícula deixada por outra classe entraria na conta e o teto
-        // mediria o resto da suíte, não este desenho. Mesmo recurso do
-        // AnnouncementFanOutIT — silencia o resto e devolve no fim.
+        // The job scans the whole studio and Postgres is shared by the
+        // suite: an enrollment left by another class would enter the count
+        // and the ceiling would measure the rest of the suite, not this
+        // design. Same trick as AnnouncementFanOutIT — silence the rest and
+        // restore it at the end.
         List<Long> previouslyActive = deactivateExistingEnrollments();
         try {
             String marker = unique("Job");
@@ -85,7 +87,7 @@ class BillingQueryCountIT extends AbstractBillingIntegrationTest {
             for (int i = 0; i < PLANS; i++) {
                 long studentId = createStudent(marker + "-aluno-" + i, createTeacher(marker + "-prof-" + i));
                 enroll(studentId, planId);
-                // Cadastrado num dia 5; "hoje" para o relógio da suíte é dia 27.
+                // Registered on the 5th; "today" for the suite's clock is the 27th.
                 jdbcTemplate.update("UPDATE student SET created_at = ?::timestamp WHERE id = ?",
                         "2026-03-05 09:00:00", studentId);
             }
@@ -95,8 +97,8 @@ class BillingQueryCountIT extends AbstractBillingIntegrationTest {
 
             billingService.generateDueInvoices();
 
-            // Planos, matrículas, configuração e datas de cadastro: quatro
-            // consultas, e o número não anda com o tamanho do estúdio.
+            // Plans, enrollments, configuration and registration dates:
+            // four queries, and the number doesn't scale with the studio's size.
             assertThat(statistics.getPrepareStatementCount())
                     .as("consultas de leitura do job para %d alunos com plano ativo", PLANS)
                     .isLessThanOrEqualTo(5);

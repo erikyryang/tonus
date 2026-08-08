@@ -7,11 +7,11 @@ import jakarta.persistence.Table;
 import java.math.BigDecimal;
 
 /**
- * Um plano do catálogo do estúdio: nome e mensalidade.
+ * A plan from the studio's catalog: name and monthly fee.
  *
- * Não existe DELETE, mesma decisão de aluno e professor: plano desativado sai
- * das listagens e das matrículas novas, mas continua explicando as faturas que
- * já foram emitidas com ele.
+ * There is no DELETE, same decision as for student and teacher: a
+ * deactivated plan drops out of listings and new enrollments, but keeps
+ * explaining the invoices that were already issued with it.
  */
 @Entity
 @Table(name = "plan")

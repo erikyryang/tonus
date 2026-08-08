@@ -41,14 +41,14 @@ class SchedulingExceptionHandler {
     }
 
     /**
-     * Rede de segurança para a corrida que a pré-checagem não cobre: duas
-     * requisições simultâneas passam as duas pelo {@code existsBy...} antes de
-     * qualquer uma gravar, e a segunda só descobre o conflito na constraint.
-     * Sem isto, esse caso raro viraria 500.
+     * Safety net for the race that the pre-check does not cover: two
+     * simultaneous requests both pass through {@code existsBy...} before either
+     * one writes, and the second only discovers the conflict at the constraint.
+     * Without this, that rare case would turn into a 500.
      *
-     * Só {@link DuplicateKeyException}, e não DataIntegrityViolationException
-     * inteira: violação de CHECK é bug nosso — a validação deveria ter pegado
-     * antes — e precisa continuar aparecendo como erro, não virar 409.
+     * Only {@link DuplicateKeyException}, and not the whole DataIntegrityViolationException:
+     * a CHECK violation is our bug — validation should have caught it
+     * beforehand — and it needs to keep showing up as an error, not turn into a 409.
      */
     @ExceptionHandler(DuplicateKeyException.class)
     ProblemDetail handleConcurrentDuplicate(DuplicateKeyException ex) {

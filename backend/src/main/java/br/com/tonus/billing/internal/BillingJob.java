@@ -5,10 +5,10 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Job diário da spec: gera fatura do dia e marca fatura vencida como
- * atrasada. O lock garante que só uma instância execute por vez; a
- * idempotência de não duplicar fatura/evento vem de
- * {@link BillingService#generateDueInvoices()} em si (ver uk_invoice_subscription_period).
+ * Daily job from the spec: generates today's invoice and marks an overdue
+ * invoice as such. The lock guarantees only one instance runs at a time; the
+ * idempotency of not duplicating an invoice/event comes from
+ * {@link BillingService#generateDueInvoices()} itself (see uk_invoice_subscription_period).
  */
 @Component
 public class BillingJob {

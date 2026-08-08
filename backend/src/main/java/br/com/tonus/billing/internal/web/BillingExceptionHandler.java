@@ -41,8 +41,8 @@ class BillingExceptionHandler {
     }
 
     /**
-     * Rede de segurança para a corrida que a pré-checagem não cobre, mesmo
-     * padrão de SchedulingExceptionHandler.
+     * Safety net for the race that the pre-check doesn't cover, same pattern
+     * as SchedulingExceptionHandler.
      */
     @ExceptionHandler(DuplicateKeyException.class)
     ProblemDetail handleConcurrentDuplicate(DuplicateKeyException ex) {

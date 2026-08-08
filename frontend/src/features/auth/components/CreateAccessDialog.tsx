@@ -8,9 +8,9 @@ import { Label } from '@/components/ui/label';
 import { apiMessage } from '@/lib/apiError';
 
 /**
- * O mínimo de senha é mais duro que o do back (que só exige não-vazio) de
- * propósito: aqui se cria a credencial de outra pessoa, e uma senha de três
- * letras digitada com pressa vira acesso frouxo que ninguém revisita.
+ * The password minimum is stricter than the back's (which only requires non-empty) on
+ * purpose: this is where another person's credential is created, and a three-letter
+ * password typed in a hurry becomes loose access that nobody revisits.
  */
 const schema = z.object({
   login: z.string().trim().min(3, 'O login precisa de ao menos 3 caracteres.'),
@@ -66,8 +66,8 @@ export function CreateAccessDialog({
           {errors.password && <p className="text-sm text-red-600">{errors.password.message}</p>}
         </div>
 
-        {/* A senha é combinada fora do sistema: não existe "esqueci minha senha"
-            nesta fase, e quem cria o acesso é quem a entrega ao aluno. */}
+        {/* The password is agreed upon outside the system: there is no "forgot my password"
+            at this stage, and whoever creates the access is who hands it to the student. */}
         <p className="text-sm text-slate-600">Anote a senha: ela não é exibida de novo.</p>
 
         {error != null && (

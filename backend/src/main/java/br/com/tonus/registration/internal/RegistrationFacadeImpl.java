@@ -83,10 +83,10 @@ class RegistrationFacadeImpl implements RegistrationFacade {
     }
 
     /**
-     * O instante do cadastro vira dia no fuso do estúdio, e não em UTC: o
-     * cadastro feito às 21h30 de Brasília é do dia 5 para quem estava lá, e em
-     * UTC seria dia 6 — a mensalidade venceria um dia depois do que deveria,
-     * para todo aluno cadastrado no fim da noite.
+     * The registration instant becomes a day in the studio's timezone, and not in UTC: a
+     * registration made at 9:30 PM Brasília time is on day 5 for whoever was there, and in
+     * UTC it would be day 6 — the monthly fee would be due one day later than it
+     * should, for every student registered late at night.
      */
     @Override
     @Transactional(readOnly = true)
@@ -126,9 +126,9 @@ class RegistrationFacadeImpl implements RegistrationFacade {
     }
 
     /**
-     * Os nomes dos professores saem de UMA consulta, não de uma por aluno: esta
-     * lista é percorrida inteira a cada abertura da agenda do dia, e um N+1 aqui
-     * apareceria justamente na tela mais usada do estúdio.
+     * The teachers' names come from ONE query, not one per student: this
+     * list is traversed entirely on every opening of the day's schedule, and an N+1 here
+     * would show up precisely on the most used screen of the studio.
      */
     private List<StudentSummary> toSummaries(List<Student> students) {
         Set<Long> teacherIds = students.stream().map(Student::getTeacherId).collect(Collectors.toSet());

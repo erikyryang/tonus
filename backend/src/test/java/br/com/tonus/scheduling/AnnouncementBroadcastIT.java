@@ -10,13 +10,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Disparo manual de mensagem livre para todo aluno ativo (mudança 9).
+ * Manual dispatch of a free-form message to every active student (change 9).
  *
- * Endpoint e validação são de scheduling (dono de announcement); o fan-out em
- * si — idempotência por broadcastId, falha parcial, reprocessamento — tem
- * teste próprio em notification (BroadcastFanOutIT), publicando o evento
- * direto. Aqui só a prova de ponta a ponta: o disparo por HTTP realmente
- * chega ao aluno.
+ * Endpoint and validation belong to scheduling (owner of announcement); the fan-out
+ * itself — idempotency by broadcastId, partial failure, reprocessing — has its
+ * own test in notification (BroadcastFanOutIT), publishing the event
+ * directly. Here just the end-to-end proof: the HTTP dispatch really
+ * reaches the student.
  */
 class AnnouncementBroadcastIT extends AbstractSchedulingIntegrationTest {
 

@@ -66,22 +66,11 @@
             <groupId>org.springframework.modulith</groupId>
             <artifactId>spring-modulith-starter-core</artifactId>
         </dependency>
-        <!--
-          Registry de publicação de eventos persistido: é o que sustenta a
-          entrega at-least-once entre módulos. Sem ele, um listener que falha
-          perde o evento em silêncio.
-        -->
         <dependency>
             <groupId>org.springframework.modulith</groupId>
             <artifactId>spring-modulith-starter-jpa</artifactId>
         </dependency>
 
-        <!--
-          flyway-core sozinho não basta mais (Boot 4): a autoconfiguração do
-          Flyway saiu de spring-boot-autoconfigure para este starter dedicado.
-          Sem ele, as migrations nunca rodam e ddl-auto=validate falha contra
-          schema vazio.
-        -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-flyway</artifactId>
@@ -120,10 +109,6 @@
             <version>${bucket4j.version}</version>
         </dependency>
 
-        <!--
-          Trava distribuída do job diário de cobrança: garante que só uma
-          instância execute o job por vez, mesmo com múltiplas réplicas.
-        -->
         <dependency>
             <groupId>net.javacrumbs.shedlock</groupId>
             <artifactId>shedlock-spring</artifactId>
@@ -140,10 +125,6 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-        <!--
-          MockMvc e @AutoConfigureMockMvc saíram de spring-boot-starter-test em
-          favor de um starter por tecnologia web (Boot 4).
-        -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc-test</artifactId>
@@ -159,11 +140,6 @@
             <artifactId>spring-modulith-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-        <!--
-          Gera os diagramas PlantUML dos módulos (target/spring-modulith-docs)
-          a partir do allowedDependencies e do Javadoc de cada package-info.java.
-          Só documentação derivada do código, não entra no jar de produção.
-        -->
         <dependency>
             <groupId>org.springframework.modulith</groupId>
             <artifactId>spring-modulith-docs</artifactId>
@@ -204,17 +180,6 @@
                     </execution>
                 </executions>
             </plugin>
-            <!--
-              Declarado depois do failsafe de propósito: os dois agem na fase
-              verify, e a ordem de declaração decide quem roda primeiro. Assim
-              uma falha de teste aparece antes de uma eventual falha de
-              cobertura, em vez de ser mascarada por ela.
-
-              Os limites ficam abaixo do valor atual (95% linha / 85% branch)
-              para dar folga: servem para acusar queda, não para virar meta.
-              Parte do que falta é defensivo e inalcançável — catch de
-              NoSuchAlgorithmException do SHA-256, por exemplo.
-            -->
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>

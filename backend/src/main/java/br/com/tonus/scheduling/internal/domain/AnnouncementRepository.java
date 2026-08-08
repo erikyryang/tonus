@@ -12,14 +12,14 @@ public interface AnnouncementRepository
     boolean existsByDate(LocalDate date);
 
     /**
-     * Só o comunicado que suspende apaga o dia. O que apenas informa não entra
-     * nesta pergunta — é a diferença entre avisar e cancelar.
+     * Only the announcement that suspends erases the day. The one that only informs does not enter
+     * this question — it is the difference between notifying and canceling.
      */
     boolean existsByDateAndSuspendsClassesTrue(LocalDate date);
 
-    /** A data é UNIQUE: no máximo um comunicado por dia. */
+    /** The date is UNIQUE: at most one announcement per day. */
     Optional<Announcement> findByDate(LocalDate date);
 
-    /** Os comunicados de um intervalo, para quem expande vários dias de uma vez. */
+    /** The announcements of an interval, for whoever expands several days at once. */
     List<Announcement> findByDateBetween(LocalDate from, LocalDate to);
 }

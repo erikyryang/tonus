@@ -8,11 +8,11 @@ import jakarta.persistence.Table;
 import java.time.LocalTime;
 
 /**
- * Horário recorrente do aluno, válido de segunda a sexta.
+ * Recurring schedule of the student, valid Monday through Friday.
  *
- * Auditado por decisão de arquitetura (docs/ddl.md): mudar o horário de um
- * aluno muda a agenda de todo mundo daquele horário, e depois ninguém lembra
- * quem mudou o quê.
+ * Audited by architectural decision (docs/ddl.md): changing a student's
+ * schedule changes the schedule of everyone in that time slot, and later nobody remembers
+ * who changed what.
  */
 @Entity
 @Table(name = "default_schedule")

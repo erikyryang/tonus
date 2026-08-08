@@ -12,10 +12,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * A configuração de cobrança do estúdio: uma linha, um campo (SPEC-012).
+ * The studio's billing configuration: one row, one field (SPEC-012).
  *
- * Não tem POST nem DELETE: a linha existe desde a migration e não se cria nem
- * se apaga. Só se lê e se edita.
+ * Has no POST or DELETE: the row exists since the migration and is neither
+ * created nor deleted. It's only read and edited.
  */
 class BillingSettingsIT extends AbstractBillingIntegrationTest {
 
@@ -35,7 +35,7 @@ class BillingSettingsIT extends AbstractBillingIntegrationTest {
         putDiscount("100.01").andExpect(status().isBadRequest());
     }
 
-    /** Zero é válido e é como o estúdio nasce: desconto é escolha, não default. */
+    /** Zero is valid and is how the studio starts out: the discount is a choice, not a default. */
     @Test
     void acceptsZero() throws Exception {
         putDiscount("0.00").andExpect(status().isOk())
@@ -43,8 +43,9 @@ class BillingSettingsIT extends AbstractBillingIntegrationTest {
     }
 
     /**
-     * A linha única é constraint, não convenção. Sem o CHECK, uma segunda linha
-     * faria "qual desconto vale?" ter como resposta "a que o LIMIT 1 pegou".
+     * The single row is a constraint, not a convention. Without the CHECK,
+     * a second row would make "which discount counts?" have "whichever
+     * LIMIT 1 picked" as the answer.
      */
     @Test
     void databaseRefusesASecondSettingsRow() {

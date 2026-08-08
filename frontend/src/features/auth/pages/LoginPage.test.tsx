@@ -56,7 +56,7 @@ describe('LoginPage', () => {
     expect(await screen.findByText(/muitas tentativas/i)).toBeInTheDocument();
   });
 
-  /** Erro de infraestrutura não pode virar "senha errada" na cara do usuário. */
+  /** An infrastructure error can't turn into "wrong password" in the user's face. */
   it('mostra o motivo do backend quando a falha não é de credencial', async () => {
     server.use(
       http.post('/api/auth/login', () =>

@@ -2,7 +2,7 @@ import { apiClient } from '@/lib/apiClient';
 
 export type Role = 'ADMIN' | 'TEACHER' | 'STUDENT';
 
-/** Espelha o DTO de GET /auth/me — os ids vêm dos claims do token. */
+/** Mirrors the GET /auth/me DTO — the ids come from the token's claims. */
 export interface SessionUser {
   role: Role;
   name: string;

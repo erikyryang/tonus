@@ -11,18 +11,19 @@ public interface PlanEnrollmentRepository extends JpaRepository<PlanEnrollment, 
 
     boolean existsByStudentIdAndPlanId(Long studentId, Long planId);
 
-    /** O insumo do job diário: todo vínculo vivo do estúdio, numa consulta. */
+    /** The daily job's input: every live enrollment in the studio, in one query. */
     List<PlanEnrollment> findByActiveTrue();
 
     long countByPlanIdAndActiveTrue(Long planId);
 
     /**
-     * Quantos alunos ativos cada plano tem, para a página inteira de uma vez.
+     * How many active students each plan has, for the whole page at once.
      *
-     * Existe porque a listagem mostra a contagem em toda linha: uma consulta por
-     * plano é N+1 numa tela que o ADMIN abre para decidir desativar algo —
-     * exatamente onde a contagem importa. Plano sem matrícula não aparece no
-     * resultado, e quem chama trata a ausência como zero.
+     * Exists because the listing shows the count on every row: one query per
+     * plan is N+1 on a screen the ADMIN opens to decide to deactivate
+     * something — exactly where the count matters. A plan with no
+     * enrollment doesn't appear in the result, and the caller treats its
+     * absence as zero.
      */
     @Query("""
             SELECT e.planId AS planId, COUNT(e) AS total

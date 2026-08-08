@@ -8,8 +8,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Quem configura assinatura, lista fatura e dá baixa é o ADMIN. Aluno só lê a
- * própria fatia, por /me/invoices.
+ * Whoever configures a subscription, lists an invoice and registers a
+ * payment is the ADMIN. A student only reads their own slice, via
+ * /me/invoices.
  */
 class BillingAccessControlIT extends AbstractBillingIntegrationTest {
 
@@ -36,8 +37,9 @@ class BillingAccessControlIT extends AbstractBillingIntegrationTest {
     }
 
     /**
-     * A lista de quem está atrasado é situação de cobrança do estúdio inteiro:
-     * o professor não a vê, mesmo sendo uma lista de ids.
+     * The list of who is overdue is a billing situation for the whole
+     * studio: the teacher doesn't see it, even though it's just a list of
+     * ids.
      */
     @Test
     void teacherCannotListOverdueStudentIds() throws Exception {

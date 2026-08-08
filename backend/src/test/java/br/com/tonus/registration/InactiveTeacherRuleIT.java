@@ -10,9 +10,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Professor que saiu do estúdio (inativo) não recebe aluno novo, mas os alunos
- * que já eram dele continuam editáveis — desativar o professor não pode
- * congelar o cadastro de quem ficou pendurado nele.
+ * A teacher who left the studio (inactive) does not receive new students, but the students
+ * who were already theirs remain editable — deactivating the teacher must not
+ * freeze the registration of whoever remained attached to them.
  */
 class InactiveTeacherRuleIT extends AbstractRegistrationIntegrationTest {
 
@@ -69,8 +69,8 @@ class InactiveTeacherRuleIT extends AbstractRegistrationIntegrationTest {
     }
 
     /**
-     * Ordem importa: aluno inexistente é 404 do recurso pedido, não 400 do
-     * corpo enviado, mesmo quando o corpo também está inválido.
+     * Order matters: a nonexistent student is 404 for the requested resource, not 400 for the
+     * submitted body, even when the body is also invalid.
      */
     @Test
     void unknownStudentWinsOverInvalidTeacher() throws Exception {

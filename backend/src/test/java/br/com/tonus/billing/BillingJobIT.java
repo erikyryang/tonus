@@ -21,19 +21,19 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * O job diário é a espinha dorsal da cobrança (SPEC-004): gera fatura do dia e
- * marca fatura vencida como atrasada. Roda como {@code @ApplicationModuleTest}
- * de propósito, mesmo padrão de {@code SchedulingEventsIT} — sobe o billing e
- * suas dependências, e falha se o módulo precisar de alguém não declarado.
+ * The daily job is billing's backbone (SPEC-004): generates today's invoice
+ * and marks an overdue invoice as such. Runs as {@code @ApplicationModuleTest}
+ * on purpose, same pattern as {@code SchedulingEventsIT} — brings up billing
+ * and its dependencies, and fails if the module needs someone not declared.
  *
- * Os testes chamam {@link BillingService} diretamente, não
- * {@code BillingJob.runDailyJob()}: o {@code @SchedulerLock} usa relógio real
- * (não o Clock injetado) e uma chave fixa ("billing-daily-job"), então duas
- * chamadas próximas no tempo real — entre métodos de teste, não só dentro de
- * um — colidem com {@code lockAtLeastFor} e a segunda silenciosamente não
- * executa. Isso testaria o lock do ShedLock, não a idempotência de negócio da
- * spec ("job rodando 2x não duplica"), que é o pré-check de existência +
- * uk_invoice_student_period.
+ * The tests call {@link BillingService} directly, not
+ * {@code BillingJob.runDailyJob()}: {@code @SchedulerLock} uses the real
+ * clock (not the injected Clock) and a fixed key ("billing-daily-job"), so
+ * two calls close together in real time — between test methods, not just
+ * within one — collide with {@code lockAtLeastFor} and the second silently
+ * doesn't run. That would test ShedLock's lock, not the spec's business
+ * idempotency ("job running twice doesn't duplicate"), which is the
+ * existence pre-check + uk_invoice_student_period.
  */
 @ApplicationModuleTest(mode = ApplicationModuleTest.BootstrapMode.ALL_DEPENDENCIES)
 @ActiveProfiles("test")
@@ -43,9 +43,9 @@ class BillingJobIT {
     static final PostgreSQLContainer<?> POSTGRES = PostgresContainer.INSTANCE;
 
     /**
-     * Configuração aninhada, não {@code @Import}: o bootstrap do módulo filtra
-     * as definições de bean pelos pacotes do módulo sob teste, mesmo motivo
-     * documentado em {@code SchedulingEventsIT.FixedClockConfig}.
+     * Nested configuration, not {@code @Import}: the module's bootstrap
+     * filters bean definitions by the packages of the module under test,
+     * same reason documented in {@code SchedulingEventsIT.FixedClockConfig}.
      */
     @TestConfiguration
     static class FixedClockConfig {
@@ -70,8 +70,9 @@ class BillingJobIT {
 
     @Test
     void jobRunningTwiceDoesNotDuplicateInvoiceOrEvent(AssertablePublishedEvents events) {
-        // Cadastrado num dia 15: é o vencimento dele, e é "hoje" para o relógio
-        // fixo desta classe — sem isso o job não teria o que faturar.
+        // Registered on the 15th: that's their due day, and it's "today"
+        // for this class's fixed clock — without it the job would have
+        // nothing to bill.
         long studentId = seedStudent("2026-01-15 10:00:00");
         seedEnrollment(studentId, seedPlan("Plano Do Job", "220.00"));
 
@@ -81,9 +82,9 @@ class BillingJobIT {
         assertThat(invoiceRepository.findAll())
                 .filteredOn(invoice -> invoice.getStudentId().equals(studentId))
                 .hasSize(1);
-        // Filtra por aluno: o Postgres é compartilhado entre as classes de teste
-        // de billing sem rollback, então outras faturas/eventos da varredura
-        // global do job podem coexistir na mesma execução.
+        // Filters by student: Postgres is shared across billing's test
+        // classes with no rollback, so other invoices/events from the job's
+        // global sweep can coexist in the same run.
         assertThat(events.ofType(InvoiceDueSoon.class).matchingValue(InvoiceDueSoon::studentId, studentId))
                 .hasSize(1);
     }
@@ -99,10 +100,10 @@ class BillingJobIT {
         String status = jdbcTemplate.queryForObject(
                 "SELECT status FROM invoice WHERE id = ?", String.class, invoiceId);
         assertThat(status).isEqualTo("OVERDUE");
-        // Filtra pela fatura: markOverdueInvoices varre a tabela inteira, e o
-        // Postgres é compartilhado entre as classes de teste de billing sem
-        // rollback — outras faturas OPEN vencidas podem coexistir e também
-        // virar OVERDUE nesta mesma chamada.
+        // Filters by the invoice: markOverdueInvoices scans the whole
+        // table, and Postgres is shared across billing's test classes with
+        // no rollback — other overdue OPEN invoices can coexist and also
+        // become OVERDUE in this same call.
         assertThat(events.ofType(InvoiceOverdue.class).matchingValue(InvoiceOverdue::invoiceId, invoiceId))
                 .hasSize(1);
     }

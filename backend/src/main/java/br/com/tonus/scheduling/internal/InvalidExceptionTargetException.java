@@ -1,8 +1,8 @@
 package br.com.tonus.scheduling.internal;
 
 /**
- * O par (nova data, nova hora) existe se e somente se for remarcação.
- * Mesma invariante do CHECK ck_schedule_exception_target.
+ * The pair (new date, new time) exists if and only if it is a reschedule.
+ * Same invariant as the CHECK ck_schedule_exception_target.
  */
 public class InvalidExceptionTargetException extends RuntimeException {
 

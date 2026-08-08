@@ -15,20 +15,20 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Token emitido sob relógio fixo continua válido, por mais longe da hora real
- * que esse relógio esteja.
+ * A token issued under a fixed clock stays valid, no matter how far from the
+ * real time that clock is.
  *
- * Existe por causa de um defeito real: a emissão usava o {@code Clock}
- * injetado e a validação usava o relógio do sistema, então o token nascia
- * expirado assim que a hora real passava do instante fixo mais o TTL de 10
- * minutos. O sintoma era {@code MyInvoicesIT.studentSeesOnlyOwnInvoices}
- * devolvendo 403 — e passava de manhã, quando a hora real ainda estava dentro
- * da janela do relógio de billing. Teste que depende da hora do dia em que
- * roda é o pior tipo de teste: quebra longe de qualquer mudança de código.
+ * Exists because of a real bug: issuance used the injected {@code Clock} and
+ * validation used the system clock, so the token would be born expired as
+ * soon as the real time passed the fixed instant plus the 10-minute TTL. The
+ * symptom was {@code MyInvoicesIT.studentSeesOnlyOwnInvoices} returning 403
+ * — and it passed in the morning, when the real time was still within
+ * billing's clock window. A test that depends on the time of day it runs is
+ * the worst kind of test: it breaks far from any code change.
  *
- * O instante daqui é deliberadamente absurdo. Se a validação voltar a olhar o
- * relógio do sistema, este teste falha sempre, em vez de falhar só depois do
- * almoço.
+ * The instant here is deliberately absurd. If validation goes back to
+ * looking at the system clock, this test fails every time, instead of only
+ * failing after lunch.
  */
 class AuthFixedClockIT extends AbstractAuthIntegrationTest {
 

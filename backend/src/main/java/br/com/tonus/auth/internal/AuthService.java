@@ -58,8 +58,8 @@ public class AuthService {
     }
 
     /**
-     * Usuário desativado recebe a mesma resposta de senha errada, de propósito:
-     * distinguir os dois casos contaria a quem tenta que aquele login existe.
+     * A deactivated user gets the same response as a wrong password, on purpose:
+     * distinguishing the two cases would tell an attacker that login exists.
      */
     @Transactional
     public AuthTokens login(String login, String rawPassword) {
@@ -74,13 +74,14 @@ public class AuthService {
     }
 
     /**
-     * Login de quem está autenticado. É a única informação da sessão que não
-     * cabe no token — role e vínculo já são claims.
+     * Login of the currently authenticated user. It's the only session
+     * information that doesn't fit in the token — role and link are already
+     * claims.
      *
-     * Confere que o usuário ainda existe e continua ativo: o access token é
-     * autocontido e sobrevive à revogação por alguns minutos. Devolver 200 para
-     * quem acabou de ter o acesso cortado faria o front montar a tela inteira
-     * de uma sessão que a próxima chamada já recusaria.
+     * Checks that the user still exists and is still active: the access token
+     * is self-contained and survives revocation for a few minutes. Returning
+     * 200 to someone whose access was just cut off would make the front render
+     * the whole screen for a session that the next call would already refuse.
      */
     @Transactional(readOnly = true)
     public String activeLoginOf(Long userId) {
@@ -141,10 +142,11 @@ public class AuthService {
     }
 
     /**
-     * Revoga o acesso do usuário ligado a um aluno/professor que saiu.
-     * Idempotente: a entrega de eventos é at-least-once, então este método roda
-     * mais de uma vez para o mesmo desligamento. Marcar como inativo quem já
-     * está inativo e invalidar token já invalidado são no-ops.
+     * Revokes access for the user linked to a student/teacher who left.
+     * Idempotent: event delivery is at-least-once, so this method runs more
+     * than once for the same deactivation. Marking as inactive someone who is
+     * already inactive and invalidating an already-invalidated token are
+     * no-ops.
      */
     @Transactional
     public void revokeAccessOfStudent(Long studentId) {
@@ -157,12 +159,12 @@ public class AuthService {
     }
 
     /**
-     * Os usuários vinculados a um conjunto de alunos. Devolve o que existe: um
-     * aluno sem login simplesmente não aparece, e é essa ausência que a tela lê
-     * como "nunca teve acesso".
+     * The users linked to a set of students. Returns what exists: a student
+     * without a login simply doesn't appear, and that absence is what the
+     * screen reads as "never had access".
      *
-     * Sem limite de tamanho de propósito — o endpoint é só do ADMIN, e a lista
-     * que ele manda é a página que acabou de receber do próprio backend.
+     * No size limit on purpose — the endpoint is ADMIN-only, and the list it
+     * sends is the page it just received from the backend itself.
      */
     @Transactional(readOnly = true)
     public List<User> findUsersOfStudents(Collection<Long> studentIds) {
@@ -179,8 +181,8 @@ public class AuthService {
     private void revokeAccessOf(User user) {
         user.deactivate();
         userRepository.save(user);
-        // Bloquear o login novo não basta: um refresh token vivo renovaria o
-        // acesso sozinho pelos 7 dias seguintes.
+        // Blocking new logins isn't enough: a still-valid refresh token would
+        // renew access on its own for the next 7 days.
         refreshTokenRepository.findByUserIdAndUsedFalse(user.getId()).forEach(token -> {
             token.markUsed();
             refreshTokenRepository.save(token);
@@ -188,9 +190,10 @@ public class AuthService {
     }
 
     /**
-     * O vínculo precisa apontar para alguém que existe e que continua no
-     * estúdio. Criar login para quem já saiu produziria um acesso ativo que
-     * ninguém revoga: o evento de desativação já passou e não se repete.
+     * The link needs to point to someone who exists and is still at the
+     * studio. Creating a login for someone who already left would produce an
+     * active access that no one revokes: the deactivation event already
+     * happened and doesn't repeat.
      */
     private void requireExistingLink(Role role, Long studentId, Long teacherId) {
         if (role == Role.STUDENT) {

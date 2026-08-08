@@ -15,9 +15,9 @@ import { RegisterPaymentDialog } from '../components/RegisterPaymentDialog';
 import { studentLabel } from '../lib/studentLabel';
 
 /**
- * "Todas" é o default; "Atrasadas" é o atalho que a spec pede em destaque.
- * `empty` acompanha o filtro porque "Nenhuma fatura" sob "Atrasadas" leria como
- * "não existe fatura nenhuma" — o oposto do que o ADMIN precisa concluir.
+ * "All" is the default; "Overdue" is the shortcut the spec asks to highlight.
+ * `empty` travels with the filter because "No invoices" under "Overdue" would read as
+ * "there are no invoices at all" — the opposite of what the ADMIN needs to conclude.
  */
 const FILTERS: Array<{ label: string; status?: InvoiceStatus; empty: string }> = [
   { label: 'Todas', empty: 'Nenhuma fatura registrada ainda.' },
@@ -29,9 +29,9 @@ const FILTERS: Array<{ label: string; status?: InvoiceStatus; empty: string }> =
 const STATUSES: InvoiceStatus[] = ['OPEN', 'PAID', 'OVERDUE'];
 
 /**
- * Filtro e página moram na URL, e não em useState — mesma decisão da agenda:
- * recarregar, voltar no histórico e mandar o link de "as atrasadas" para alguém
- * continuam funcionando.
+ * Filter and page live in the URL, not in useState — same decision as the schedule:
+ * reloading, going back in history and sending someone the "overdue ones" link
+ * keep working.
  */
 export function InvoicesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -63,8 +63,8 @@ export function InvoicesPage() {
             size="sm"
             variant={filter.status === status ? 'default' : 'outline'}
             aria-pressed={filter.status === status}
-            // Trocar de filtro volta para a primeira página: a página 3 das
-            // atrasadas raramente existe quando o filtro era "todas".
+            // Switching filters goes back to the first page: page 3 of the
+            // overdue ones rarely exists when the filter was "all".
             onClick={() => setSearchParams(queryFor(filter.status, 0))}
           >
             {filter.label}
@@ -74,7 +74,7 @@ export function InvoicesPage() {
 
       <Toast message={toast.message} serial={toast.serial} />
 
-      {/* Enquanto o recuo não acontece, o vazio da página inexistente mentiria. */}
+      {/* While the step-back hasn't happened, the nonexistent page's empty state would lie. */}
       <ListFeedback
         state={invoices}
         loading="Carregando as faturas…"
@@ -103,9 +103,9 @@ export function InvoicesPage() {
               { id: pending.id, paymentDate },
               {
                 onSuccess: () => {
-                  // "será avisado", não "recebeu": a entrega do WhatsApp é
-                  // assíncrona (evento + reentrega). No instante da resposta
-                  // HTTP nada foi entregue ainda, e o toast não pode mentir.
+                  // "will be notified", not "received": WhatsApp delivery is
+                  // asynchronous (event + redelivery). At the moment of the HTTP
+                  // response nothing has been delivered yet, and the toast can't lie.
                   toast.show('Renovação registrada. O aluno será avisado por WhatsApp.');
                   closeDialog();
                 },
@@ -154,8 +154,8 @@ function InvoiceTable({
         {invoices.map((invoice) => (
           <tr
             key={invoice.id}
-            // O gancho do destaque da linha atrasada, e o que o teste observa:
-            // a cor sozinha não é asserção nem sinal acessível.
+            // The hook for the overdue row's highlight, and what the test observes:
+            // color alone is neither an assertion nor an accessible signal.
             data-status={invoice.status}
             className={cn(
               'border-b border-slate-100',
@@ -173,9 +173,9 @@ function InvoiceTable({
               )}
             </td>
             <td className="px-3 py-2 text-right">
-              {/* Pagamento é imutável no back: PAGA não tem ação a oferecer.
-                  "Renovar": fatura paga é ciclo renovado, mesmo endpoint de sempre
-                  (POST /invoices/{id}/payment) — só o texto muda (SPEC-004/008). */}
+              {/* Payment is immutable in the back: PAID has no action to offer.
+                  "Renew": a paid invoice is a renewed cycle, same endpoint as always
+                  (POST /invoices/{id}/payment) — only the text changes (SPEC-004/008). */}
               {invoice.status !== 'PAID' && (
                 <Button
                   size="sm"
@@ -195,9 +195,9 @@ function InvoiceTable({
 }
 
 /**
- * A query string canônica da tela. Só o que foge do default aparece: sem
- * filtro e na primeira página a URL fica limpa, e /admin/invoices continua
- * sendo o link que se manda para alguém.
+ * The screen's canonical query string. Only what deviates from the default appears: with no
+ * filter and on the first page the URL stays clean, and /admin/invoices remains
+ * the link that gets sent to someone.
  */
 function queryFor(status: InvoiceStatus | undefined, page: number): URLSearchParams {
   const params = new URLSearchParams();

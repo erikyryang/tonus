@@ -5,13 +5,14 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.modulith.Modulith;
 
 /**
- * {@code @Modulith(sharedModules = "shared")}, e não {@code @SpringBootApplication}
- * puro: "shared module" no Spring Modulith não é inferido de
- * {@code allowedDependencies = {}} — é sempre declaração explícita aqui. Sem
- * isso, {@code shared.internal.*} (JpaAuditingConfig, AuditListener) fica de
- * fora do bootstrap de todo {@code @ApplicationModuleTest}, e created_at/
- * updated_at nascem nulos em qualquer entidade persistida por esse tipo de
- * teste — foi o que quebrava SchedulingEventsIT quando rodado isolado.
+ * {@code @Modulith(sharedModules = "shared")}, not a plain
+ * {@code @SpringBootApplication}: a "shared module" in Spring Modulith isn't
+ * inferred from {@code allowedDependencies = {}} — it's always an explicit
+ * declaration here. Without it, {@code shared.internal.*}
+ * (JpaAuditingConfig, AuditListener) is left out of the bootstrap of every
+ * {@code @ApplicationModuleTest}, and created_at/updated_at come back null
+ * on any entity persisted by that kind of test — that's what was breaking
+ * SchedulingEventsIT when run in isolation.
  */
 @Modulith(sharedModules = "shared")
 @ConfigurationPropertiesScan

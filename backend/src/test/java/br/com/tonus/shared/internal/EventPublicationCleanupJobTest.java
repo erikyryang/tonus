@@ -12,10 +12,11 @@ import org.springframework.modulith.events.EventPublication;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * O job de poda repassa a retenção configurada.
+ * The pruning job passes through the configured retention.
  *
- * O parâmetro é o que separa "apaga o que já não serve" de "apaga a resposta
- * para se o aviso saiu" — e é apagamento, então errar aqui não tem desfazer.
+ * The parameter is what separates "deletes what's no longer useful" from
+ * "deletes the answer to whether the notice went out" — and it's a
+ * deletion, so getting this wrong has no undo.
  */
 class EventPublicationCleanupJobTest {
 

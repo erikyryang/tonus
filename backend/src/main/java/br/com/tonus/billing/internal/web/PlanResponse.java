@@ -4,9 +4,10 @@ import br.com.tonus.billing.internal.PlanView;
 import java.math.BigDecimal;
 
 /**
- * {@code activeEnrollments} é quantos alunos perdem a cobrança se o plano for
- * desativado. Vem do back porque a tela precisa dizer isso antes de confirmar,
- * e contá-lo no cliente exigiria carregar as matrículas de todo o estúdio.
+ * {@code activeEnrollments} is how many students lose the charge if the plan
+ * is deactivated. It comes from the backend because the screen needs to say
+ * so before confirming, and counting it on the client would require loading
+ * the enrollments of the whole studio.
  */
 public record PlanResponse(Long id, String name, BigDecimal monthlyPrice, boolean active, long activeEnrollments) {
 

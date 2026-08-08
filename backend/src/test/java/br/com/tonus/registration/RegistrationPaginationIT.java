@@ -9,11 +9,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Critério de aceite: "Listagens paginadas desde o dia 1".
+ * Acceptance criterion: "Paginated listings from day 1".
  *
- * As asserções são sobre a forma da página e o tamanho pedido, nunca sobre a
- * contagem total da tabela — o Postgres é compartilhado entre as classes de
- * teste e outros ITs também inserem linhas.
+ * The assertions are about the shape of the page and the requested size, never about the
+ * total count of the table — the Postgres is shared between the test
+ * classes and other ITs also insert rows.
  */
 class RegistrationPaginationIT extends AbstractRegistrationIntegrationTest {
 
@@ -58,8 +58,8 @@ class RegistrationPaginationIT extends AbstractRegistrationIntegrationTest {
     }
 
     /**
-     * Sem parâmetro de paginação a resposta continua sendo uma página — a
-     * listagem nunca devolve array cru, que é o que a regra do projeto proíbe.
+     * Without a pagination parameter the response is still a page — the
+     * listing never returns a raw array, which is what the project's rule forbids.
      */
     @Test
     void listingIsAlwaysPagedEvenWithoutParams() throws Exception {

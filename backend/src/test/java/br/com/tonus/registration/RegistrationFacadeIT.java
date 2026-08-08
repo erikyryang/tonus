@@ -9,12 +9,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Contrato que os módulos scheduling, billing e notification vão consumir:
- * telefone/nome por alunoId, alunos ativos e alunos por professor.
+ * Contract that the scheduling, billing and notification modules will consume:
+ * phone/name by studentId, active students and students by teacher.
  *
- * Não usa @ApplicationModuleTest porque a SPEC-002 não publica evento nenhum —
- * o que precisa ser exercitado aqui é a consulta contra o Postgres real. As
- * fronteiras entre módulos já são verificadas por ArchitectureTest.
+ * Does not use @ApplicationModuleTest because SPEC-002 does not publish any event —
+ * what needs to be exercised here is the query against the real Postgres. The
+ * boundaries between modules are already checked by ArchitectureTest.
  */
 class RegistrationFacadeIT extends AbstractRegistrationIntegrationTest {
 

@@ -7,10 +7,10 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 
 /**
- * {@code paymentDate} vem nulo enquanto a fatura não foi paga.
+ * {@code paymentDate} comes as null while the invoice hasn't been paid.
  *
- * Sem {@code subscriptionId}: a fatura passou a ser do aluno (SPEC-012), e não
- * existe mais assinatura para apontar.
+ * No {@code subscriptionId}: the invoice became the student's (SPEC-012),
+ * and there's no more subscription to point to.
  */
 public record InvoiceResponse(Long id, Long studentId, String studentName,
                                YearMonth referenceMonth, BigDecimal amount, LocalDate dueDate,

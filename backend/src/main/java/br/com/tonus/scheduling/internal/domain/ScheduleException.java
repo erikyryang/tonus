@@ -10,11 +10,11 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 /**
- * Mudança pontual: a aula daquele dia foi cancelada ou movida.
+ * One-off change: that day's class was canceled or moved.
  *
- * O par (newDate, newTime) existe se e somente se for RESCHEDULED — invariante
- * garantida também por CHECK no banco, porque uma remarcação sem destino seria
- * uma aula que some sem reaparecer.
+ * The pair (newDate, newTime) exists if and only if it is RESCHEDULED — an invariant
+ * also guaranteed by a CHECK in the database, because a reschedule with no destination would be
+ * a class that disappears without reappearing.
  */
 @Entity
 @Table(name = "schedule_exception")

@@ -7,7 +7,7 @@ export function createQueryClient() {
     defaultOptions: {
       queries: {
         refetchOnWindowFocus: false,
-        // 401 é tratado pelo apiClient (refresh + retry); repetir aqui não ajuda.
+        // 401 is handled by apiClient (refresh + retry); retrying here doesn't help.
         retry: 1,
       },
     },

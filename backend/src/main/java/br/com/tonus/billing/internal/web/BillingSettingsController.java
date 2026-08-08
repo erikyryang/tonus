@@ -9,8 +9,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Sem POST e sem DELETE: a linha existe desde a migration e não se cria nem se
- * apaga. Só se lê e se edita.
+ * No POST and no DELETE: the row exists since the migration and is neither
+ * created nor deleted. It's only read and edited.
  */
 @RestController
 @RequestMapping("/billing-settings")

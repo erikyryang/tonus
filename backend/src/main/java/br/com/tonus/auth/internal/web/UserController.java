@@ -21,21 +21,22 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Criação do usuário de acesso do aluno/professor pelo ADMIN (SPEC-002).
- * Mora no auth porque é o auth que é dono da tabela users; o vínculo é validado
- * contra o cadastro via RegistrationFacade.
+ * Creation of the student/teacher access user by the ADMIN (SPEC-002). Lives
+ * in auth because auth owns the users table; the link is validated against
+ * registration via RegistrationFacade.
  *
- * Não existe rota de desativação: o acesso cai sozinho quando o aluno/professor
- * é desativado no cadastro, por evento. A reconcessão é que é manual.
+ * There's no deactivation route: access drops on its own, by event, when the
+ * student/teacher is deactivated in registration. It's regranting that's
+ * manual.
  */
 @RestController
 @RequestMapping("/users")
 class UserController {
 
     /**
-     * Uma página de alunos com folga larga. O cliente pergunta pela página que
-     * o próprio backend acabou de devolver, e nenhuma listagem chega perto
-     * disso — o teto é contra o uso errado, não contra o uso previsto.
+     * A page of students with wide margin to spare. The client asks about the
+     * page that the backend itself just returned, and no listing comes close
+     * to this — the cap is against misuse, not against expected use.
      */
     private static final int MAX_STUDENT_IDS = 200;
 
@@ -53,20 +54,21 @@ class UserController {
     }
 
     /**
-     * Quem já tem login, entre estes alunos. É a consulta que permite à tela
-     * distinguir "criar acesso" de "reativar acesso" — e sem ela o id do
-     * usuário, que a reativação exige, nunca chegaria ao cliente.
+     * Who already has a login, among these students. It's the query that lets
+     * the screen distinguish "create access" from "reactivate access" — and
+     * without it the user id, which reactivation requires, would never reach
+     * the client.
      *
-     * Em lote e não por aluno: a listagem mostra uma página inteira de alunos
-     * de cada vez, e uma chamada por linha seria absurdo.
+     * Batched, not per student: the listing shows a whole page of students at
+     * a time, and one call per row would be absurd.
      *
-     * Não é paginado, diferente das outras listagens, e o teto abaixo é o que
-     * torna isso defensável: a regra da raiz existe para que nenhuma resposta
-     * cresça sem limite, e aqui o limite está na pergunta — no máximo um
-     * usuário por aluno informado, no máximo {@value #MAX_STUDENT_IDS} alunos.
-     * Sem o teto a promessa dependeria de boa-fé do cliente, e a lista vira
-     * cláusula IN de um parâmetro por id: o suficiente para estourar o limite
-     * do driver e virar 500 no lugar de um 400 honesto.
+     * Not paginated, unlike the other listings, and the cap below is what
+     * makes that defensible: the root rule exists so that no response grows
+     * unbounded, and here the bound is in the question itself — at most one
+     * user per student id given, at most {@value #MAX_STUDENT_IDS} students.
+     * Without the cap the promise would rely on the client's good faith, and
+     * the list turns into an IN clause with one parameter per id: enough to
+     * blow past the driver's limit and become a 500 instead of an honest 400.
      */
     @GetMapping
     List<UserResponse> byStudents(@RequestParam List<Long> studentIds) {
@@ -101,7 +103,7 @@ class UserController {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
-    /** Pedido grande demais é erro de uso do cliente, e 400 é o que diz isso. */
+    /** A request that's too large is a client misuse error, and 400 is what says so. */
     static class TooManyStudentIdsException extends RuntimeException {
 
         TooManyStudentIdsException(int asked, int max) {

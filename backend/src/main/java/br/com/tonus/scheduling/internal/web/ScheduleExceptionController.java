@@ -30,9 +30,9 @@ class ScheduleExceptionController {
     }
 
     /**
-     * O tipo escolhe o método do serviço em vez de virar um parâmetro dele:
-     * cancelar e remarcar publicam eventos diferentes e têm invariantes
-     * diferentes, então um método só com ifs dentro esconderia as duas regras.
+     * The type picks the service method instead of becoming a parameter of it:
+     * canceling and rescheduling publish different events and have different
+     * invariants, so a single method with ifs inside would hide the two rules.
      */
     @PostMapping
     ResponseEntity<ScheduleExceptionResponse> create(@Valid @RequestBody ScheduleExceptionRequest request) {
@@ -55,10 +55,10 @@ class ScheduleExceptionController {
     }
 
     /**
-     * Filtros por aluno e por intervalo, todos opcionais. O intervalo é sobre
-     * {@code date} — a data em que a mudança acontece — e não sobre a data de
-     * destino: quem procura "o que mudou nesta semana" está perguntando pelos
-     * dias que deixaram de ser normais.
+     * Filters by student and by interval, all optional. The interval is over
+     * {@code date} — the date on which the change happens — and not over the destination
+     * date: whoever looks for "what changed this week" is asking about the
+     * days that stopped being normal.
      */
     @GetMapping
     Page<ScheduleExceptionResponse> list(
@@ -71,8 +71,8 @@ class ScheduleExceptionController {
     }
 
     /**
-     * Apagar devolve o dia ao template. É o desfazer de um cancelamento
-     * marcado por engano — sem ele, a correção só existiria no banco.
+     * Deleting returns the day to the template. It is the undo of a mistakenly
+     * marked cancellation — without it, the correction would only exist in the database.
      */
     @DeleteMapping("/{id}")
     ResponseEntity<Void> delete(@PathVariable Long id) {

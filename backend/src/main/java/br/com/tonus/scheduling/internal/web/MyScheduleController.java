@@ -17,18 +17,18 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Endpoints /me: o id do aluno e do professor vem do token, e não existe
- * caminho para informá-lo — nem path, nem query, nem corpo.
+ * /me endpoints: the student's and teacher's id come from the token, and there is no
+ * way to provide it — not path, not query, not body.
  *
- * A diferença importa. Um endpoint que aceitasse o id e conferisse se bate com
- * o do token dependeria de alguém lembrar de fazer a conferência; é justamente
- * o que se esquece, e vira IDOR. Aqui não há o que conferir.
+ * The difference matters. An endpoint that accepted the id and checked whether it matches
+ * the token's would depend on someone remembering to do the check; that is exactly
+ * what gets forgotten, and it turns into IDOR. Here there is nothing to check.
  */
 @RestController
 @RequestMapping("/me")
 class MyScheduleController {
 
-    /** Um mês. Mais que isso não é a pergunta "quando é a minha próxima aula". */
+    /** One month. More than that is not the question "when is my next class". */
     private static final int MAX_WINDOW_DAYS = 31;
 
     private final SchedulingService schedulingService;
@@ -49,16 +49,16 @@ class MyScheduleController {
     }
 
     /**
-     * A janela do aluno numa chamada só.
+     * The student's window in a single call.
      *
-     * A tela dele mostra os próximos dias, e /me/schedule responde por dia: era
-     * uma requisição por data, cada uma expandindo a agenda do estúdio inteiro
-     * para devolver a linha de um aluno. O contrato aqui é o mesmo do dia
-     * avulso, repetido por data — o cliente não recompõe nada.
+     * Their screen shows the upcoming days, and /me/schedule answers per day: it was
+     * one request per date, each expanding the whole studio's schedule
+     * to return one student's row. The contract here is the same as the single
+     * day, repeated per date — the client does not recompose anything.
      *
-     * O teto de {@value #MAX_WINDOW_DAYS} dias existe porque o custo é
-     * proporcional ao tamanho pedido: sem ele, `days=3650` seria uma expansão
-     * de dez anos que qualquer aluno autenticado poderia disparar.
+     * The cap of {@value #MAX_WINDOW_DAYS} days exists because the cost is
+     * proportional to the requested size: without it, `days=3650` would be a ten-year
+     * expansion that any authenticated student could trigger.
      */
     @GetMapping("/schedule/week")
     List<DayScheduleResponse> myScheduleWeek(@AuthenticationPrincipal AuthenticatedUser user,
@@ -84,20 +84,20 @@ class MyScheduleController {
     }
 
     /**
-     * Sem data, "hoje" — é o que aluno e professor querem em 99% dos acessos.
-     * O ADMIN continua obrigado a informar a data em /schedule/day: lá a
-     * consulta é deliberada, e um default silencioso esconderia engano.
+     * Without a date, "today" — it is what student and teacher want in 99% of accesses.
+     * The ADMIN is still required to provide the date in /schedule/day: there the
+     * query is deliberate, and a silent default would hide a mistake.
      *
-     * "Hoje" sai do Clock injetado, com o fuso do estúdio (ver ClockConfig).
+     * "Today" comes from the injected Clock, with the studio's timezone (see ClockConfig).
      */
     private LocalDate orToday(LocalDate date) {
         return date != null ? date : LocalDate.now(clock);
     }
 
     /**
-     * Token com o papel certo mas sem vínculo é erro de configuração do
-     * usuário, não uma agenda vazia: devolver vazio esconderia o problema e o
-     * ADMIN nunca saberia que aquele login está quebrado.
+     * A token with the right role but no link is a user configuration error,
+     * not an empty schedule: returning empty would hide the problem and the
+     * ADMIN would never know that login is broken.
      */
     private Long requireLink(Long linkedId, String role) {
         if (linkedId == null) {
@@ -106,7 +106,7 @@ class MyScheduleController {
         return linkedId;
     }
 
-    /** Janela fora do intervalo aceito é erro de uso do cliente: 400. */
+    /** A window outside the accepted range is a client usage error: 400. */
     static class InvalidWindowException extends RuntimeException {
 
         InvalidWindowException(int asked, int max) {

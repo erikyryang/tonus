@@ -3,11 +3,12 @@ package br.com.tonus.billing;
 import java.time.LocalDate;
 
 /**
- * Uma fatura ABERTA passou do prazo de tolerância e virou ATRASADA.
+ * An OPEN invoice passed the grace period and became OVERDUE.
  *
- * Publicado só na transição (uma vez): a query do job só varre faturas ainda
- * ABERTAS, então rodar o job de novo no mesmo dia não republica.
- * Consome: ninguém ainda. {@code notification} avisará o aluno.
+ * Published only on the transition (once): the job's query only scans
+ * invoices still OPEN, so running the job again on the same day does not
+ * republish it.
+ * Consumers: none yet. {@code notification} will notify the student.
  */
 public record InvoiceOverdue(Long invoiceId, Long studentId, LocalDate dueDate) {
 }

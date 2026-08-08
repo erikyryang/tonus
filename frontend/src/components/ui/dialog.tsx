@@ -3,15 +3,15 @@ import { type ReactNode, useEffect, useId, useRef } from 'react';
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
 
 /**
- * Modal escrito à mão, e não shadcn/Radix: o projeto não adota biblioteca de UI
- * nova sem discussão, e o que a agenda precisa é confirmação simples.
- * Deliberadamente sem <dialog> nativo — o suporte no jsdom é irregular e o
- * comportamento passaria a depender do ambiente de teste.
+ * Modal written by hand, and not shadcn/Radix: the project doesn't adopt a new UI
+ * library without discussion, and what the schedule needs is simple confirmation.
+ * Deliberately without native <dialog> — support in jsdom is inconsistent and
+ * behavior would end up depending on the test environment.
  *
- * O que uma biblioteca daria de graça e aqui é explícito: o foco entra no
- * diálogo, fica preso nele enquanto está aberto e volta para quem o abriu ao
- * fechar. Sem isso, quem navega por teclado continuaria tabulando pela agenda
- * atrás do modal e perderia a posição ao fechá-lo.
+ * What a library would give for free and here is explicit: focus enters the
+ * dialog, stays trapped in it while open and returns to whoever opened it on
+ * close. Without this, whoever navigates by keyboard would keep tabbing through the schedule
+ * behind the modal and would lose their position when closing it.
  */
 export function Dialog({
   title,
@@ -21,7 +21,7 @@ export function Dialog({
 }: {
   title: string;
   onClose: () => void;
-  /** Mutação em andamento: fechar por Escape ou clique no fundo fica bloqueado. */
+  /** Mutation in progress: closing via Escape or clicking the backdrop is blocked. */
   busy?: boolean;
   children: ReactNode;
 }) {
@@ -32,7 +32,7 @@ export function Dialog({
     const opener = document.activeElement as HTMLElement | null;
     focusFirst(panel.current);
     return () => {
-      // Elemento pode ter saído do DOM junto com o menu que abriu o diálogo.
+      // Element may have left the DOM along with the menu that opened the dialog.
       if (opener?.isConnected) opener.focus();
     };
   }, []);
@@ -78,8 +78,8 @@ export function DialogActions({ children }: { children: ReactNode }) {
 }
 
 /**
- * O primeiro foco é o primeiro campo — ou, nas confirmações, o "Voltar". Sair
- * com o cursor sobre a ação destrutiva convidaria a confirmar no Enter.
+ * The first focus is the first field — or, in confirmations, "Back". Leaving
+ * the cursor over the destructive action would invite confirming with Enter.
  */
 function focusFirst(panel: HTMLElement | null) {
   const target = panel?.querySelector<HTMLElement>(FOCUSABLE);

@@ -6,9 +6,9 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
 /**
- * O professor é referenciado por id (e não por @ManyToOne) para manter a
- * entidade simples e o vínculo explícito — a integridade é garantida pela FK
- * do banco.
+ * The teacher is referenced by id (and not by @ManyToOne) to keep the
+ * entity simple and the link explicit — integrity is guaranteed by the database
+ * FK.
  */
 @Entity
 @Table(name = "student")

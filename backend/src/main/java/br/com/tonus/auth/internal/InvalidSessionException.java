@@ -1,13 +1,14 @@
 package br.com.tonus.auth.internal;
 
 /**
- * O token é legítimo, mas o usuário por trás dele não vale mais — saiu do
- * estúdio ou teve o acesso revogado.
+ * The token is legitimate, but the user behind it is no longer valid — left
+ * the studio or had access revoked.
  *
- * Acontece porque o access token é autocontido: ele continua criptograficamente
- * válido até expirar, mesmo depois de o login ser desativado. O refresh já é
- * bloqueado na hora da revogação, então a janela é curta; o que esta exceção
- * garante é que a verificação de sessão não devolva 200 dentro dela.
+ * Happens because the access token is self-contained: it remains
+ * cryptographically valid until it expires, even after the login is
+ * deactivated. The refresh is already blocked at revocation time, so the
+ * window is short; what this exception guarantees is that the session check
+ * doesn't return 200 within it.
  */
 public class InvalidSessionException extends RuntimeException {
 

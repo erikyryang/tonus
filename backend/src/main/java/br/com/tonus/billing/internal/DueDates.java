@@ -4,12 +4,13 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 
 /**
- * O vencimento de uma competência a partir do dia do cadastro do aluno.
+ * The due date of a billing period based on the student's registration day.
  *
- * Vive fora do serviço porque é regra pura, sem banco e sem relógio: era método
- * de {@code Subscription} e não podia morrer junto com ela (SPEC-012). O
- * aparo para o último dia do mês é a parte que se esquece — dia 31 em fevereiro
- * — e é o que o teste unitário guarda.
+ * Lives outside the service because it's a pure rule, with no database and no
+ * clock: it used to be a method of {@code Subscription} and couldn't die
+ * along with it (SPEC-012). The clamping to the last day of the month is the
+ * part that gets forgotten — day 31 in February — and it's what the unit test
+ * guards against.
  */
 public final class DueDates {
 

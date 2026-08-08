@@ -3,14 +3,14 @@ package br.com.tonus.scheduling;
 import java.time.LocalDate;
 
 /**
- * Comunicado cadastrado. O consumidor avisa todo aluno ativo — quem são eles é
- * decisão de quem consome, não deste evento.
+ * Announcement registered. The consumer notifies every active student — who they
+ * are is a decision of the consumer, not of this event.
  *
- * Carrega a descrição e o efeito porque a mensagem depende dos dois: "não
- * teremos aula" e "as aulas acontecem normalmente" são avisos diferentes, e o
- * motivo é o que faz o aviso valer alguma coisa. Sem eles o consumidor teria de
- * consultar a agenda para montar o texto — e `notification` não pergunta nada a
- * `scheduling`, por decisão de arquitetura.
+ * Carries the description and the effect because the message depends on both: "we won't
+ * have class" and "classes happen as usual" are different notices, and the
+ * reason is what makes the notice worth anything. Without them the consumer would have to
+ * query the schedule to build the text — and `notification` does not ask `scheduling`
+ * anything, by architectural decision.
  */
 public record AnnouncementCreated(LocalDate date, String description, boolean suspendsClasses) {
 }

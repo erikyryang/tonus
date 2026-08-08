@@ -16,10 +16,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Comunicado é global: uma linha vale para o estúdio inteiro. Data duplicada
- * tornaria ambíguo o "as aulas de D estão suspensas?" que a expansão da agenda
- * pergunta — e engoliria o segundo aviso, porque a chave de idempotência do
- * WhatsApp é a data.
+ * Announcement is global: one row applies to the whole studio. A duplicated date
+ * would make ambiguous the "are D's classes suspended?" that the schedule expansion
+ * asks — and would swallow the second notice, because WhatsApp's idempotency
+ * key is the date.
  */
 class AnnouncementCrudIT extends AbstractSchedulingIntegrationTest {
 
@@ -69,9 +69,9 @@ class AnnouncementCrudIT extends AbstractSchedulingIntegrationTest {
     }
 
     /**
-     * O intervalo filtra pelas duas pontas, inclusive. O comunicado é justamente o
-     * caso em que a borda importa: quem pede "o mês de setembro" espera o dia 1
-     * e o dia 30 dentro, não de fora.
+     * The interval filters by both ends, inclusive. The announcement is exactly the
+     * case where the edge matters: whoever asks for "the month of September" expects day 1
+     * and day 30 to be inside, not outside.
      */
     @Test
     void listFiltersByDateRange() throws Exception {
@@ -111,8 +111,8 @@ class AnnouncementCrudIT extends AbstractSchedulingIntegrationTest {
     }
 
     /**
-     * O efeito é obrigatório: sem ele, um comunicado informativo esvaziaria o
-     * dia por engano de digitação, e ninguém saberia por quê.
+     * The effect is mandatory: without it, an informative announcement would empty the
+     * day by a typo, and nobody would know why.
      */
     @Test
     void rejectsAnnouncementWithoutSuspendsClasses() throws Exception {

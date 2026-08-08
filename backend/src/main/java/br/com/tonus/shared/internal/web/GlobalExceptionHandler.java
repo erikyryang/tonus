@@ -9,17 +9,18 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 /**
- * Handler global de erros do projeto (RFC 9457 Problem Details).
- * MethodArgumentNotValidException e HttpMessageNotReadableException já
- * são convertidas para Problem Details pelo suporte nativo do Spring
- * (spring.mvc.problemdetails.enabled=true); aqui só cobrimos o que
- * escapa desse mecanismo — exceções não mapeadas por nenhum módulo,
- * pra nunca vazar stacktrace pro cliente.
+ * Global error handler for the project (RFC 9457 Problem Details).
+ * MethodArgumentNotValidException and HttpMessageNotReadableException are
+ * already converted to Problem Details by Spring's native support
+ * (spring.mvc.problemdetails.enabled=true); here we only cover what
+ * escapes that mechanism — exceptions not mapped by any module, so a
+ * stacktrace never leaks to the client.
  *
- * AccessDeniedException/AuthenticationException são relançadas de
- * propósito: se o DispatcherServlet as resolvesse aqui, elas nunca
- * chegariam ao ExceptionTranslationFilter do Spring Security, que é
- * quem deve gerar o 403/401 (senão viram 500 por engano).
+ * AccessDeniedException/AuthenticationException are rethrown on
+ * purpose: if the DispatcherServlet resolved them here, they would never
+ * reach Spring Security's ExceptionTranslationFilter, which is the one
+ * that should generate the 403/401 (otherwise they turn into a 500 by
+ * mistake).
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {

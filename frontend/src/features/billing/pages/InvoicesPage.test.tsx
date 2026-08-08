@@ -23,7 +23,7 @@ function renderInvoices(queryClient = createTestQueryClient(), route = '/admin/i
   return renderApp(route, queryClient);
 }
 
-/** Sempre a lista fixa, independente do filtro — para os testes de render. */
+/** Always the fixed list, regardless of the filter — for render tests. */
 function fixedList(...invoices: Invoice[]) {
   return invoicesHandler(() => pageOf(invoices));
 }
@@ -52,9 +52,9 @@ describe('lista de faturas', () => {
   });
 
   /**
-   * Critério de aceite: OVERDUE é o que o ADMIN caça nesta tela. O destaque não
-   * pode ser só cor — o texto do badge distingue, e o `data-status` é o gancho
-   * que o estilo usa para a linha inteira.
+   * Acceptance criterion: OVERDUE is what the ADMIN hunts for on this screen. The highlight can't
+   * be color alone — the badge's text distinguishes it, and `data-status` is the hook
+   * the styling uses for the whole row.
    */
   it('destaca a fatura atrasada', async () => {
     server.use(
@@ -73,7 +73,7 @@ describe('lista de faturas', () => {
     expect(open).toHaveAttribute('data-status', 'OPEN');
   });
 
-  /** Pagamento é imutável no back: sem baixa a oferecer, só o registro do que houve. */
+  /** Payment is immutable in the back: nothing to settle to offer, only the record of what happened. */
   it('fatura paga mostra a data do pagamento e não oferece renovar', async () => {
     server.use(
       meOk(ADMIN),
@@ -113,7 +113,7 @@ describe('lista de faturas', () => {
     expect(await screen.findByText(/nenhuma fatura registrada/i)).toBeInTheDocument();
   });
 
-  /** "Nenhuma fatura" sob o filtro "Atrasadas" leria como "não há fatura nenhuma". */
+  /** "No invoices" under the "Overdue" filter would read as "there are no invoices at all". */
   it('o vazio diz de qual filtro está falando', async () => {
     server.use(meOk(ADMIN), fixedList());
 
@@ -125,9 +125,9 @@ describe('lista de faturas', () => {
   });
 
   /**
-   * invoice.student_id não tem FK (decisão de docs/ddl.md), então o back
-   * pode devolver nome nulo. Célula em branco numa linha sobre dinheiro é pior
-   * do que um identificador feio.
+   * invoice.student_id has no FK (decision from docs/ddl.md), so the back
+   * can return a null name. A blank cell in a row about money is worse
+   * than an ugly identifier.
    */
   it('identifica o aluno mesmo sem nome vindo do back', async () => {
     server.use(
@@ -151,7 +151,7 @@ describe('lista de faturas', () => {
 });
 
 describe('filtro por status', () => {
-  /** Critério de aceite: o filtro só existe se chegar ao backend. */
+  /** Acceptance criterion: the filter only exists if it reaches the backend. */
   it('altera a query string enviada', async () => {
     const sent: string[] = [];
     server.use(
@@ -168,7 +168,7 @@ describe('filtro por status', () => {
 
     const { user } = renderInvoices();
 
-    // Default é "todas": nenhum status vai na query.
+    // Default is "all": no status goes into the query.
     await rowOf('Ana Alves');
     expect(paramsOf(sent[0]!).get('status')).toBeNull();
 
@@ -193,8 +193,8 @@ describe('renovar', () => {
   }
 
   /**
-   * Critério de aceite: o fluxo inteiro. É a ação de maior consequência da UI —
-   * dispara recibo real por WhatsApp.
+   * Acceptance criterion: the whole flow. It's the UI action with the biggest consequences —
+   * it triggers a real receipt via WhatsApp.
    */
   it('confirma, envia a data escolhida e a lista volta com a fatura paga', async () => {
     const sent: Array<{ id: number; paymentDate: string }> = [];
@@ -218,11 +218,11 @@ describe('renovar', () => {
     const { user } = renderInvoices();
     const dialog = await openPaymentDialog(user);
 
-    // O diálogo avisa o efeito real, não pergunta "tem certeza?".
+    // The dialog states the real effect, doesn't ask "are you sure?".
     expect(within(dialog).getByText(/ciclo do aluno é renovado/i)).toBeInTheDocument();
 
     fireEvent.change(within(dialog).getByLabelText('Data do pagamento'), { target: { value: '2026-07-20' } });
-    // A baixa não mexe mais no vencimento (SPEC-004): prometer isso seria mentir.
+    // Settling no longer touches the due date (SPEC-004): promising that would be a lie.
     expect(within(dialog).queryByText(/vencimento da assinatura/i)).not.toBeInTheDocument();
 
     await user.click(within(dialog).getByRole('button', { name: 'Renovar' }));
@@ -246,7 +246,7 @@ describe('renovar', () => {
     expect(within(dialog).getByLabelText('Data do pagamento')).toHaveValue(todayIsoDate());
   });
 
-  /** Critério de aceite: o zod barra antes de qualquer request. */
+  /** Acceptance criterion: zod blocks it before any request. */
   it('recusa data futura sem chamar a API', async () => {
     server.use(meOk(ADMIN), fixedList(invoice({ ...ANA, status: 'OPEN' })));
 
@@ -256,19 +256,19 @@ describe('renovar', () => {
     fireEvent.change(within(dialog).getByLabelText('Data do pagamento'), { target: { value: '2099-01-01' } });
     await user.click(within(dialog).getByRole('button', { name: 'Renovar' }));
 
-    // Sem handler de POST: se a chamada saísse, o MSW derrubaria o teste.
+    // No POST handler: if the call went out, MSW would fail the test.
     expect(await within(dialog).findByText(/data futura/i)).toBeInTheDocument();
   });
 
   /**
-   * Critério de aceite: 409 é estado legítimo (outro admin deu a baixa, ou o
-   * duplo clique venceu a corrida), não erro genérico. A UI explica e mostra a
-   * lista de verdade.
+   * Acceptance criterion: 409 is a legitimate state (another admin settled it, or the
+   * double click won the race), not a generic error. The UI explains it and shows the
+   * true list.
    */
   it('explica o 409 com a mensagem do back e refaz a lista', async () => {
     const requests: string[] = [];
-    // A corrida de verdade: a tela carregou com a fatura aberta e, entre abrir
-    // o diálogo e confirmar, outro admin deu a baixa.
+    // The real race: the screen loaded with the invoice open and, between opening
+    // the dialog and confirming, another admin settled it.
     let paidByOtherAdmin = false;
 
     server.use(
@@ -287,7 +287,7 @@ describe('renovar', () => {
       }),
     );
 
-    // staleTime infinito: uma segunda chamada só pode vir de invalidação.
+    // Infinite staleTime: a second call can only come from invalidation.
     const { user } = renderInvoices(createTestQueryClient({ staleTime: Infinity, gcTime: Infinity }));
 
     const dialog = await openPaymentDialog(user);
@@ -303,8 +303,8 @@ describe('renovar', () => {
   });
 
   /**
-   * O 409 aqui não é transitório: a fatura está paga e vai continuar paga.
-   * Deixar o botão armado convida a repetir uma ação que só pode falhar de novo.
+   * The 409 here isn't transient: the invoice is paid and will stay paid.
+   * Leaving the button armed invites repeating an action that can only fail again.
    */
   it('não deixa repetir a renovação depois do 409', async () => {
     server.use(
@@ -324,9 +324,9 @@ describe('renovar', () => {
   });
 
   /**
-   * A entrega do WhatsApp é assíncrona (evento + reentrega at-least-once). O
-   * toast não pode afirmar que o aluno já recebeu — no instante da resposta
-   * HTTP, não recebeu.
+   * WhatsApp delivery is asynchronous (event + at-least-once redelivery). The
+   * toast can't state that the student has already received it — at the moment of the HTTP
+   * response, they haven't.
    */
   it('o toast não afirma entrega que ainda não aconteceu', async () => {
     server.use(meOk(ADMIN), fixedList(invoice({ ...ANA, status: 'OPEN' })), registerPaymentOk());
@@ -339,7 +339,7 @@ describe('renovar', () => {
     expect(screen.getByRole('status')).not.toHaveTextContent(/recebeu/i);
   });
 
-  /** Dupla proteção com o 409; o idempotente de verdade é o uk_payment_invoice. */
+  /** Double protection with the 409; the real idempotence is uk_payment_invoice. */
   it('desabilita o botão enquanto a renovação está em andamento', async () => {
     server.use(
       meOk(ADMIN),
@@ -359,7 +359,7 @@ describe('renovar', () => {
   });
 });
 
-/** O tipo Page do front é o recorte do Page do Spring; a paginação usa `number`. */
+/** The front's Page type is the slice of Spring's Page; pagination uses `number`. */
 describe('paginação', () => {
   it('navega para a próxima página e leva o filtro junto', async () => {
     const sent: string[] = [];
@@ -388,10 +388,10 @@ describe('paginação', () => {
   });
 
   /**
-   * A última página some debaixo do ADMIN quando ele dá baixa no único item
-   * dela sob o filtro "Atrasadas": a fatura sai do filtro e a página deixa de
-   * existir. Sem recuar, a tela diria "nenhuma fatura atrasada" com a página 1
-   * ainda cheia.
+   * The last page vanishes under the ADMIN when they settle the only item
+   * on it under the "Overdue" filter: the invoice leaves the filter and the page stops
+   * existing. Without stepping back, the screen would say "no overdue invoices" with page 1
+   * still full.
    */
   it('recua quando a página deixa de existir depois da renovação', async () => {
     let paid = false;
@@ -402,7 +402,7 @@ describe('paginação', () => {
       invoicesHandler((params) => {
         const page = Number(params.get('page') ?? 0);
         if (paid) {
-          // Sobrou só a Ana: uma página, e a página 1 não existe mais.
+          // Only Ana is left: one page, and page 1 no longer exists.
           return page === 0
             ? pageOf([invoice({ ...ANA, status: 'OVERDUE' })], { number: 0, totalElements: 1, totalPages: 1 })
             : pageOf([], { number: page, totalElements: 1, totalPages: 1 });
@@ -421,10 +421,10 @@ describe('paginação', () => {
     await user.click(await screen.findByRole('button', { name: 'Renovar a fatura de Bia Barros' }));
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Renovar' }));
 
-    // Recuou para a página 0 e mostra o que sobrou, em vez do vazio da página 1.
+    // Stepped back to page 0 and shows what's left, instead of page 1's empty state.
     expect(await rowOf('Ana Alves')).toBeInTheDocument();
     expect(screen.queryByText(/nenhuma fatura/i)).not.toBeInTheDocument();
-    // A URL perde o ?page=, mas a chamada sempre carrega page explícito.
+    // The URL loses the ?page=, but the call always carries an explicit page.
     expect(paramsOf(sent[sent.length - 1]!).get('page')).toBe('0');
   });
 });

@@ -60,7 +60,7 @@ export function AppRoutes() {
   );
 }
 
-/** Raiz não tem tela própria: resolve o destino pelo papel da sessão. */
+/** Root has no screen of its own: it resolves the destination by the session's role. */
 function RootRedirect() {
   const session = useSessionState();
 
@@ -70,7 +70,7 @@ function RootRedirect() {
   return <Navigate to={destinationFor(session.user.role)} replace />;
 }
 
-/** Liga o 401 sem recuperação do apiClient ao roteador: cache limpo e /login. */
+/** Wires apiClient's unrecoverable 401 to the router: cache cleared and /login. */
 function UnauthorizedBridge() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();

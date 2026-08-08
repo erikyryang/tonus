@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { apiMessage } from '@/lib/apiError';
 import { useBillingSettings, useUpdateBillingSettings } from '../api/billingQueries';
 
-/** Espelha o CHECK do banco: 0 a 100. */
+/** Mirrors the database CHECK: 0 to 100. */
 const schema = z.object({
   multiPlanDiscountPercent: z
     .string()
@@ -24,8 +24,8 @@ const schema = z.object({
 type SettingsForm = z.infer<typeof schema>;
 
 /**
- * A configuração de cobrança do estúdio. Uma tela para um campo, e não um campo
- * dentro de /admin/plans: desconto não é atributo de plano nenhum (SPEC-012).
+ * The studio's billing configuration. One screen for one field, not a field
+ * inside /admin/plans: discount isn't an attribute of any plan (SPEC-012).
  */
 export function SettingsPage() {
   const settings = useBillingSettings();
@@ -42,8 +42,8 @@ export function SettingsPage() {
     defaultValues: { multiPlanDiscountPercent: '' },
   });
 
-  // O valor só existe depois da resposta; sem isso o campo abriria vazio e um
-  // salvar apressado gravaria o vazio por cima do que estava configurado.
+  // The value only exists after the response; without this the field would open empty and a
+  // hasty save would write the empty value over what was configured.
   useEffect(() => {
     if (settings.data) {
       reset({ multiPlanDiscountPercent: String(settings.data.multiPlanDiscountPercent) });

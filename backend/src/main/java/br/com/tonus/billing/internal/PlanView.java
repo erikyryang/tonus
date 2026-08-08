@@ -3,11 +3,12 @@ package br.com.tonus.billing.internal;
 import br.com.tonus.billing.internal.domain.Plan;
 
 /**
- * Plano pareado com o que a tela precisa e a linha de `plan` não guarda: quantos
- * alunos perdem a cobrança se ele for desativado.
+ * Plan paired with what the screen needs and the `plan` row doesn't hold:
+ * how many students lose the charge if it's deactivated.
  *
- * Mesma razão de {@link InvoiceView} existir — a contagem mora em outra tabela,
- * e resolvê-la no cliente custaria carregar as matrículas do estúdio inteiro.
+ * Same reason {@link InvoiceView} exists — the count lives in another table,
+ * and resolving it on the client would cost loading the whole studio's
+ * enrollments.
  */
 public record PlanView(Plan plan, long activeEnrollments) {
 }

@@ -39,10 +39,10 @@ class AuthLogoutIT extends AbstractAuthIntegrationTest {
     }
 
     /**
-     * Logout sem cookie nenhum é o caso de quem já estava deslogado, ou de quem
-     * limpou os cookies antes de clicar em sair. Tem que ser no-op silencioso:
-     * transformar isso em erro só produziria ruído numa ação que já alcançou o
-     * resultado desejado.
+     * Logout without any cookie is the case of someone who was already
+     * logged out, or who cleared their cookies before clicking sign out. It
+     * has to be a silent no-op: turning this into an error would just
+     * produce noise for an action that already reached the desired outcome.
      */
     @Test
     void logoutWithoutCookiesIsHarmless() throws Exception {

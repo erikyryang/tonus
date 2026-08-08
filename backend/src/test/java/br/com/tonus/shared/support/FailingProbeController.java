@@ -4,9 +4,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Endpoint que só existe em teste, para provocar uma exceção que nenhum módulo
- * mapeia. É a única forma de exercitar o handler de último recurso do shared —
- * o resto da API, por bem construída, nunca chega lá.
+ * Endpoint that only exists in tests, to trigger an exception that no
+ * module maps. It's the only way to exercise shared's last-resort handler —
+ * the rest of the API, being well built, never reaches it.
  */
 @RestController
 public class FailingProbeController {

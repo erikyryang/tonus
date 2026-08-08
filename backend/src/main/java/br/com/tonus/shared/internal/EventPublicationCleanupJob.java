@@ -8,16 +8,16 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Apaga entrega concluída depois da janela de retenção.
+ * Deletes completed deliveries after the retention window.
  *
- * O registry guarda uma linha por evento por listener e nunca apaga nada
- * sozinho. Com seis avisos por aluno por mês, mais os eventos de cadastro, a
- * tabela só cresce — e ela está no caminho quente de toda publicação e de toda
- * varredura do job de republicação, que passa a ler cada vez mais lixo para
- * achar cada vez menos pendência.
+ * The registry keeps one row per event per listener and never deletes
+ * anything on its own. With six notices per student per month, plus
+ * registration events, the table only grows — and it sits on the hot path of
+ * every publication and of every scan by the republication job, which then
+ * reads more and more garbage to find fewer and fewer pending items.
  *
- * Apaga só o que está concluído: o que não fechou é justamente o que o
- * {@link EventRepublicationJob} precisa encontrar.
+ * Deletes only what's completed: what hasn't closed is exactly what
+ * {@link EventRepublicationJob} needs to find.
  */
 @Component
 public class EventPublicationCleanupJob {
@@ -34,9 +34,9 @@ public class EventPublicationCleanupJob {
     }
 
     /**
-     * De madrugada e meia hora depois do job de cobrança: os dois mexem em
-     * tabela grande, e a poda varrendo enquanto a cobrança publica eventos só
-     * cria contenção sem necessidade.
+     * At night and half an hour after the billing job: both touch a large
+     * table, and pruning while billing publishes events would just create
+     * unnecessary contention.
      */
     @Scheduled(cron = "${shared.events.cleanup-cron:0 30 3 * * *}")
     @SchedulerLock(name = "event-publication-cleanup-job", lockAtMostFor = "PT30M", lockAtLeastFor = "PT0S")

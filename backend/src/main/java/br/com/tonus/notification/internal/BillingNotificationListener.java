@@ -8,10 +8,11 @@ import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
 /**
- * O que acontece com a mensalidade do aluno, ele fica sabendo.
+ * Whatever happens to the student's monthly fee, they get to know about it.
  *
- * A chave de idempotência é o id da fatura: os três eventos são fatos que
- * acontecem no máximo uma vez por fatura, e o template já separa qual deles é.
+ * The idempotency key is the invoice id: the three events are facts that
+ * happen at most once per invoice, and the template already separates which
+ * one it is.
  */
 @Component
 class BillingNotificationListener {

@@ -101,8 +101,8 @@ export function PlansPage() {
                   <td className="px-3 py-2">{plan.activeEnrollments}</td>
                   <td className="px-3 py-2">{plan.active ? 'Ativo' : 'Inativo'}</td>
                   <td className="px-3 py-2 text-right">
-                    {/* Sem excluir: plano desativado continua explicando as
-                        faturas emitidas com ele (SPEC-012). */}
+                    {/* No deleting: a deactivated plan keeps explaining the
+                        invoices issued with it (SPEC-012). */}
                     <ActionMenu
                       label={`Ações de ${plan.name}`}
                       actions={[
@@ -167,8 +167,8 @@ export function PlansPage() {
             )
           }
         >
-          {/* Desativar com matrícula ativa é permitido (SPEC-012); o preço é
-              dizer o tamanho do estrago antes, não esconder o botão. */}
+          {/* Deactivating with an active enrollment is allowed (SPEC-012); the price is
+              saying the size of the damage upfront, not hiding the button. */}
           {pending.plan.active ? (
             <p>
               <strong>{pending.plan.name}</strong> sai das listagens e das novas matrículas.

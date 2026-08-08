@@ -1,8 +1,8 @@
 package br.com.tonus.registration;
 
 /**
- * Aluno saiu do estúdio. Consumido pelo auth para revogar o acesso do usuário
- * vinculado. Entrega at-least-once: o listener é idempotente.
+ * Student left the studio. Consumed by auth to revoke access of the linked
+ * user. At-least-once delivery: the listener is idempotent.
  */
 public record StudentDeactivated(Long studentId) {
 }

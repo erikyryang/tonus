@@ -6,8 +6,8 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 /**
- * Só os campos da SPEC-002 — minimização LGPD. Campo extra enviado pelo cliente
- * é descartado pelo Jackson (FAIL_ON_UNKNOWN_PROPERTIES desligado no shared).
+ * Only the SPEC-002 fields — LGPD minimization. Extra field sent by the client
+ * is discarded by Jackson (FAIL_ON_UNKNOWN_PROPERTIES turned off in shared).
  */
 public record StudentRequest(
         @NotBlank @Size(max = 255) String name,

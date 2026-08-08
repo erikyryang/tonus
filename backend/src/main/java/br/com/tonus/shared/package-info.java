@@ -1,8 +1,10 @@
 /**
- * Infra transversal: erros (Problem Details), Clock, auditoria, config Jackson.
+ * Cross-cutting infrastructure: errors (Problem Details), Clock, auditing,
+ * Jackson config.
  *
- * Não depende de nenhum outro módulo — é a base sobre a qual todos os outros se
- * apoiam. A lista vazia é a declaração disso, e o ArchitectureTest a verifica.
+ * Does not depend on any other module — it's the base that all the others
+ * rest on. The empty list is the declaration of that, and ArchitectureTest
+ * verifies it.
  */
 @org.springframework.modulith.ApplicationModule(allowedDependencies = {})
 package br.com.tonus.shared;

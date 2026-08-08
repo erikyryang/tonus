@@ -13,32 +13,32 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Base dos testes do módulo scheduling.
+ * Base for the scheduling module's tests.
  *
- * Herda de registration porque agenda não existe sem aluno e professor: o seed
- * continua sendo feito pela API REST, nunca por repositório — os repositórios
- * vivem em {@code *.internal.domain} e o teste roda no pacote raiz do módulo.
+ * Inherits from registration because the schedule does not exist without a student and a teacher: the seeding
+ * continues to be done through the REST API, never through a repository — the repositories
+ * live in {@code *.internal.domain} and the test runs in the module's root package.
  *
- * As datas são literais fixos e nunca derivadas de "hoje": a expansão da agenda
- * depende do dia da semana, então um teste que usasse a data corrente passaria
- * de segunda a sexta e quebraria no sábado.
+ * The dates are fixed literals and never derived from "today": the schedule expansion
+ * depends on the day of the week, so a test that used the current date would pass
+ * Monday through Friday and would break on Saturday.
  *
- * Pelo mesmo motivo o relógio é fixo ({@link SchedulingClockConfig}): "hoje" é
- * sempre {@link #MONDAY}, e as datas abaixo têm posição estável em relação a
- * ele — passado e futuro não mudam com a passagem do tempo real.
+ * For the same reason the clock is fixed ({@link SchedulingClockConfig}): "today" is
+ * always {@link #MONDAY}, and the dates below have a stable position relative to
+ * it — past and future do not change with the passage of real time.
  */
 @Import(SchedulingClockConfig.class)
 abstract class AbstractSchedulingIntegrationTest extends AbstractRegistrationIntegrationTest {
 
-    /** Segunda-feira — é também "hoje" para o relógio fixo dos testes. */
+    /** Monday — is also "today" for the tests' fixed clock. */
     protected static final String MONDAY = "2026-07-27";
-    /** Terça-feira. */
+    /** Tuesday. */
     protected static final String TUESDAY = "2026-07-28";
-    /** Quarta-feira — destino das remarcações. */
+    /** Wednesday — destination of the reschedules. */
     protected static final String WEDNESDAY = "2026-07-29";
-    /** Sábado. */
+    /** Saturday. */
     protected static final String SATURDAY = "2026-08-01";
-    /** Sexta-feira anterior a "hoje" — para exercitar recusa de data passada. */
+    /** Friday before "today" — to exercise the rejection of a past date. */
     protected static final String LAST_FRIDAY = "2026-07-24";
 
     protected long createDefaultSchedule(long studentId, String time) throws Exception {
@@ -95,7 +95,7 @@ abstract class AbstractSchedulingIntegrationTest extends AbstractRegistrationInt
                 .content(body));
     }
 
-    /** Agenda do dia já expandida, como o ADMIN a vê. */
+    /** The day's schedule, already expanded, as the ADMIN sees it. */
     protected JsonNode daySchedule(String date) throws Exception {
         MvcResult result = mockMvc.perform(get("/schedule/day").param("date", date).cookie(admin))
                 .andExpect(status().isOk())
@@ -104,9 +104,9 @@ abstract class AbstractSchedulingIntegrationTest extends AbstractRegistrationInt
     }
 
     /**
-     * Cookie de um aluno de verdade — com vínculo em {@code users.student_id}.
-     * O {@code studentCookie} herdado do auth cria usuário sem vínculo, e é
-     * justamente o vínculo que os endpoints /me usam para achar o aluno.
+     * Cookie of a real student — with a link in {@code users.student_id}.
+     * The {@code studentCookie} inherited from auth creates a user without a link, and it is
+     * exactly the link that the /me endpoints use to find the student.
      */
     protected Cookie linkedStudentCookie(long studentId) throws Exception {
         return linkedCookie("STUDENT", "studentId", studentId);

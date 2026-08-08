@@ -9,11 +9,11 @@ import { useMyInvoices } from '../api/billingQueries';
 import { InvoiceStatusBadge } from '../components/InvoiceStatusBadge';
 
 /**
- * As faturas do aluno logado. Só leitura: dar baixa é do ADMIN, e o aluno não
- * tem como se declarar pago.
+ * The logged-in student's invoices. Read-only: settling payment is the ADMIN's job, and the student has
+ * no way to declare themself as paid.
  *
- * Cartões, e não tabela: a tela é do celular, e uma tabela de cinco colunas em
- * 360px vira rolagem horizontal.
+ * Cards, not a table: the screen is for the phone, and a five-column table at
+ * 360px turns into horizontal scrolling.
  */
 export function MyInvoicesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -40,8 +40,8 @@ export function MyInvoicesPage() {
               <li
                 key={invoice.id}
                 aria-label={`Fatura de ${formatReferenceMonth(invoice.referenceMonth)}`}
-                // O gancho do destaque, e o que o teste observa: cor sozinha
-                // não é sinal acessível.
+                // The hook for the highlight, and what the test observes: color alone
+                // is not an accessible signal.
                 data-status={invoice.status}
                 className={cn(
                   'flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-4',

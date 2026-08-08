@@ -11,12 +11,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * A SPEC-002 pede que o ADMIN crie o usuário de acesso do aluno/professor.
- * O endpoint mora no auth porque é o auth que é dono da tabela users; o vínculo
- * é validado contra o cadastro.
+ * SPEC-002 requires the ADMIN to create the student/teacher access user.
+ * The endpoint lives in auth because auth owns the users table; the link is
+ * validated against registration.
  *
- * Aluno e professor são criados de verdade em cada teste: o vínculo precisa
- * apontar para alguém que existe e está ativo, então id chutado não serve.
+ * A real student and teacher are created in each test: the link needs to
+ * point to someone who exists and is active, so a made-up id won't do.
  */
 class AuthUserCreationIT extends AbstractAuthIntegrationTest {
 

@@ -5,10 +5,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Controller que só existe em teste, para isolar a verificação de que o
- * pipeline de autenticação/autorização (cookie JWT -> SecurityContext com o
- * role correto) funciona, sem depender de endpoints de negócio de outros
- * módulos ainda não implementados.
+ * Controller that only exists in tests, to isolate verification that the
+ * authentication/authorization pipeline (JWT cookie -> SecurityContext with
+ * the correct role) works, without depending on business endpoints from
+ * other modules that aren't implemented yet.
  */
 @RestController
 public class RoleProbeController {

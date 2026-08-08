@@ -6,9 +6,9 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marca uma entidade para ter mudanças registradas em audit_log.
- * O listener que efetivamente grava os registros ainda não existe
- * (fase GREEN) — por enquanto a anotação só declara o contrato.
+ * Marks an entity to have changes recorded in audit_log.
+ * The listener that actually writes the records doesn't exist yet
+ * (GREEN phase) — for now the annotation only declares the contract.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)

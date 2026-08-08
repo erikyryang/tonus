@@ -8,15 +8,15 @@ import java.time.LocalTime;
 import java.util.List;
 
 /**
- * A agenda de um dia já expandida — o cliente não recebe template, exceção e
- * comunicado para combinar por conta própria. Se recebesse, cada consumidor
- * reimplementaria a regra, e um deles erraria.
+ * The already expanded schedule of a day — the client does not receive template, exception and
+ * announcement to combine on its own. If it did, each consumer would
+ * reimplement the rule, and one of them would get it wrong.
  *
- * Pela mesma razão o dia carrega o estado inteiro: o comunicado (que explica
- * por que não há aula, ou avisa algo sobre um dia que tem aula) e os
- * cancelamentos (que a expansão remove por definição). Sem isso a tela teria de
- * deduzir "está vazio, deve ser feriado" — inventando um motivo que ela não tem
- * como saber.
+ * For the same reason the day carries the whole state: the announcement (which explains
+ * why there is no class, or notifies about something on a day that has class) and the
+ * cancellations (which the expansion removes by definition). Without this the screen would have to
+ * deduce "it is empty, must be a holiday" — inventing a reason it has no
+ * way of knowing.
  */
 public record DayScheduleResponse(LocalDate date,
                                   Announcement announcement,
@@ -29,7 +29,7 @@ public record DayScheduleResponse(LocalDate date,
                 day.cancellations().stream().map(Cancellation::from).toList());
     }
 
-    /** Nulo no dia sem comunicado. */
+    /** Null on a day without an announcement. */
     public record Announcement(String description, boolean suspendsClasses) {
 
         static Announcement from(DayScheduleView.Announcement announcement) {

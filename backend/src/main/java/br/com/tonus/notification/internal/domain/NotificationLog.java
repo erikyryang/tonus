@@ -9,12 +9,13 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 
 /**
- * Um aviso entregue. A linha só existe se a mensagem saiu — a falha de envio
- * derruba a transação que a criou.
+ * A delivered notice. The row only exists if the message went out — a send
+ * failure rolls back the transaction that created it.
  *
- * referenceKey identifica o fato dentro do evento (a data, o id da fatura,
- * origem+destino da remarcação). Junto com template e studentId forma a chave
- * única que impede o reprocessamento de reenviar.
+ * referenceKey identifies the fact within the event (the date, the invoice
+ * id, origin+destination of the reschedule). Together with template and
+ * studentId it forms the unique key that prevents reprocessing from
+ * resending.
  */
 @Entity
 @Table(name = "notification_log")

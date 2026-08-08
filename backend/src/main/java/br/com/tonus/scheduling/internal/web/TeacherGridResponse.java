@@ -9,10 +9,10 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * A grade do professor: a agenda dele agrupada por hora.
+ * The teacher's grid: their schedule grouped by time.
  *
- * O agrupamento é feito aqui, na borda, e não no banco: o "grupo" não é uma
- * entidade, é só o formato em que o professor lê a própria agenda.
+ * The grouping is done here, at the edge, and not in the database: the "group" is not an
+ * entity, it is just the format in which the teacher reads their own schedule.
  */
 public record TeacherGridResponse(LocalDate date, List<Slot> slots) {
 
@@ -31,13 +31,13 @@ public record TeacherGridResponse(LocalDate date, List<Slot> slots) {
     }
 
     /**
-     * Id, nome e telefone. O telefone está aqui por finalidade, não por
-     * conveniência: quem lê esta resposta é o professor daquele aluno, e falar
-     * com ele — desmarcar, avisar de atraso — é o atendimento, não um extra.
+     * Id, name and phone. The phone is here for a purpose, not for
+     * convenience: whoever reads this response is that student's teacher, and speaking
+     * with them — canceling, notifying of a delay — is the service, not an extra.
      *
-     * A minimização continua valendo no que não mudou: nenhum outro caminho da
-     * agenda carrega telefone, e este só carrega o dos alunos do professor
-     * logado (o id vem do token). Nunca logar o valor.
+     * Minimization still holds for what did not change: no other schedule
+     * path carries phone, and this one only carries that of the logged-in
+     * teacher's students (the id comes from the token). Never log the value.
      */
     public record Student(Long studentId, String studentName, String studentPhone) {
     }

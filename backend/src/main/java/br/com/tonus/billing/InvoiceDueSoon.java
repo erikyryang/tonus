@@ -4,11 +4,11 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
- * Uma fatura acabou de nascer, vencendo hoje.
+ * An invoice was just born, due today.
  *
- * Consome: ninguém ainda. {@code notification} avisará o aluno.
- * Idempotência: o consumidor precisa tolerar o mesmo aviso duas vezes — a
- * entrega é at-least-once.
+ * Consumers: none yet. {@code notification} will notify the student.
+ * Idempotency: the consumer must tolerate receiving the same notice twice —
+ * delivery is at-least-once.
  */
 public record InvoiceDueSoon(Long invoiceId, Long studentId, LocalDate dueDate, BigDecimal amount) {
 }

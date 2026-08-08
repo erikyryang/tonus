@@ -1,14 +1,14 @@
 import { Button } from '@/components/ui/button';
 
 /**
- * Uma opção do filtro de situação. `active: undefined` é "todos" — o back lê o
- * parâmetro ausente assim.
+ * A status filter option. `active: undefined` is "all" — that's how the back
+ * reads the missing parameter.
  *
- * O vazio anda junto do filtro porque só ele sabe o que a lista vazia significa:
- * "Nenhum aluno" sob "Inativos" leria como "não existe aluno nenhum".
+ * The empty-state text travels with the filter because only it knows what the empty list means:
+ * "No students" under "Inactive" would read as "there are no students at all".
  *
- * Os rótulos ficam em cada tela, e não num gerador aqui: "Ativos" para aluno e
- * "Ativas" para assinatura é concordância, não configuração.
+ * The labels stay in each screen, and not in a generator here: "Ativos" for student and
+ * "Ativas" for subscription is agreement, not configuration.
  */
 export interface StatusFilterOption {
   label: string;
@@ -21,9 +21,9 @@ export function emptyMessageOf(filters: StatusFilterOption[], active: boolean | 
 }
 
 /**
- * A barra de situação das listagens do ADMIN. Nasceu igual em alunos,
- * professores e assinaturas: as três copiavam o mesmo `role="group"`, o mesmo
- * `aria-pressed` e a mesma volta para a primeira página.
+ * The status bar for ADMIN listings. Born identical in students,
+ * teachers and subscriptions: all three copied the same `role="group"`, the same
+ * `aria-pressed` and the same return to the first page.
  */
 export function StatusFilter({
   filters,
@@ -42,8 +42,8 @@ export function StatusFilter({
           size="sm"
           variant={filter.active === active ? 'default' : 'outline'}
           aria-pressed={filter.active === active}
-          // Trocar de filtro volta para a primeira página: a página 3 dos
-          // inativos raramente existe quando o filtro era "ativos".
+          // Switching filters goes back to the first page: page 3 of the
+          // inactive ones rarely exists when the filter was "active".
           onClick={() => onChange(filter.active)}
         >
           {filter.label}

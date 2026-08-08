@@ -13,22 +13,24 @@ import org.springframework.web.bind.annotation.RestController;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Quem pode chamar o quê é decidido em um lugar só: o {@code SecurityConfig}.
+ * Who can call what is decided in one single place: {@code SecurityConfig}.
  *
- * A regra existe porque as duas formas funcionam, e é essa a armadilha. Com
- * autorização espalhada em anotação de controller, responder "quem enxerga a
- * agenda do estúdio?" exige abrir todos os controllers e confiar que nenhum foi
- * esquecido — e o esquecido não falha, ele libera. Concentrada no filtro, a
- * configuração é o inventário completo da superfície da API, e o que não está
- * lá cai na regra final.
+ * The rule exists because both approaches work, and that's exactly the trap.
+ * With authorization scattered across controller annotations, answering
+ * "who can see the studio's schedule?" requires opening every controller and
+ * trusting that none was forgotten — and the forgotten one doesn't fail, it
+ * lets through. Concentrated in the filter, the configuration is the
+ * complete inventory of the API's surface, and whatever isn't there falls
+ * into the final rule.
  *
- * O teste é de reflexão, e não de comportamento, de propósito: um endpoint novo
- * com {@code @PreAuthorize} passaria em qualquer teste de acesso que alguém
- * escrevesse para ele. O que precisa quebrar é a reintrodução do padrão.
+ * The test is a reflection test, not a behavior test, on purpose: a new
+ * endpoint with {@code @PreAuthorize} would pass any access test someone
+ * wrote for it. What needs to break is the reintroduction of the pattern.
  *
- * {@code @EnableMethodSecurity} continua ligado de propósito: desligá-lo faria
- * um {@code @PreAuthorize} futuro virar um no-op silencioso — o pior desfecho
- * possível para uma anotação de autorização. Aqui ele falha alto.
+ * {@code @EnableMethodSecurity} stays enabled on purpose: turning it off
+ * would make a future {@code @PreAuthorize} become a silent no-op — the
+ * worst possible outcome for an authorization annotation. Here it fails
+ * loudly.
  */
 class AuthorizationLivesInSecurityConfigIT extends AbstractIntegrationTest {
 

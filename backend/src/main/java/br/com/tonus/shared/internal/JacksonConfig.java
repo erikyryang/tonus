@@ -14,11 +14,12 @@ import tools.jackson.databind.module.SimpleModule;
 public class JacksonConfig {
 
     /**
-     * Hora do projeto é HH:mm. O padrão do Jackson serializa LocalTime com
-     * segundos ("07:00:00"), o que não é errado, só ruído: a agenda do estúdio
-     * é marcada em minutos cheios e nada aqui tem resolução de segundo.
+     * The project's time format is HH:mm. Jackson's default serializes
+     * LocalTime with seconds ("07:00:00"), which isn't wrong, just noise: the
+     * studio's schedule is set in whole minutes and nothing here has
+     * second-level resolution.
      *
-     * Só a escrita muda — na leitura o parser ISO já aceita "07:00".
+     * Only writing changes — on reading, the ISO parser already accepts "07:00".
      */
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
 

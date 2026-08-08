@@ -33,23 +33,24 @@ class InvoiceController {
     }
 
     /**
-     * Os ids dos alunos com fatura ATRASADA.
+     * The ids of students with an OVERDUE invoice.
      *
-     * Não é paginado, e é a exceção consciente à regra de listagem paginada: a
-     * resposta é o conjunto que o cliente cruza com a página de alunos que ele
-     * já tem: paginá-la faria a tela precisar de todas as páginas antes de
-     * pintar a primeira linha. O tamanho é limitado pelo número de alunos do
-     * estúdio, e cada item é um número.
+     * Not paginated, and it's the conscious exception to the paginated
+     * listing rule: the response is the set the client cross-references
+     * with the student page it already has: paginating it would make the
+     * screen need every page before painting the first row. The size is
+     * bounded by the number of students in the studio, and each item is a
+     * number.
      *
-     * O caminho vem antes de qualquer {@code /{id}} — não há nenhum hoje, e é
-     * bom que continue assim: "overdue-student-ids" nunca é um id.
+     * The path comes before any {@code /{id}} — there isn't one today, and
+     * it's good that it stays that way: "overdue-student-ids" is never an id.
      */
     @GetMapping("/overdue-student-ids")
     List<Long> overdueStudentIds() {
         return billingService.findOverdueStudentIds();
     }
 
-    /** Quem registrou vem do principal autenticado — nunca do cliente. */
+    /** Who registered it comes from the authenticated principal — never from the client. */
     @PostMapping("/{id}/payment")
     InvoiceResponse registerPayment(@PathVariable Long id,
                                     @Valid @RequestBody PaymentRequest request,

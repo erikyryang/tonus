@@ -9,13 +9,13 @@ import org.springframework.context.annotation.Configuration;
 public class ClockConfig {
 
     /**
-     * O fuso é o do estúdio, não UTC.
+     * The timezone is the studio's, not UTC.
      *
-     * Instante não depende de fuso, mas "hoje" depende: os endpoints /me
-     * resolvem a data corrente por {@code LocalDate.now(clock)}, e com um clock
-     * em UTC todo aluno que abrisse a agenda depois das 21h de Brasília veria a
-     * aula do dia seguinte. O erro só aparece de noite, que é o pior tipo de
-     * erro para se descobrir em produção.
+     * An instant doesn't depend on timezone, but "today" does: the /me
+     * endpoints resolve the current date via {@code LocalDate.now(clock)},
+     * and with a clock in UTC every student who opened the schedule after 9pm
+     * Brasília time would see the next day's class. The bug only shows up at
+     * night, which is the worst kind of bug to discover in production.
      */
     private static final ZoneId STUDIO_ZONE = ZoneId.of("America/Sao_Paulo");
 

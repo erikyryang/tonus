@@ -14,18 +14,18 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Base dos testes do módulo billing.
+ * Base for the billing module's tests.
  *
- * Plano e matrícula são criados pela própria API, mas fatura não tem endpoint
- * de criação — ela só nasce do job diário. Testes que precisam de uma fatura
- * existente semeiam a linha direto por SQL, no mesmo espírito de
- * {@code SchedulingEventsIT.seedStudent}: contornar a ausência de um caminho
- * HTTP que não existe por decisão de arquitetura, não por lacuna a preencher.
+ * Plan and enrollment are created through the API itself, but an invoice has
+ * no creation endpoint — it's only born from the daily job. Tests that need
+ * an existing invoice seed the row directly via SQL, in the same spirit as
+ * {@code SchedulingEventsIT.seedStudent}: working around the absence of an
+ * HTTP path that doesn't exist by architecture decision, not a gap to fill.
  */
 @Import(BillingClockConfig.class)
 abstract class AbstractBillingIntegrationTest extends AbstractRegistrationIntegrationTest {
 
-    /** "Hoje" para {@link BillingClockConfig}. */
+    /** "Today" for {@link BillingClockConfig}. */
     protected static final String TODAY = "2026-07-27";
 
     @Autowired
@@ -57,7 +57,7 @@ abstract class AbstractBillingIntegrationTest extends AbstractRegistrationIntegr
                         """.formatted(studentId, planId)));
     }
 
-    /** A fatura é do aluno desde a SPEC-012; não existe mais assinatura para semear. */
+    /** The invoice belongs to the student since SPEC-012; there's no more subscription to seed. */
     protected long seedInvoice(long studentId, String referenceMonth, String amount, String dueDate, String status) {
         return jdbcTemplate.queryForObject("""
                 INSERT INTO invoice (student_id, reference_month, amount, due_date, status, created_at, updated_at)
@@ -67,8 +67,9 @@ abstract class AbstractBillingIntegrationTest extends AbstractRegistrationIntegr
     }
 
     /**
-     * Baixa já registrada. Serve à listagem, que precisa exibir a data do
-     * pagamento de uma fatura PAGA sem ter passado pelo endpoint de baixa.
+     * Payment already registered. Serves the listing, which needs to
+     * display the payment date of a PAID invoice without having gone
+     * through the payment endpoint.
      */
     protected void seedPayment(long invoiceId, String paymentDate, long registeredBy) {
         jdbcTemplate.update("""
@@ -78,10 +79,10 @@ abstract class AbstractBillingIntegrationTest extends AbstractRegistrationIntegr
     }
 
     /**
-     * Cookie de um aluno de verdade — com vínculo em {@code users.student_id}.
-     * Mesma necessidade de {@code AbstractSchedulingIntegrationTest}: os
-     * endpoints /me dependem do vínculo, e o {@code studentCookie} herdado do
-     * auth cria usuário sem vínculo nenhum.
+     * Cookie for a real student — linked via {@code users.student_id}. Same
+     * need as {@code AbstractSchedulingIntegrationTest}: the /me endpoints
+     * depend on the link, and the {@code studentCookie} inherited from auth
+     * creates a user with no link at all.
      */
     protected Cookie linkedTeacherCookie(long teacherId) throws Exception {
         String login = unique("billing-teacher") + "@tonus.com";

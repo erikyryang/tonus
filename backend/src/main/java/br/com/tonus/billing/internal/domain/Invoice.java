@@ -12,14 +12,15 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 
 /**
- * Fatura de uma competência de um aluno.
+ * A student's invoice for a billing period.
  *
- * Uma por aluno por competência, e não uma por plano: o aluno com três planos
- * recebe uma cobrança só, com a soma (SPEC-012). O {@code amount} é cópia do
- * que foi cobrado — mudar o preço de um plano depois não reescreve histórico.
+ * One per student per billing period, not one per plan: the student with
+ * three plans gets a single charge, with the sum (SPEC-012). {@code amount}
+ * is a copy of what was charged — changing a plan's price later doesn't
+ * rewrite history.
  *
- * Auditada por decisão de arquitetura (docs/ddl.md): transição de status de
- * fatura precisa ficar rastreável.
+ * Audited by architecture decision (docs/ddl.md): invoice status transitions
+ * need to stay traceable.
  */
 @Entity
 @Table(name = "invoice")

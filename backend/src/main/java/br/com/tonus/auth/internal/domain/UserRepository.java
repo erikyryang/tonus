@@ -11,7 +11,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     List<User> findByStudentId(Long studentId);
 
-    /** Uma consulta para a página inteira de alunos, e não uma por linha (SPEC-009). */
+    /** One query for the whole page of students, not one per row (SPEC-009). */
     List<User> findByStudentIdIn(Collection<Long> studentIds);
 
     List<User> findByTeacherId(Long teacherId);

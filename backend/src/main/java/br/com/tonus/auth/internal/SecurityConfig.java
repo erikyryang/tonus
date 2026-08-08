@@ -11,10 +11,11 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 /**
- * {@code @EnableMethodSecurity} continua ligado mesmo sem nenhum
- * {@code @PreAuthorize} no projeto: desligá-lo faria uma anotação futura virar
- * um no-op silencioso, que é o pior desfecho possível para autorização. Ligado,
- * ela funciona — e o teste de arquitetura é que reprova o uso em controller.
+ * {@code @EnableMethodSecurity} stays enabled even without a single
+ * {@code @PreAuthorize} in the project: turning it off would make a future
+ * annotation become a silent no-op, which is the worst possible outcome for
+ * authorization. Enabled, it works — and the architecture test is what fails
+ * on its use in a controller.
  */
 @Configuration
 @EnableMethodSecurity
@@ -28,53 +29,55 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 /*
-                 * O inventário de quem pode chamar o quê — em um lugar só, e não
-                 * em @PreAuthorize espalhado pelos controllers.
+                 * The inventory of who can call what — in one single place,
+                 * not scattered across controllers as @PreAuthorize.
                  *
-                 * Autorização por anotação funciona, e é justamente por isso que
-                 * engana: para responder "quem enxerga a agenda do estúdio?" é
-                 * preciso abrir todos os controllers e confiar que nenhum foi
-                 * esquecido — e o esquecido não falha, ele libera. Aqui a lista
-                 * é legível de uma vez, e a última regra vale para o que não foi
-                 * previsto. Um teste (AuthorizationLivesInSecurityConfigIT)
-                 * impede o padrão de voltar.
+                 * Annotation-based authorization works, and that's exactly why
+                 * it's deceptive: answering "who can see the studio's
+                 * schedule?" requires opening every controller and trusting
+                 * that none was forgotten — and the forgotten one doesn't
+                 * fail, it lets through. Here the list is readable in one
+                 * pass, and the last rule covers whatever wasn't foreseen. A
+                 * test (AuthorizationLivesInSecurityConfigIT) keeps the
+                 * pattern from coming back.
                  *
-                 * A ordem importa: vale a primeira regra que casar.
+                 * Order matters: the first rule that matches wins.
                  */
                 .authorizeHttpRequests(auth -> auth
-                        // Entrar, renovar e sair acontecem sem sessão válida.
+                        // Logging in, refreshing and logging out happen without a valid session.
                         .requestMatchers("/auth/login", "/auth/refresh", "/auth/logout").permitAll()
 
-                        // Endpoints /me: o papel decide o acesso; o id do aluno
-                        // ou do professor vem do token, nunca do path.
+                        // /me endpoints: the role decides access; the student's
+                        // or teacher's id comes from the token, never from the path.
                         //
-                        // Cada caminho é listado inteiro, sem /**: foi um teste
-                        // pedindo 403 e recebendo 404 que mostrou o risco do
-                        // contrário — /me/schedule não cobre /me/schedule/week,
-                        // e o endpoint novo cairia no anyRequest() abaixo,
-                        // aberto a qualquer papel autenticado.
+                        // Each path is listed in full, without /**: it was a test
+                        // expecting 403 and getting 404 that showed the risk of the
+                        // opposite — /me/schedule doesn't cover /me/schedule/week,
+                        // and a new endpoint would fall into the anyRequest() below,
+                        // open to any authenticated role.
                         .requestMatchers("/me/schedule", "/me/schedule/week", "/me/invoices").hasRole("STUDENT")
                         .requestMatchers("/me/grid").hasRole("TEACHER")
 
-                        // Cadastro e acesso.
+                        // Registration and access.
                         .requestMatchers("/users/**", "/students/**", "/teachers/**").hasRole("ADMIN")
 
-                        // Agenda: quem configura é o ADMIN. O professor é dono da
-                        // aula, mas não decide horário nem feriado — deixá-lo
-                        // escrever aqui lhe daria poder sobre alunos de outro.
+                        // Schedule: only the ADMIN configures it. The teacher owns
+                        // the class, but doesn't decide schedule or holidays —
+                        // letting them write here would give them power over
+                        // another teacher's students.
                         .requestMatchers("/schedule/**", "/schedule-exceptions/**",
                                 "/default-schedules/**", "/announcements/**").hasRole("ADMIN")
 
-                        // Cobrança.
+                        // Billing.
                         .requestMatchers("/subscriptions/**", "/invoices/**", "/plans/**",
                                 "/plan-enrollments/**", "/billing-settings").hasRole("ADMIN")
 
-                        // /auth/me e o que mais existir: exige sessão, sem
-                        // escolher papel. Mesma regra de antes desta mudança —
-                        // endpoint novo continua nascendo autenticado, e é a
-                        // linha acima que precisa ganhar a exceção.
+                        // /auth/me and whatever else exists: requires a session,
+                        // without choosing a role. Same rule as before this change —
+                        // a new endpoint is still born authenticated, and it's the
+                        // line above that needs to gain the exception.
                         .anyRequest().authenticated())
-                // Não autenticado é 401; autenticado sem permissão continua 403.
+                // Not authenticated is 401; authenticated without permission stays 403.
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint(new ProblemAuthenticationEntryPoint(objectMapper)))
                 .addFilterBefore(new JwtAuthenticationFilter(jwtService), UsernamePasswordAuthenticationFilter.class);

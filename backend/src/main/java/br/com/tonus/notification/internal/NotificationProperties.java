@@ -4,25 +4,25 @@ import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Configuração do módulo de notificação.
+ * Configuration for the notification module.
  *
- * Aninhada como {@code AuthProperties}: {@code evolution} descreve o adapter e
- * {@code consecutiveFailureLimit} é política de envio, que vale para qualquer
- * provedor — misturar os dois num prefixo só faria o limite parecer detalhe da
- * Evolution.
+ * Nested like {@code AuthProperties}: {@code evolution} describes the
+ * adapter and {@code consecutiveFailureLimit} is send policy, which applies
+ * to any provider — mixing the two under a single prefix would make the
+ * limit look like an Evolution detail.
  */
 @ConfigurationProperties(prefix = "notification")
 public record NotificationProperties(
         Evolution evolution, Integer consecutiveFailureLimit, Duration logRetention) {
 
     /**
-     * Piso da retenção do histórico. A tabela é a chave de idempotência: apagar
-     * uma linha cuja publicação ainda possa ser reentregue faz o aluno receber
-     * a mensagem de novo. A reentrega é limitada por `shared.events.max-age`
-     * (24h por padrão), e este piso existe para que a distância entre as duas
-     * seja grande demais para alguém encostar nela por engano ao ajustar
-     * configuração — os dois valores vivem em módulos diferentes e nada além
-     * daqui os relaciona.
+     * Floor for the history's retention. The table is the idempotency key:
+     * deleting a row whose publication could still be redelivered makes the
+     * student receive the message again. Redelivery is bounded by
+     * `shared.events.max-age` (24h by default), and this floor exists so
+     * the gap between the two is too large for someone to bump into it by
+     * accident while adjusting configuration — the two values live in
+     * different modules and nothing beyond this relates them.
      */
     private static final Duration MINIMUM_LOG_RETENTION = Duration.ofDays(7);
 
@@ -30,14 +30,14 @@ public record NotificationProperties(
         if (evolution == null) {
             evolution = new Evolution(null, null, null, null, null, false);
         }
-        // Falhas seguidas num fan-out não são azar, são o gateway fora do ar.
-        // Cinco é folgado o bastante para tolerar um número inválido isolado e
-        // curto o bastante para não gastar uma hora de timeouts.
+        // Consecutive failures in a fan-out aren't bad luck, they're the
+        // gateway being down. Five is loose enough to tolerate an isolated
+        // invalid number and short enough to not waste an hour of timeouts.
         if (consecutiveFailureLimit == null) {
             consecutiveFailureLimit = 5;
         }
-        // Seis meses: muito além de qualquer reentrega possível, e o horizonte
-        // em que ainda se pergunta se um aviso saiu.
+        // Six months: well beyond any possible redelivery, and the horizon
+        // within which it's still reasonable to ask whether a notice went out.
         if (logRetention == null) {
             logRetention = Duration.ofDays(180);
         }
@@ -50,11 +50,11 @@ public record NotificationProperties(
     }
 
     /**
-     * A chave e a URL vêm de variável de ambiente — a sessão de WhatsApp é
-     * credencial, não parâmetro de aplicação.
+     * The key and URL come from environment variables — the WhatsApp
+     * session is a credential, not an application parameter.
      *
-     * {@code enabled} nasce falso: sem ele, subir a aplicação local exigiria
-     * uma sessão de WhatsApp de verdade.
+     * {@code enabled} starts false: without it, starting the application
+     * locally would require a real WhatsApp session.
      */
     public record Evolution(
             String baseUrl,
@@ -68,8 +68,8 @@ public record NotificationProperties(
             if (instance == null) {
                 instance = "tonus";
             }
-            // Timeout explícito nos dois lados: sem ele, uma Evolution que
-            // aceita a conexão e nunca responde trava o listener para sempre.
+            // Explicit timeout on both sides: without it, an Evolution that
+            // accepts the connection and never responds hangs the listener forever.
             if (connectTimeout == null) {
                 connectTimeout = Duration.ofSeconds(3);
             }

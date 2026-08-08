@@ -4,17 +4,17 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 
 /**
- * Corpo da baixa: só a data em que o dinheiro entrou. Quem registrou vem do
- * principal autenticado, nunca do cliente.
+ * Payment body: only the date the money came in. Who registered it comes
+ * from the authenticated principal, never from the client.
  *
- * A data é obrigatória, e não "hoje por omissão": este endpoint dispara recibo
- * por WhatsApp e move o vencimento da assinatura, e nenhuma das duas coisas
- * tem desfazer. Um corpo esquecido tem de virar 400, não um pagamento lançado
- * numa data que ninguém escolheu.
+ * The date is required, not "today by default": this endpoint fires a
+ * WhatsApp receipt and moves the subscription's due date, and neither of
+ * these two things has an undo. A forgotten body has to become a 400, not a
+ * payment logged on a date nobody chose.
  *
- * A recusa de data futura mora no BillingService, não em {@code @PastOrPresent}:
- * o Bean Validation compara com o relógio do sistema, e "hoje" neste projeto só
- * vem do Clock injetado.
+ * The rejection of a future date lives in BillingService, not in {@code
+ * @PastOrPresent}: Bean Validation compares against the system clock, and
+ * "today" in this project only comes from the injected Clock.
  */
 public record PaymentRequest(@NotNull LocalDate paymentDate) {
 }

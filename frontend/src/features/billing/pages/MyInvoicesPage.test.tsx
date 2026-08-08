@@ -24,7 +24,7 @@ describe('minhas faturas (aluno)', () => {
     expect(within(item).getByText('Aberta')).toBeInTheDocument();
   });
 
-  /** A atrasada é a que o aluno precisa achar sozinho — e não só pela cor. */
+  /** The overdue one is the one the student needs to find on their own — and not just by color. */
   it('destaca a fatura atrasada', async () => {
     server.use(
       meOk(STUDENT),
@@ -49,7 +49,7 @@ describe('minhas faturas (aluno)', () => {
     expect(await screen.findByText(/nenhuma fatura/i)).toBeInTheDocument();
   });
 
-  /** Guard do papel: fatura de aluno é do aluno. */
+  /** Role guard: a student's invoice belongs to the student. */
   it('manda o professor para a própria grade', async () => {
     server.use(meOk(TEACHER), anyMyGridEmpty());
 

@@ -12,10 +12,10 @@ import type { Invoice } from '../api/billingApi';
 import { studentLabel } from '../lib/studentLabel';
 
 /**
- * Data futura é barrada aqui e no back. A duplicação é a permitida pelo
- * CLAUDE.md (validação de formulário) e existe porque esta chamada não é
- * inócua: aceitar amanhã mandaria ao aluno o recibo de um pagamento que ainda
- * não aconteceu e jogaria o vencimento da assinatura para frente.
+ * A future date is blocked here and in the back. The duplication is the one allowed by
+ * CLAUDE.md (form validation) and exists because this call isn't
+ * harmless: accepting tomorrow would send the student a receipt for a payment that hasn't
+ * happened yet and would push the subscription's due date forward.
  */
 const schema = z.object({
   paymentDate: z
@@ -49,9 +49,9 @@ export function RegisterPaymentDialog({
   });
 
   /**
-   * O 409 daqui é "outro admin já deu a baixa" — não é transitório, e a lista
-   * atrás do diálogo já foi refeita. Repetir só produziria o mesmo 409, então
-   * a única saída que faz sentido é Voltar.
+   * The 409 here means "another admin already settled it" — it's not transient, and the list
+   * behind the dialog has already been redone. Retrying would only produce the same 409, so
+   * the only sensible way out is Back.
    */
   const alreadySettled = isConflict(error);
 
@@ -74,9 +74,9 @@ export function RegisterPaymentDialog({
           {errors.paymentDate && <p className="text-sm text-red-600">{errors.paymentDate.message}</p>}
         </div>
 
-        {/* O efeito real, não "tem certeza?": o WhatsApp sai e não há como desavisar.
-            O vencimento não entra mais aqui: o pagamento não o move (SPEC-004).
-            Fatura paga é ciclo renovado — o texto fala de renovação, não de dívida. */}
+        {/* The real effect, not "are you sure?": the WhatsApp message goes out and there's no way to unsend it.
+            The due date doesn't come into play here anymore: payment doesn't move it (SPEC-004).
+            A paid invoice is a renewed cycle — the text talks about renewal, not debt. */}
         <p className="text-sm font-medium text-slate-900">
           O ciclo do aluno é renovado e ele receberá a confirmação por WhatsApp.
         </p>

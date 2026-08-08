@@ -7,10 +7,10 @@ import jakarta.persistence.Table;
 import java.time.LocalDate;
 
 /**
- * Baixa de uma fatura: quando foi paga e quem registrou.
+ * An invoice's payment: when it was paid and who registered it.
  *
- * registeredBy guarda o id do usuário ADMIN, sem FK: billing não pode
- * depender de auth (fecharia ciclo com auth -> registration).
+ * registeredBy holds the ADMIN user's id, with no FK: billing can't depend
+ * on auth (it would close a cycle with auth -> registration).
  */
 @Entity
 @Table(name = "payment")

@@ -12,12 +12,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Critério de aceite: "Criar aluno sem professor → 400".
+ * Acceptance criterion: "Creating a student without a teacher → 400".
  *
- * O vínculo é verificado nas duas camadas: a API rejeita com Problem Details e
- * o banco rejeita por conta própria (NOT NULL + FK). A constraint é regra de
- * negócio — se um dia alguém remover o @NotNull do DTO, o teste de banco ainda
- * segura.
+ * The link is checked at both layers: the API rejects with Problem Details and
+ * the database rejects on its own (NOT NULL + FK). The constraint is a business
+ * rule — if someone ever removes the @NotNull from the DTO, the database test still
+ * holds.
  */
 class StudentTeacherLinkIT extends AbstractRegistrationIntegrationTest {
 

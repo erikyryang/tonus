@@ -11,7 +11,7 @@ import { ApiError } from '@/lib/apiClient';
 import { type SessionUser, authApi, sessionQueryKey } from '../api/authApi';
 import { destinationFor } from '../session';
 
-/** Mensagem única: não conta a quem tenta se o login existe. */
+/** Single message: doesn't tell whoever is trying whether the login exists. */
 const INVALID_CREDENTIALS = 'Login ou senha inválidos.';
 const TOO_MANY_ATTEMPTS = 'Muitas tentativas seguidas. Aguarde um minuto e tente de novo.';
 const UNREACHABLE = 'Não foi possível conectar. Verifique sua internet e tente de novo.';
@@ -41,7 +41,7 @@ export function LoginPage() {
     setFormError(null);
     try {
       await authApi.login(values);
-      // O cache anterior pode ser de outro usuário: a sessão nova começa limpa.
+      // The previous cache may belong to another user: the new session starts clean.
       queryClient.clear();
       const user = await queryClient.fetchQuery<SessionUser>({
         queryKey: sessionQueryKey,
@@ -107,10 +107,10 @@ export function LoginPage() {
 }
 
 /**
- * 401 tem mensagem fixa — o detail do backend também é genérico, mas depender
- * dele deixaria a garantia de "não distinguir usuário de senha" na mão de quem
- * editar a string do outro lado. Os demais erros mostram o que o backend disse,
- * que aí sim é informação útil (rate limit, indisponibilidade).
+ * 401 has a fixed message — the backend's detail is also generic, but depending
+ * on it would leave the "don't distinguish user from password" guarantee in the hands of whoever
+ * edits the string on the other side. The other errors show what the backend said,
+ * which then is useful information (rate limit, unavailability).
  */
 function messageFor(error: unknown): string {
   if (!(error instanceof ApiError)) return UNREACHABLE;

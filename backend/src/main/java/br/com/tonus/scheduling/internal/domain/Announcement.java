@@ -7,12 +7,12 @@ import jakarta.persistence.Table;
 import java.time.LocalDate;
 
 /**
- * Um aviso do estúdio para um dia. Pode suspender as aulas daquele dia ou
- * apenas informar.
+ * A studio notice for a day. It can suspend that day's classes or
+ * just inform.
  *
- * As duas coisas moram na mesma tabela porque são o mesmo ato — o estúdio
- * avisando todo mundo sobre um dia —, e separá-las obrigaria a agenda a
- * perguntar em dois lugares para montar um dia só.
+ * The two things live in the same table because they are the same act — the studio
+ * notifying everyone about a day —, and separating them would force the schedule to
+ * query in two places to build a single day.
  */
 @Entity
 @Table(name = "announcement")

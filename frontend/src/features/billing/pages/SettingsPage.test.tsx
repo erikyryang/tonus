@@ -25,7 +25,7 @@ describe('configuração de cobrança', () => {
     await waitFor(() => expect(sent).toEqual([{ multiPlanDiscountPercent: 15 }]));
   });
 
-  /** O campo explica quando o desconto vale — senão "15" não quer dizer nada. */
+  /** The field explains when the discount applies — otherwise "15" means nothing. */
   it('explica que o desconto só vale a partir do segundo plano', async () => {
     server.use(meOk(ADMIN), settingsHandler(() => billingSettings(0)));
 

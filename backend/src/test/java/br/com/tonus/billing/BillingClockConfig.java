@@ -8,15 +8,15 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 
 /**
- * "Hoje" fixo para a suíte MockMvc de billing.
+ * Fixed "today" for billing's MockMvc suite.
  *
- * Não precisa ficar perto da data real. Já precisou: enquanto o
- * {@code JwtService} emitia com este Clock e validava contra o relógio do
- * sistema, um "hoje" de teste distante fazia todo token nascer expirado, e a
- * suíte passava ou falhava conforme a hora em que rodava. Hoje a validação usa
- * o mesmo Clock da emissão, e {@code AuthFixedClockIT} guarda essa
- * propriedade — a data aqui volta a ser escolha de domínio, não concessão à
- * infraestrutura de token.
+ * It doesn't need to be close to the real date. It once did: while {@code
+ * JwtService} issued with this Clock and validated against the system
+ * clock, a distant test "today" made every token born expired, and the
+ * suite passed or failed depending on the hour it ran. Today validation uses
+ * the same Clock as issuance, and {@code AuthFixedClockIT} guards that
+ * property — the date here goes back to being a domain choice, not a
+ * concession to the token infrastructure.
  */
 @TestConfiguration
 public class BillingClockConfig {

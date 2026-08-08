@@ -20,7 +20,7 @@ buildNumber.properties
 .mvn/wrapper/maven-wrapper.jar
 .flattened-pom.xml
 
-# Gradle (caso use no mesmo projeto)
+# Gradle (in case this project also uses it)
 .gradle/
 build/
 !gradle/wrapper/gradle-wrapper.jar
@@ -34,7 +34,7 @@ application-local.yaml
 application-local.properties
 HELP.md
 
-### === IDEs Java (IntelliJ, Eclipse, NetBeans, VS Code) === ###
+### === Java IDEs (IntelliJ, Eclipse, NetBeans, VS Code) === ###
 
 backend/target/
 
@@ -70,9 +70,9 @@ bin/
 !.vscode/extensions.json
 *.code-workspace
 
-### === Node / React / TypeScript (geral) === ###
+### === Node / React / TypeScript (general) === ###
 
-# Dependências
+# Dependencies
 node_modules/
 jspm_packages/
 bower_components/
@@ -94,36 +94,36 @@ storybook-static/
 .stylelintcache
 *.tsbuildinfo
 
-# Logs de package managers
+# Package manager logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Testes / cobertura
+# Tests / coverage
 coverage/
 .nyc_output/
 
-# Variáveis de ambiente
-# Qualquer .env fica fora do git; só o exemplo é versionado. A lista antiga
-# cobria apenas os sufixos .local e deixava passar .env.development e
-# .env.production, que o Vite lê do mesmo jeito.
+# Environment variables
+# Any .env stays out of git; only the example is versioned. The old list
+# only covered the .local suffixes and let .env.development and
+# .env.production slip through, which Vite reads just the same.
 .env
 .env.*
 !.env.example
 
-# Editor/OS específicos de front-end
+# Frontend-specific editor/OS files
 .vite/
 .rollup.cache/
-# Config em TypeScript faz o Vite gerar um bundle temporário ao lado do
-# arquivo; ele sobra quando o processo morre no meio.
+# A TypeScript config makes Vite generate a temporary bundle next to the
+# file; it's left over when the process dies midway.
 vite.config.ts.timestamp-*
 vite.config.js.timestamp-*
-# Convenção do Vite para arquivo de override só da máquina local.
+# Vite's convention for a machine-local-only override file.
 *.local
 
-### === Sistema Operacional / Editores gerais === ###
+### === Operating system / general editors === ###
 .DS_Store
 Thumbs.db
 Desktop.ini
@@ -131,11 +131,11 @@ Desktop.ini
 *~
 
 ### === OpenSpec === ###
-# openspec/ NÃO deve ser ignorado (é a fonte da verdade do projeto).
-# Apenas garanta que as pastas não fiquem vazias (.gitkeep) antes do primeiro commit.
+# openspec/ must NOT be ignored (it's the project's source of truth).
+# Just make sure the folders aren't empty (.gitkeep) before the first commit.
 
 ### === Claude Code (.claude) === ###
-# Comite .claude/commands/ e .claude/skills/ (compartilhados com o time).
-# Ignore apenas configs locais específicas da sua máquina:
+# Commit .claude/commands/ and .claude/skills/ (shared with the team).
+# Only ignore local configs specific to your machine:
 .claude/settings.local.json
 .claude/*.local.json

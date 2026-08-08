@@ -6,14 +6,15 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
 /**
- * O vínculo de um aluno com um plano.
+ * A student's link to a plan.
  *
- * Desativar em vez de apagar, como no resto do sistema: "esse aluno já teve
- * esse plano" é pergunta de cobrança, e a linha apagada não responde.
+ * Deactivate instead of delete, as in the rest of the system: "did this
+ * student ever have this plan" is a billing question, and a deleted row
+ * can't answer it.
  *
- * {@code studentId} sem FK, mesma decisão de {@code subscription.student_id}
- * (ver docs/ddl.md); {@code planId} tem FK de verdade, porque plano e matrícula
- * são do mesmo módulo.
+ * {@code studentId} has no FK, same decision as {@code
+ * subscription.student_id} (see docs/ddl.md); {@code planId} has a real FK,
+ * because plan and enrollment belong to the same module.
  */
 @Entity
 @Table(name = "plan_enrollment")

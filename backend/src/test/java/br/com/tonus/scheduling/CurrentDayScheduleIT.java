@@ -12,13 +12,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Sem {@code ?date=}, os endpoints /me respondem sobre hoje — que é o que
- * aluno e professor querem em quase todo acesso.
+ * Without {@code ?date=}, the /me endpoints answer about today — which is what
+ * student and teacher want in almost every access.
  *
- * O relógio fixo da suíte ({@link SchedulingClockConfig}) marca 23h de uma
- * segunda-feira em Brasília, de propósito: nesse instante já é terça em UTC.
- * Um clock em UTC faria o aluno ver a agenda do dia seguinte toda noite — o
- * erro que só aparece depois das 21h, o pior tipo para descobrir em produção.
+ * The suite's fixed clock ({@link SchedulingClockConfig}) marks 11 PM on a
+ * Monday in Brasília, on purpose: at that instant it is already Tuesday in UTC.
+ * A clock in UTC would make the student see the next day's schedule every night — the
+ * error that only shows up after 9 PM, the worst kind to discover in production.
  */
 class CurrentDayScheduleIT extends AbstractSchedulingIntegrationTest {
 
@@ -50,8 +50,8 @@ class CurrentDayScheduleIT extends AbstractSchedulingIntegrationTest {
     }
 
     /**
-     * A data explícita continua mandando: o default é conveniência, não
-     * substituição do parâmetro.
+     * The explicit date still rules: the default is a convenience, not a
+     * replacement for the parameter.
      */
     @Test
     void explicitDateStillWins() throws Exception {

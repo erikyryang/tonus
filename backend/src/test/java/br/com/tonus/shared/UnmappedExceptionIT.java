@@ -11,12 +11,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Critério de aceite da SPEC-001: erro nunca vira stacktrace na resposta.
+ * SPEC-001 acceptance criterion: an error never turns into a stacktrace in
+ * the response.
  *
- * O ProblemDetailsHandlerIT cobre os 4xx, que o Spring converte sozinho — o
- * handler global nem participa daquele caminho. O que se verifica aqui é a
- * razão de existir dele: exceção que ninguém mapeou vira 500 em Problem
- * Details, sem vazar classe, mensagem interna nem stacktrace.
+ * ProblemDetailsHandlerIT covers the 4xx cases, which Spring converts on
+ * its own — the global handler doesn't even participate in that path. What
+ * is verified here is the reason it exists: an exception nobody mapped
+ * turns into a 500 in Problem Details, without leaking the class, internal
+ * message, or stacktrace.
  */
 class UnmappedExceptionIT extends AbstractAuthIntegrationTest {
 

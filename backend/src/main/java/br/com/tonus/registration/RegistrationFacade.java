@@ -7,9 +7,9 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Contrato do módulo registration para os demais módulos (scheduling, billing,
- * notification). Consulta síncrona apenas — efeito colateral entre módulos é
- * por evento.
+ * Contract of the registration module for the other modules (scheduling, billing,
+ * notification). Synchronous query only — side effect between modules is
+ * via event.
  */
 public interface RegistrationFacade {
 
@@ -20,78 +20,78 @@ public interface RegistrationFacade {
     boolean teacherExists(Long teacherId);
 
     /**
-     * Aluno existe e continua no estúdio. Separado de {@link #studentExists}
-     * porque quem consulta precisa distinguir "não existe" de "saiu" — as duas
-     * situações levam a mensagens e decisões diferentes.
+     * Student exists and is still at the studio. Separate from {@link #studentExists}
+     * because the caller needs to distinguish "does not exist" from "left" — the two
+     * situations lead to different messages and decisions.
      */
     boolean studentIsActive(Long studentId);
 
     boolean teacherIsActive(Long teacherId);
 
     /**
-     * Nomes de vários alunos de uma vez, indexados por id.
+     * Names of several students at once, indexed by id.
      *
-     * Existe para listagens que mostram aluno linha a linha (faturas, SPEC-008).
-     * {@link #findStudentContact} não serve: seria uma consulta por linha e
-     * entregaria telefone — dado pessoal — a quem só precisa do nome. Ids sem
-     * aluno correspondente simplesmente não aparecem no mapa.
+     * Exists for listings that show student row by row (invoices, SPEC-008).
+     * {@link #findStudentContact} does not serve: it would be a per-row query and
+     * would hand over phone — personal data — to whoever only needs the name. Ids with no
+     * matching student simply do not appear in the map.
      *
-     * Inclui aluno desativado de propósito: quem saiu do estúdio mantém
-     * histórico de fatura (SPEC-002 não tem DELETE), e a tela continua tendo de
-     * dizer de quem é a cobrança.
+     * Includes deactivated student on purpose: whoever left the studio still keeps
+     * invoice history (SPEC-002 has no DELETE), and the screen still needs to
+     * say who the charge belongs to.
      */
     Map<Long, String> findStudentNames(Collection<Long> studentIds);
 
     /**
-     * Telefones de vários alunos de uma vez, indexados por id.
+     * Phones of several students at once, indexed by id.
      *
-     * Existe separado de {@link #findStudentNames} porque telefone é dado
-     * pessoal: quem só precisa do nome não deve recebê-lo de brinde. Quem chama
-     * aqui declara a finalidade — a grade do professor, que atende aquele aluno.
+     * Exists separately from {@link #findStudentNames} because phone is personal
+     * data: whoever only needs the name should not get it as a bonus. Whoever calls
+     * here declares the purpose — the teacher's grid, who attends that student.
      *
-     * Em lote e não por aluno pela mesma razão dos nomes: a grade é percorrida
-     * inteira de uma vez, e uma consulta por linha seria N+1.
+     * Batched and not per student for the same reason as the names: the grid is
+     * traversed entirely at once, and a per-row query would be N+1.
      *
-     * Nunca logar o valor devolvido.
+     * Never log the returned value.
      */
     Map<Long, String> findStudentPhones(Collection<Long> studentIds);
 
     /**
-     * O dia em que o aluno entrou no estúdio.
+     * The day the student joined the studio.
      *
-     * A cobrança precisa disso para fixar o vencimento da mensalidade no dia do
-     * mês em que ele se cadastrou (SPEC-004). É data, não instante: quem
-     * pergunta quer o dia do calendário no fuso do estúdio, e o horário do
-     * cadastro não significa nada para uma mensalidade.
+     * Billing needs this to fix the monthly fee due date on the day of the
+     * month they registered (SPEC-004). It is a date, not an instant: the
+     * caller wants the calendar day in the studio's timezone, and the
+     * registration time means nothing for a monthly fee.
      *
-     * Vazio quando o aluno não existe — a decisão do que fazer com isso é de
-     * quem chama.
+     * Empty when the student does not exist — the decision of what to do with
+     * that is up to the caller.
      */
     Optional<LocalDate> findRegistrationDate(Long studentId);
 
     /**
-     * As datas de cadastro de vários alunos de uma vez, indexadas por id.
+     * The registration dates of several students at once, indexed by id.
      *
-     * Existe para o job diário de cobrança, que resolve o vencimento de cada
-     * fatura pelo dia do cadastro (SPEC-004) e roda sobre o estúdio inteiro:
-     * perguntar aluno a aluno seria N+1 no único lugar do sistema que trabalha
-     * com todo mundo de uma vez. Ids sem aluno não aparecem no mapa.
+     * Exists for the daily billing job, which resolves each invoice's due date
+     * by the registration day (SPEC-004) and runs over the whole studio:
+     * asking student by student would be N+1 in the only place in the system that
+     * works with everyone at once. Ids with no student do not appear in the map.
      */
     Map<Long, LocalDate> findRegistrationDates(Collection<Long> studentIds);
 
     /**
-     * Um aluno só, com nome e professor — o que a agenda precisa para montar a
-     * linha de uma aula.
+     * A single student, with name and teacher — what the schedule needs to build
+     * the row of a class.
      *
-     * Existe ao lado de {@link #findActiveStudents()} porque as perguntas são
-     * diferentes: a agenda do estúdio quer todo mundo, a agenda de um aluno
-     * quer um. Responder a segunda com a primeira significa carregar o estúdio
-     * inteiro para descartar tudo menos uma linha, e é o aluno — no celular,
-     * na tela que ele mais abre — quem paga por isso.
+     * Exists alongside {@link #findActiveStudents()} because the questions are
+     * different: the studio schedule wants everyone, a student's schedule
+     * wants one. Answering the second with the first means loading the whole
+     * studio just to discard everything but one row, and it is the student — on the
+     * phone, on the screen they open the most — who pays for that.
      *
-     * Devolve o aluno inativo também: quem consulta é que decide o que fazer
-     * com {@link StudentSummary#active()}, e some-lo silenciosamente
-     * transformaria "saiu do estúdio" em "não existe".
+     * Also returns the inactive student: the caller is the one who decides what to do
+     * with {@link StudentSummary#active()}, and silently hiding it
+     * would turn "left the studio" into "does not exist".
      */
     Optional<StudentSummary> findStudentSummary(Long studentId);
 

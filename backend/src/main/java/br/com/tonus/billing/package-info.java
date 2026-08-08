@@ -1,12 +1,12 @@
 /**
- * Cobrança: ciclo assinatura -> fatura -> pagamento, com job diário.
+ * Billing: subscription -> invoice -> payment cycle, with a daily job.
  *
- * Depende de registration porque não existe cobrança sem aluno — a fachada
- * valida vínculo e estado do aluno.
+ * Depends on registration because there's no billing without a student — the
+ * facade validates the student's link and state.
  *
- * A aresta é acíclica: registration não conhece billing. Efeito colateral
- * para fora do módulo é evento (InvoiceDueSoon, InvoiceOverdue,
- * PaymentRegistered), nunca chamada direta.
+ * The edge is acyclic: registration doesn't know about billing. A side
+ * effect going outside the module is an event (InvoiceDueSoon,
+ * InvoiceOverdue, PaymentRegistered), never a direct call.
  */
 @org.springframework.modulith.ApplicationModule(allowedDependencies = {"shared", "registration"})
 package br.com.tonus.billing;

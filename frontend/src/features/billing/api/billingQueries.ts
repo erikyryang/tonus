@@ -19,7 +19,7 @@ export function useInvoices(query: InvoiceQuery) {
   return useQuery({
     queryKey: invoicesKey(query),
     queryFn: () => billingApi.invoices(query),
-    /** Trocar de filtro ou de página não pisca a tabela para branco. */
+    /** Switching filter or page doesn't flash the table to blank. */
     placeholderData: keepPreviousData,
   });
 }
@@ -30,18 +30,18 @@ export interface RegisterPaymentInput {
 }
 
 /**
- * A invalidação é do prefixo ['billing','invoices'], não da página atual: a
- * baixa tira a fatura do filtro "Atrasadas" e a põe em "Pagas", então qualquer
- * combinação de filtro e página em cache passou a mentir.
+ * The invalidation is on the ['billing','invoices'] prefix, not the current page: settling
+ * takes the invoice out of the "Overdue" filter and puts it into "Paid", so any
+ * filter and page combination in cache has started lying.
  *
- * E vai junto o conjunto de quem está atrasado, que é outra chave: dar baixa na
- * última fatura vencida de um aluno tira o "Atrasado" dele na tela de alunos, e
- * essa tela não estava montada na hora da baixa — sem invalidar, ela voltaria
- * do cache afirmando um atraso que acabou de ser pago.
+ * And the set of who's overdue goes along, which is another key: settling the
+ * last overdue invoice of a student removes their "Overdue" status on the students screen, and
+ * that screen wasn't mounted at the time of settling — without invalidating, it would come back
+ * from cache stating a delay that was just paid.
  *
- * O 409 também invalida. Ele significa que outro admin já deu a baixa — a lista
- * na tela está desatualizada exatamente como estaria depois de um sucesso, e
- * deixá-la como está mostraria ao ADMIN uma fatura aberta que não existe mais.
+ * The 409 also invalidates. It means another admin already settled it — the list
+ * on the screen is out of date exactly as it would be after a success, and
+ * leaving it as is would show the ADMIN an open invoice that no longer exists.
  */
 export function useRegisterPayment() {
   const queryClient = useQueryClient();
@@ -69,8 +69,8 @@ export function usePlans(query: PlanQuery) {
 }
 
 /**
- * O catálogo inteiro, para o diálogo de planos do aluno. Só os ativos entram na
- * escolha: matricular alguém num plano desativado não geraria cobrança.
+ * The whole catalog, for the student's plans dialog. Only the active ones enter the
+ * choice: enrolling someone in a deactivated plan wouldn't generate a charge.
  */
 export function usePlansLookup() {
   return useQuery({
@@ -119,9 +119,9 @@ export function useEnrollmentsOfStudent(studentId: number | undefined) {
 }
 
 /**
- * Matricular e desmatricular invalidam o prefixo das matrículas e o dos planos:
- * a contagem de alunos por plano — que a tela de planos usa para avisar antes
- * de desativar — muda junto.
+ * Enrolling and unenrolling invalidate the enrollments prefix and the plans one:
+ * the count of students per plan — which the plans screen uses to warn before
+ * deactivating — changes along with it.
  */
 function useEnrollmentInvalidation() {
   const queryClient = useQueryClient();
@@ -166,11 +166,11 @@ export function useUpdateBillingSettings() {
 }
 
 /**
- * Os alunos com fatura atrasada, em conjunto para a tela cruzar linha a linha.
+ * The students with an overdue invoice, as a set for the screen to cross-reference row by row.
  *
- * `undefined` enquanto não responde é a informação que importa: quem consome
- * precisa distinguir "ainda não sei" de "não está atrasado", senão a tela
- * afirma "Em dia" antes de ter perguntado.
+ * `undefined` while it hasn't responded is the information that matters: the consumer
+ * needs to distinguish "don't know yet" from "not overdue", or else the screen
+ * states "Up to date" before having asked.
  */
 export function useOverdueStudentIds() {
   return useQuery({

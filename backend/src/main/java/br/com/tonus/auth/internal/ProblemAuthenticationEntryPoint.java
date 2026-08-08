@@ -11,16 +11,17 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 
 /**
- * Quem não se autenticou recebe 401 em Problem Details, não o 403 padrão do
- * Spring Security.
+ * Whoever hasn't authenticated receives 401 in Problem Details, not Spring
+ * Security's default 403.
  *
- * A distinção importa para o cliente: 401 é "não sei quem você é" — e é o
- * gatilho do refresh no front —, enquanto 403 fica para quem já se identificou
- * e não tem permissão. Sem isso, um access token expirado seria indistinguível
- * de falta de permissão e a sessão nunca se renovaria.
+ * The distinction matters to the client: 401 is "I don't know who you are" —
+ * and is the trigger for the refresh on the front end —, while 403 is for
+ * someone who already identified themselves and lacks permission. Without
+ * this, an expired access token would be indistinguishable from a lack of
+ * permission and the session would never renew.
  *
- * A mensagem é genérica de propósito: dizer se o token expirou, foi forjado ou
- * simplesmente não veio ajudaria quem está sondando a API.
+ * The message is generic on purpose: saying whether the token expired, was
+ * forged, or simply wasn't sent would help whoever is probing the API.
  */
 public class ProblemAuthenticationEntryPoint implements AuthenticationEntryPoint {
 

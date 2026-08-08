@@ -16,12 +16,12 @@ import org.springframework.modulith.events.ResubmissionOptions;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * A janela de reentrega.
+ * The redelivery window.
  *
- * As duas bordas existem por motivos opostos, e errar qualquer uma custa caro:
- * o piso evita reentregar para um listener que ainda está rodando; o teto evita
- * que uma entrega perdida em definitivo seja retentada a cada cinco minutos
- * para sempre, já que o registry não guarda contador de tentativas.
+ * The two edges exist for opposite reasons, and getting either wrong is
+ * costly: the floor avoids redelivering to a listener that's still running;
+ * the ceiling avoids a delivery lost for good being retried every five
+ * minutes forever, since the registry keeps no attempt counter.
  */
 class EventRepublicationJobTest {
 
@@ -32,13 +32,13 @@ class EventRepublicationJobTest {
         assertThat(shouldResubmit(NOW.minus(Duration.ofMinutes(30)))).isTrue();
     }
 
-    /** Ainda pode ser um listener no meio do trabalho. */
+    /** Might still be a listener in the middle of working. */
     @Test
     void skipsWhatIsTooYoung() {
         assertThat(shouldResubmit(NOW.minus(Duration.ofMinutes(1)))).isFalse();
     }
 
-    /** Passado o teto, desiste — e a linha fica no banco como evidência. */
+    /** Past the ceiling, it gives up — and the row stays in the database as evidence. */
     @Test
     void skipsWhatIsTooOld() {
         assertThat(shouldResubmit(NOW.minus(Duration.ofDays(2)))).isFalse();

@@ -4,20 +4,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Adapter usado quando a integração está desligada: registra que houve envio e
- * não fala com ninguém.
+ * Adapter used when the integration is turned off: logs that a send
+ * happened and talks to no one.
  *
- * É o que permite subir a aplicação em desenvolvimento sem uma sessão de
- * WhatsApp de verdade. Nunca falha, de propósito — simular indisponibilidade
- * aqui esconderia o caminho feliz do resto do sistema.
+ * It's what allows the application to start in development without a real
+ * WhatsApp session. Never fails, on purpose — simulating unavailability here
+ * would hide the rest of the system's happy path.
  */
 class LoggingWhatsAppSender implements WhatsAppSender {
 
     private static final Logger log = LoggerFactory.getLogger(LoggingWhatsAppSender.class);
 
     LoggingWhatsAppSender() {
-        // Em nível de aviso, e na subida: ninguém percebe que os avisos não
-        // estão saindo até um aluno reclamar que não soube do cancelamento.
+        // At warn level, and on startup: nobody notices the notices aren't
+        // going out until a student complains they weren't told about the cancellation.
         log.warn("notification.evolution.enabled=false — nenhum WhatsApp será enviado");
     }
 
@@ -27,11 +27,11 @@ class LoggingWhatsAppSender implements WhatsAppSender {
     }
 
     /**
-     * Só os quatro últimos dígitos. Telefone completo em log é dado pessoal
-     * vazando para onde ninguém controla retenção.
+     * Only the last four digits. A full phone number in the log is personal
+     * data leaking to a place where nobody controls retention.
      *
-     * Visível no pacote para ter teste próprio: é regra de privacidade, e o
-     * que a garante não deve depender de alguém inspecionar log à mão.
+     * Package-visible so it has its own test: it's a privacy rule, and what
+     * guarantees it shouldn't depend on someone inspecting the log by hand.
      */
     static String mask(String phone) {
         if (phone == null || phone.length() <= 4) {

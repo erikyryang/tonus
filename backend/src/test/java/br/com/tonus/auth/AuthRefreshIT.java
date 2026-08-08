@@ -16,11 +16,12 @@ class AuthRefreshIT extends AbstractAuthIntegrationTest {
     private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     /**
-     * O refresh token vale 7 dias (SPEC-001). Vencido, não renova nada.
+     * The refresh token is valid for 7 days (SPEC-001). Expired, it renews
+     * nothing.
      *
-     * A expiração é envelhecida direto no banco em vez de mexer no Clock: o
-     * bean é compartilhado por totalidade no contexto, e recuá-lo sete dias afetaria
-     * qualquer outro teste que rodasse na mesma JVM.
+     * The expiration is aged directly in the database instead of touching
+     * the Clock: the bean is shared across the whole context, and setting it
+     * back seven days would affect any other test running in the same JVM.
      */
     @Test
     void expiredRefreshTokenIsRejected() throws Exception {

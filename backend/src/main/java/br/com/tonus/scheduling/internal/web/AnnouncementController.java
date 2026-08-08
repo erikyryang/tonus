@@ -36,9 +36,9 @@ class AnnouncementController {
     }
 
     /**
-     * Intervalo opcional: a lista cresce um punhado de linhas por ano e nunca
-     * é grande, mas "os comunicados deste semestre" é a pergunta real de quem
-     * monta a agenda.
+     * Optional interval: the list grows a handful of rows per year and is never
+     * big, but "this semester's announcements" is the real question of whoever
+     * builds the schedule.
      */
     @GetMapping
     Page<AnnouncementResponse> list(
@@ -55,9 +55,9 @@ class AnnouncementController {
     }
 
     /**
-     * Mensagem livre para todo aluno ativo (mudança 9) — fora do ciclo de
-     * comunicado de dia/efeito. 202: o disparo só publica o evento, o envio de
-     * verdade é assíncrono e não termina dentro desta requisição.
+     * Free-form message to every active student (change 9) — outside the
+     * day/effect announcement cycle. 202: the dispatch only publishes the event, the actual
+     * sending is asynchronous and does not finish within this request.
      */
     @PostMapping("/broadcast")
     ResponseEntity<Void> broadcast(@Valid @RequestBody BroadcastRequest request) {

@@ -14,13 +14,14 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Avisa um aluno, uma vez só.
+ * Notifies a student, exactly once.
  *
- * Roda em transação própria (REQUIRES_NEW) porque um único evento pode virar N
- * avisos: no feriado, cada aluno precisa commitar sozinho. Tudo num commit só
- * significaria que falhar no aluno 150 desfaz as 149 linhas já gravadas e o
- * reprocessamento reenvia 149 mensagens — falha parcial virando duplicação em
- * massa, que é justamente o pior efeito colateral possível aqui.
+ * Runs in its own transaction (REQUIRES_NEW) because a single event can turn
+ * into N notices: on a holiday, each student needs to commit on their own.
+ * Everything in a single commit would mean that failing on student 150
+ * undoes the 149 rows already recorded and reprocessing resends 149
+ * messages — partial failure turning into mass duplication, which is
+ * exactly the worst possible side effect here.
  */
 @Service
 public class NotificationService {
@@ -41,20 +42,23 @@ public class NotificationService {
     }
 
     /**
-     * Grava primeiro, envia depois. O INSERT tem de chegar ao banco antes da
-     * chamada externa: é a constraint única, e não a consulta acima dela, que
-     * segura duas entregas concorrentes do mesmo evento — entre consultar e
-     * enviar existe uma janela, e o registry entrega at-least-once.
+     * Save first, send afterward. The INSERT has to reach the database
+     * before the external call: it's the unique constraint, not the query
+     * above it, that holds back two concurrent deliveries of the same
+     * event — between querying and sending there's a window, and the
+     * registry delivers at-least-once.
      *
-     * Se o envio falhar, a exceção derruba esta transação, a linha some e a
-     * publicação continua incompleta para ser reprocessada.
+     * If the send fails, the exception rolls back this transaction, the row
+     * disappears, and the publication stays incomplete to be reprocessed.
      *
-     * Na corrida — duas entregas do mesmo evento passando juntas pela consulta
-     * — o INSERT perdedor viola a constraint e essa exceção também sobe. É o
-     * comportamento certo, e de propósito não é tratada aqui: uma vez violada
-     * a constraint a transação já está condenada, então engolir o erro só
-     * trocaria o rollback por um UnexpectedRollbackException no commit. O
-     * reprocessamento resolve, e na segunda passada a consulta acha a linha.
+     * In the race — two deliveries of the same event passing the query
+     * together — the losing INSERT violates the constraint and this
+     * exception surfaces too. That's the correct behavior, and it's
+     * intentionally not handled here: once the constraint is violated the
+     * transaction is already doomed, so swallowing the error would just
+     * swap the rollback for an UnexpectedRollbackException on commit.
+     * Reprocessing solves it, and on the second pass the query finds the
+     * row.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void notifyStudent(Long studentId, MessageTemplate template,
@@ -63,15 +67,17 @@ public class NotificationService {
             return;
         }
 
-        // Quem saiu do estúdio não recebe mais nada — nem aviso de agenda, que
-        // não tem sentido para quem não tem aula, nem cobrança, porque perseguir
-        // dívida de ex-aluno é decisão de quem administra e não efeito colateral
-        // de um job noturno. Vale a mesma assimetria do resto do projeto: o
-        // automático serve para parar, não para continuar.
+        // Whoever left the studio receives nothing more — not a schedule
+        // notice, which makes no sense for someone with no class, nor a
+        // billing one, because chasing a former student's debt is a decision
+        // for the admin, not a side effect of a nightly job. The same
+        // asymmetry as the rest of the project applies: automation serves to
+        // stop, not to keep going.
         //
-        // studentIsActive cobre junto o aluno que nunca existiu. Nos dois casos
-        // não se lança: reprocessar não traria o aluno de volta, e a publicação
-        // ficaria pendente para sempre entupindo o registry.
+        // studentIsActive also covers the student who never existed. In
+        // both cases nothing is thrown: reprocessing wouldn't bring the
+        // student back, and the publication would stay pending forever,
+        // clogging up the registry.
         if (!registration.studentIsActive(studentId)) {
             log.info("Aviso {} descartado: aluno {} não está ativo no cadastro", template, studentId);
             return;
@@ -86,7 +92,7 @@ public class NotificationService {
         logs.saveAndFlush(new NotificationLog(studentId, template, referenceKey, clock.instant()));
         sender.send(contact.get().phone(), template.render(contact.get().name(), args));
 
-        // Nem telefone nem corpo da mensagem no log: os dois são dado pessoal.
+        // Neither phone nor message body in the log: both are personal data.
         log.info("Aviso {} entregue ao aluno {}", template, studentId);
     }
 }

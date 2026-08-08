@@ -11,23 +11,24 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Poda o histórico de avisos entregues.
+ * Prunes the history of delivered notices.
  *
- * A tabela ganha uma linha por aviso por aluno e nunca perdia nenhuma, enquanto
- * `event_publication` já era podada — assimetria que não tinha sido decidida,
- * só esquecida.
+ * The table gains one row per notice per student and never lost any, while
+ * `event_publication` was already being pruned — an asymmetry that hadn't
+ * been decided, just forgotten.
  *
- * A poda só é segura porque a reentrega tem teto. `notification_log` é a chave
- * de idempotência: apagar a linha de um aviso cuja publicação ainda possa ser
- * reentregue faz o aluno receber a mensagem outra vez. Quem garante o teto é
- * `EventRepublicationJob` (24h por padrão) somado a
- * `spring.modulith.events.republish-outstanding-events-on-restart=false` — com
- * a republicação de subida ligada não haveria teto nenhum, porque ela reentrega
- * tudo que está incompleto sem olhar idade, e esta poda seria perigosa.
+ * The pruning is only safe because redelivery has a ceiling. `notification_log`
+ * is the idempotency key: deleting the row of a notice whose publication
+ * could still be redelivered makes the student receive the message again.
+ * What guarantees the ceiling is `EventRepublicationJob` (24h by default)
+ * plus `spring.modulith.events.republish-outstanding-events-on-restart=false`
+ * — with startup republication turned on there would be no ceiling at all,
+ * because it redelivers everything incomplete without looking at age, and
+ * this pruning would be dangerous.
  *
- * O caso que torna isso concreto é o fan-out de feriado: as linhas dos alunos
- * já avisados ficam gravadas enquanto a publicação segue incompleta por causa
- * dos que faltaram.
+ * The case that makes this concrete is the holiday fan-out: the rows of
+ * students already notified get recorded while the publication stays
+ * incomplete because of the ones that were missed.
  */
 @Component
 public class NotificationLogCleanupJob {
@@ -44,7 +45,7 @@ public class NotificationLogCleanupJob {
         this.clock = clock;
     }
 
-    /** Depois das outras varreduras noturnas, para não disputar o banco com elas. */
+    /** After the other nightly sweeps, to not compete with them for the database. */
     @Scheduled(cron = "${notification.cleanup-cron:0 45 3 * * *}")
     @SchedulerLock(name = "notification-log-cleanup-job", lockAtMostFor = "PT30M", lockAtLeastFor = "PT0S")
     @Transactional

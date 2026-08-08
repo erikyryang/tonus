@@ -6,14 +6,15 @@ import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
 /**
- * Quem sai do estúdio perde o acesso ao sistema.
+ * Whoever leaves the studio loses access to the system.
  *
- * Só revoga; não concede. Reativar um aluno no cadastro não devolve o login —
- * isso exige `PATCH /users/{id}/activate` explícito do ADMIN, porque conceder
- * acesso não deve ser efeito colateral de outra operação.
+ * Only revokes; never grants. Reactivating a student in registration doesn't
+ * restore the login — that requires an explicit ADMIN
+ * `PATCH /users/{id}/activate`, because granting access must not be a side
+ * effect of another operation.
  *
- * A entrega é at-least-once, então este listener roda mais de uma vez para o
- * mesmo desligamento; a idempotência mora em AuthService.revokeAccessOf.
+ * Delivery is at-least-once, so this listener runs more than once for the
+ * same deactivation; idempotency lives in AuthService.revokeAccessOf.
  */
 @Component
 public class RegistrationDeactivationListener {

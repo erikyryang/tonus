@@ -3,11 +3,11 @@ package br.com.tonus.scheduling;
 import java.time.LocalDate;
 
 /**
- * Aula cancelada num dia específico. Consumido por notification (SPEC-004)
- * para avisar o aluno.
+ * Class canceled on a specific day. Consumed by notification (SPEC-004)
+ * to notify the student.
  *
- * Carrega id e data, nunca entidade: o consumidor busca o que precisar pela
- * fachada do registration.
+ * Carries id and date, never entity: the consumer looks up whatever it needs via the
+ * registration facade.
  */
 public record ClassCanceled(Long studentId, LocalDate date) {
 }

@@ -1,122 +1,191 @@
 # Tonus
 
-Sistema de gestão para escolas/academias com três perfis de usuário —
-**admin**, **professor** e **aluno**. Cobre cadastro de pessoas, agenda de
-aulas/horários, cobrança (faturas) e notificações via WhatsApp.
+Management system for schools and studios with three user roles — **admin**,
+**teacher**, and **student**. Handles people registration, class scheduling,
+billing, and WhatsApp notifications.
 
-O repositório tem duas partes: uma API em `backend/` e um SPA em `frontend/`.
+Two parts in this repo: an API in `backend/` and a SPA in `frontend/`.
 
-## Arquitetura
+## Architecture
 
-Monólito modular (Spring Modulith) em vez de microserviços — um único
-deploy, mas com fronteiras de módulo verificadas em tempo de teste
-(`ApplicationModules.verify()`), para não virar um "big ball of mud".
+A modular monolith (Spring Modulith), not microservices: one deployable, but
+module boundaries are enforced at test time so it can't quietly turn into a
+big ball of mud.
 
-Módulos (pacote `br.com.tonus.*`):
-
-| Módulo | Responsabilidade |
+| Module | Responsibility |
 |---|---|
-| `shared` | Infra transversal: erros (RFC 9457 Problem Details), `Clock`, auditoria, config Jackson |
-| `auth` | Autenticação/autorização dos 3 papéis (JWT em cookie, refresh token) |
-| `registration` | Cadastro de alunos e professores |
-| `scheduling` | Agenda e horários |
-| `billing` | Cobrança e faturas |
-| `notification` | Notificações via WhatsApp |
+| `shared` | Cross-cutting infra: errors, `Clock`, audit, Jackson config |
+| `auth` | Login, JWT cookie, refresh tokens |
+| `registration` | Students and teachers |
+| `scheduling` | Classes, default schedules, announcements |
+| `billing` | Plans, invoices, payments |
+| `notification` | WhatsApp notifications |
 
-Dependências permitidas: `scheduling → registration`,
-`billing → registration`, `auth → registration`,
-`notification → {registration, scheduling, billing}`, e todos → `shared`.
-Nada além disso, sem ciclos. `notification` aponta para `scheduling` e
-`billing` porque consome os eventos deles — escutar um evento é referenciar
-o record que o publicador expõe na raiz, e isso é dependência de compilação
-como qualquer outra; em execução o acoplamento continua assíncrono e num
-sentido só. A lista é declarada em `@ApplicationModule(allowedDependencies)`
-no `package-info.java` de cada módulo: aresta nova exige editar o arquivo, e
-é isso que força a decisão a ser consciente.
+```mermaid
+flowchart LR
+    shared[shared]
 
-Esse `allowedDependencies` também gera diagrama — ver "Documentação de
-módulos (diagramas)" abaixo.
+    auth[auth] --> registration[registration]
+    scheduling[scheduling] --> registration
+    billing[billing] --> registration
 
-Comunicação entre módulos é síncrona (fachada) para consultas, ou assíncrona
-(eventos, at-least-once) para efeitos colaterais. Todo listener é idempotente.
+    notification[notification] -.event.-> scheduling
+    notification -.event.-> billing
 
-**Autorização mora só no `SecurityConfig`**, em regras por rota — não há
-`@PreAuthorize` em controller, e um teste de arquitetura reprova a volta do
-padrão. Concentrada, a configuração é o inventário legível de quem pode
-chamar o quê; espalhada em anotação, o controller esquecido não falha: ele
-libera.
+    auth --> shared
+    registration --> shared
+    scheduling --> shared
+    billing --> shared
+    notification --> shared
+```
 
-**Front e API são same-origin por decisão de arquitetura**, e por isso não há
-CORS no backend: em desenvolvimento quem faz a ponte é o proxy `/api` do
-Vite, em produção é o Caddy servindo o estático e fazendo reverse proxy. A
-sessão vive em cookie `httpOnly` — o JavaScript nunca lê nem anexa token.
+Solid arrows are direct calls (facade); dashed arrows are event listeners.
+`notification` only reacts to events from `scheduling` and `billing` — it
+never calls into them directly. This graph is enforced by
+`ApplicationModules.verify()`: a new dependency has to be added explicitly
+in `@ApplicationModule(allowedDependencies)`, so it can't sneak in.
 
-Decisões de arquitetura, contrato de eventos e DDL completo estão em
-`docs/`; o comportamento esperado de cada feature está em
-`docs/specs/SPEC-00X-*.md`.
+Here's what that split looks like end-to-end — a daily job flags an invoice
+as overdue, and a student query reads that same data back:
+
+```mermaid
+flowchart TD
+    A[Daily job] --> B["billing marks Invoice OVERDUE"]
+    B --> C[publishes InvoiceOverdue event]
+    C -.async.-> D[notification listener]
+    D --> E{already sent?}
+    E -->|no| F[Evolution API] --> G[Student's WhatsApp]
+    E -->|yes| H[no-op]
+
+    I["GET /invoices"] --> J[InvoiceController]
+    J -->|facade call| K[BillingService]
+    K --> L[(PostgreSQL)]
+    L --> J --> I
+```
+
+The event path is async and at-least-once, so the listener checks
+`notification_log` before sending — that's what turns a redelivery into a
+no-op instead of a duplicate WhatsApp message. The query path is a plain
+synchronous read, same transaction start to finish.
+
+A couple more decisions worth knowing:
+
+- **Authorization lives only in `SecurityConfig`**, as per-route rules —
+  never `@PreAuthorize` in a controller. One place to check who can do what,
+  instead of trusting that every controller remembered to lock itself down.
+- **Frontend and API are same-origin**, so there's no CORS to configure. The
+  session lives in an `httpOnly` cookie; the frontend never touches a token.
+
+More detail — event contracts, DDL, the reasoning behind each call — lives
+in `docs/`.
 
 ## Stack
 
-**Backend** — Java 25 (LTS), Spring Boot 4 (Web MVC, Data JPA, Security), Spring
+**Backend** — Java 25, Spring Boot 4 (Web MVC, Data JPA, Security), Spring
 Modulith, PostgreSQL, Flyway, Testcontainers, ShedLock, JWT (jjwt), Bucket4j,
 Maven.
 
-**Frontend** — Vite, React 18, TypeScript (strict), React Router, TanStack
-Query (estado de servidor), react-hook-form + zod (formulários), Tailwind,
-Vitest + React Testing Library + MSW (testes).
+**Frontend** — Vite, React 18, TypeScript, React Router, TanStack Query,
+react-hook-form + zod, Tailwind, Vitest + RTL + MSW.
 
-## Como rodar localmente
+## API
 
-Pré-requisitos: Java 25, Node 20+, Docker rodando, e o wrapper do Maven
-(`./mvnw`, já incluso no repo — não precisa instalar Maven).
+Errors follow RFC 9457 Problem Details. Unauthenticated is `401`,
+authenticated without permission is `403`.
+
+**`auth`**
+
+| Method | Route | Who | What it does |
+|---|---|---|---|
+| `POST` | `/auth/login` | public | logs in, sets the session cookie |
+| `POST` | `/auth/refresh` | public (cookie) | rotates the refresh token |
+| `POST` | `/auth/logout` | public (cookie) | ends the session |
+| `GET` | `/auth/me` | authenticated | who's logged in |
+| `POST` `GET` | `/users` | ADMIN | create/list logins |
+| `PATCH` | `/users/{id}/activate` | ADMIN | reactivate a revoked login |
+
+**`registration`** (ADMIN only)
+
+| Method | Route | What it does |
+|---|---|---|
+| `POST` `GET` `GET /{id}` `PUT /{id}` | `/students` | student CRUD |
+| `PATCH /{id}/activate` `.../deactivate` | `/students` | never DELETE |
+| `POST` `GET` `GET /{id}` `PUT /{id}` | `/teachers` | teacher CRUD |
+| `PATCH /{id}/activate` `.../deactivate` | `/teachers` | same idea |
+
+**`scheduling`**
+
+| Method | Route | Who | What it does |
+|---|---|---|---|
+| `GET` | `/schedule/day` | ADMIN | a day's schedule, by time and teacher |
+| `POST` `GET` `GET /{id}` `PUT /{id}` `DELETE /{id}` | `/default-schedules` | ADMIN | weekly recurring schedule |
+| `GET` | `/default-schedules/by-student` | ADMIN | one student's schedule |
+| `POST` `GET` `GET /{id}` `DELETE /{id}` | `/schedule-exceptions` | ADMIN | one-off cancel/reschedule |
+| `POST` `GET` `DELETE /{id}` | `/announcements` | ADMIN | may suspend classes |
+| `POST` | `/announcements/broadcast` | ADMIN | send it now |
+| `GET` | `/me/schedule`, `/me/schedule/week` | STUDENT | own schedule |
+| `GET` | `/me/grid` | TEACHER | own grid |
+
+**`billing`**
+
+| Method | Route | Who | What it does |
+|---|---|---|---|
+| `POST` `GET` `GET /{id}` `PUT /{id}` | `/plans` | ADMIN | plan CRUD |
+| `PATCH /{id}/activate` `.../deactivate` | `/plans` | ADMIN | toggle a plan |
+| `POST` `GET` | `/plan-enrollments` | ADMIN | enroll a student |
+| `PATCH /{id}/activate` `.../deactivate` | `/plan-enrollments` | ADMIN | toggle an enrollment |
+| `GET` `PUT` | `/billing-settings` | ADMIN | multi-plan discount |
+| `GET` | `/invoices` | ADMIN | listing |
+| `GET` | `/invoices/overdue-student-ids` | ADMIN | who's behind |
+| `POST` | `/invoices/{id}/payment` | ADMIN | record a payment |
+| `GET` | `/me/invoices` | STUDENT | own invoices |
+
+`notification` exposes no endpoint — it only listens for events and talks to
+WhatsApp (Evolution API).
+
+## Running locally
+
+Prerequisites: Java 25, Node 20+, Docker running. Maven wrapper is already
+in the repo, no install needed.
 
 ```bash
-# API em localhost:8080
+# API on localhost:8080
 cd backend
-cp .env.example .env        # ajuste os valores se necessário
-docker compose up -d db     # sobe o Postgres
+cp .env.example .env
+docker compose up -d db
 ./mvnw spring-boot:run
 ```
 
 ```bash
-# SPA em localhost:5173, com proxy /api para a API acima
+# SPA on localhost:5173, proxying /api to the API above
 cd frontend
 npm install
 npm run dev
 ```
 
-Não há passo extra para desenvolver: **o `Secure` do cookie de sessão sai do
-transporte da requisição**, não de configuração. Local é HTTP puro e o cookie
-vem sem o atributo; atrás do Caddy é HTTPS e ele vem com. Nenhuma máquina
-precisa lembrar de ligar nada, e não existe flag para vazar de um ambiente para
-o outro.
+Nothing to configure for the session cookie: its `Secure` attribute follows
+the actual request transport, not an environment flag. Local is plain HTTP
+so it's dropped; behind Caddy in production it's HTTPS so it's set. One
+gotcha to know about: Safari refuses `Secure` cookies over HTTP even on
+`localhost` (Chrome and Firefox don't), so a `200` on `/auth/login` followed
+by a `401` on `/auth/me` in Safari means this, not a bug.
 
-Isso importa porque em HTTP o Safari descarta cookie `Secure` — Chrome e
-Firefox abrem exceção para `localhost`, ele não. O sintoma é enganoso: o
-`POST /auth/login` devolve 200, mas o `GET /auth/me` seguinte dá 401 e a tela
-mostra "Login ou senha inválidos" para quem digitou a senha certa.
+## Development users
 
-O que sustenta o lado de produção é `server.forward-headers-strategy`: sem ele,
-o TLS terminado no Caddy ficaria invisível para a aplicação e o cookie sairia
-sem `Secure`. `AuthCookieSecureIT` cobre os dois lados e o caso do proxy.
-
-## Usuários de desenvolvimento
-
-`POST /users` exige um ADMIN já autenticado, então o primeiro login não tem como
-sair da própria API. Com o Postgres no ar e as migrations já aplicadas (ou seja,
-depois de subir a aplicação ao menos uma vez), o seed abaixo resolve isso: dá a
-todo mundo que está no banco um login com a **mesma senha padrão**.
+The first login can't come from the API itself — creating a user requires an
+already-logged-in ADMIN. Once Postgres is up and the app has run at least
+once (migrations applied), this seed gives everyone in the database a login
+with the same password:
 
 ```bash
 cd backend
 docker compose exec -T db psql -U tonus -d tonus < scripts/seed-dev.sql
 ```
 
-A senha de todos é **`tonus123`**. Num banco zerado — o clone recém-feito — o
-script monta o ambiente inteiro, porque só o ADMIN não daria para exercitar as
-telas dos outros dois papéis:
+Password for everyone: **`tonus123`**. On a fresh database it also creates
+a full cast so all three roles have something to log into:
 
-| Login | Papel | Pessoa |
+| Login | Role | Person |
 |---|---|---|
 | `admin@tonus.com` | ADMIN | — |
 | `marina@tonus.com` | TEACHER | Marina Duarte |
@@ -126,170 +195,87 @@ telas dos outros dois papéis:
 | `diego@tonus.com` | STUDENT | Diego Alves (Rafael) |
 | `helena@tonus.com` | STUDENT | Helena Castro (Rafael) |
 
-Sofia Ramos entra no cadastro **inativa e sem login**: é ela que dá conteúdo ao
-filtro "Inativos" das listagens, e dar acesso a quem saiu do estúdio
-contradiria a regra que o próprio script respeita.
+(Sofia Ramos is also seeded, inactive and with no login — she's there so the
+"Inactive" filter has something to show.)
 
-Assim que houver alguém em `teacher`/`student`, o script **para de inventar
-gente** — inventar seria sujar o cadastro de quem já está usando o ambiente — e
-passa a só derivar login de quem está lá, pela regra `primeironome@tonus.com`.
-Cadastrou um aluno pela tela? Rode o seed de novo e ele ganha acesso. Nomes que
-disputam o mesmo login (duas Marias) são desempatados pelo id.
+Run it again any time: it's idempotent, only touches accounts that need it,
+and once real people exist in `teacher`/`student` it stops inventing new
+ones — it just grants logins to whoever's actually there
+(`firstname@tonus.com`). It also leaves each screen with realistic data
+(schedules, announcements, plans, a couple of invoices, one overdue) so
+nothing renders empty on a fresh clone — but it won't touch a database that
+already has real activity in it.
 
-O script é idempotente: reexecutar reaplica a senha padrão em todo mundo e cria
-login só para quem ainda não tem. Duas regras que ele respeita, e que são a
-razão de ele não ser um `UPDATE` qualquer:
-
-- **Quem foi desativado no cadastro fica de fora.** O acesso dessas pessoas cai
-  por evento quando elas saem do estúdio, e ressuscitá-lo aqui contradiria a
-  regra.
-- **Quem está ativo no cadastro mas com o login revogado é reativado.** Em
-  produção a reconcessão é manual (`PATCH /users/{id}/activate`); aqui a
-  promessa do script é justamente que todo mundo que está no estúdio entra.
-
-O Flyway roda quando a **aplicação** sobe, não quando o Postgres sobe — rodar o
-seed logo depois de um `docker compose up -d db` em volume novo falha, e a
-mensagem diz o que fazer. `SeedDevScriptIT` executa o arquivo por `psql` contra
-um Postgres real a cada build, então uma migration futura que mude `users`
-quebra no CI, e não no primeiro login de quem clonou o repo.
-
-O arquivo mora em `backend/scripts/` e **não** em `db/migration` de propósito:
-migration roda em todo ambiente, e uma senha conhecida aplicada em produção é
-conta aberta. Isto aqui é ferramenta de desenvolvimento — o dia em que houver
-ambiente de verdade, senha por usuário volta a ser senha de verdade.
-
-Num banco zerado o seed também cria **movimento**, para que nenhuma tela nasça
-vazia — tela vazia não exercita interface nenhuma, e é para exercitá-la que o
-ambiente local existe:
-
-| Tela | O que o seed deixa lá |
-|---|---|
-| `/admin/schedule` | quatro horários padrão, dois no mesmo horário (o agrupamento por hora aparece), um cancelamento e uma remarcação |
-| `/admin/default-schedules` | os mesmos quatro horários |
-| `/admin/announcements` | um comunicado que suspende as aulas e um que só avisa |
-| `/admin/plans` | quatro planos, um deles inativo (o filtro de situação tem o que filtrar) |
-| `/admin/students` | matrículas em planos, e um aluno com fatura atrasada (o selo "Atrasado") |
-| `/admin/settings` | desconto de múltiplos planos em 10% |
-| `/admin/invoices` | quatro faturas: uma paga com baixa registrada, duas abertas e uma atrasada |
-| `/me/schedule`, `/me/grid`, `/me/invoices` | os mesmos dados, pelo olho do aluno e do professor |
-
-As datas se ancoram em "hoje", nunca em literal: seed com data fixa apodrece, e
-o ambiente montado em março mostraria uma agenda de janeiro. Se o dia for fim de
-semana, a agenda se ancora na segunda seguinte — sábado não tem aula, e a tela
-do dia nasceria vazia justamente para quem foi conferi-la.
-
-Cada bloco é guardado pela própria tabela estar vazia: reexecutar não duplica
-nada, e **num banco que já tem movimento o script não encosta em nada** — mesma
-regra que vale para não inventar pessoas. Se o cadastro de demonstração não
-estiver lá (porque o banco é de alguém trabalhando), o movimento não é semeado.
-
-## Como rodar os testes
-
-Os testes do backend são de integração, com Postgres real via Testcontainers —
-**é obrigatório o Docker estar rodando**. H2 é proibido: as constraints do
-banco são regras de negócio e precisam ser testadas de verdade.
+## Running the tests
 
 ```bash
-cd backend && ./mvnw clean verify
+cd backend && ./mvnw clean verify    # integration tests, real Postgres via Testcontainers — Docker must be running
 ```
-
-Os do frontend são de comportamento (Vitest + RTL), com a API mockada por MSW
-na fronteira HTTP — nunca o TanStack Query ou o cliente HTTP por dentro.
 
 ```bash
-cd frontend && npm run test:run && npm run typecheck
+cd frontend && npm run test:run && npm run typecheck   # Vitest + RTL, API mocked at the HTTP boundary with MSW
 ```
 
-## Documentação de módulos (diagramas)
+H2 is never used for backend tests — database constraints are business
+rules and need a real Postgres to verify.
 
-O `allowedDependencies` de cada `package-info.java` (ver "Arquitetura" acima)
-não é só uma trava de teste — também é a fonte de um diagrama gerado, então a
-doc nunca desalinha do código: se o diagrama e o import real divergem, é
-porque a divergência já quebrou `ArchitectureTest`.
+## Module diagrams
 
-Gerar (não precisa de Docker, é só análise estática do bytecode):
+The same `allowedDependencies` that architecture tests enforce also
+generates PlantUML diagrams, so they can't drift from the code:
 
 ```bash
 cd backend && ./mvnw test -Dtest=ApplicationModulesDocumentationTest
 ```
 
-Isso escreve em `backend/target/spring-modulith-docs/` (gitignored — é
-build output, regenera a qualquer momento, não faz sentido versionar):
+Output goes to `backend/target/spring-modulith-docs/` — `components.puml`
+for the full picture, `module-<name>.puml` per module. Paste into
+[plantuml.com/plantuml](https://www.plantuml.com/plantuml) or open with your
+IDE's PlantUML plugin to view.
 
-| Arquivo | Conteúdo |
-|---|---|
-| `components.puml` | diagrama geral: todos os módulos e as setas de dependência/evento entre eles |
-| `module-<nome>.puml` | diagrama só das dependências daquele módulo |
-| `module-<nome>.adoc` | "canvas" do módulo em texto: descrição (1ª frase do Javadoc do `package-info.java`), tipos expostos na raiz e eventos publicados/ouvidos |
-| `all-docs.adoc` | os `.adoc` de todos os módulos concatenados |
-
-Para visualizar um `.puml`: colar o conteúdo em
-[plantuml.com/plantuml](https://www.plantuml.com/plantuml) (não precisa
-instalar nada), ou abrir com a extensão PlantUML da IDE (plugin "PlantUML
-Integration" no IntelliJ, "PlantUML" no VS Code) — nesses casos o preview
-renderiza dentro do próprio editor sem precisar colar em lugar nenhum.
-
-Como o Javadoc do `package-info.java` vira a descrição do módulo no
-`.adoc`, mudar essa descrição é a forma de manter o "canvas" útil — não tem
-campo separado para preencher.
-
-## Estrutura do repositório
+## Repository layout
 
 ```
-backend/    # código Java, pom.xml, migrations, testes, docker-compose
+backend/    # Java code, pom.xml, migrations, tests, docker-compose
 frontend/   # SPA (Vite + React + TypeScript)
-docs/       # specs de feature e decisões de arquitetura (fonte de verdade)
-CLAUDE.md   # convenções do projeto (arquitetura, nomenclatura, fluxo de dev)
+docs/       # architecture decisions
+CLAUDE.md   # project conventions
 ```
 
-Cada parte tem o seu próprio `CLAUDE.md` quando as convenções divergem —
-`frontend/CLAUDE.md` traz as regras de sessão, rede e testes do SPA.
+`frontend/CLAUDE.md` has SPA-specific conventions where they diverge from
+the root one.
 
-## Fluxo de desenvolvimento
+## Development workflow
 
-O projeto segue TDD com um gate manual: cada spec começa na fase **RED**
-(testes de aceite + o mínimo de código para passarem) e só avança para a
-fase **IMPLEMENTA** — que fecha casos de borda e finaliza o que sobrou —
-mediante autorização explícita. Spec e código mudam no mesmo PR. Detalhes
-completos em `CLAUDE.md`.
+TDD with a manual gate: every feature starts in a **RED** phase (failing
+acceptance tests, then the minimum code to pass them), and only moves to
+**IMPLEMENT** — edge cases, polish, everything else — once explicitly
+approved. Details in `CLAUDE.md`.
 
-## Status atual
+## Current status
 
-Backend e frontend completos até a SPEC-007.
+Backend and frontend are complete through the day-schedule screen:
 
-- **SPEC-001 (fundação: `shared` + `auth`)** — login/refresh/logout com JWT em
-  cookie httpOnly `SameSite=Strict`, rotação de refresh token com detecção de
-  reuso, rate limit no login, Problem Details para erros, e auditoria
-  automática de entidades via listener JPA.
-- **SPEC-002 (`registration`)** — CRUD de alunos e professores com vínculo
-  obrigatório aluno→professor, desativação em vez de DELETE (preserva
-  histórico de fatura), listagens paginadas e filtráveis, `RegistrationFacade`
-  para os módulos seguintes, e criação do usuário de acesso pelo ADMIN via
-  `POST /users`. Quem é desativado no cadastro tem o acesso revogado
-  automaticamente, por evento.
-- **SPEC-003 (`scheduling`)** — agenda recorrente seg–sex por horário padrão,
-  com exceções pontuais (cancelamento e remarcação) e comunicados do estúdio,
-  que podem ou não suspender as aulas do dia. A agenda de um
-  dia é derivada a cada consulta, nunca materializada. Endpoints
-  `/schedule/day` (ADMIN), `/me/schedule` (aluno) e `/me/grid` (professor).
-- **SPEC-004 + SPEC-012 (`billing`)** — ciclo plano → fatura → pagamento, com job
-  diário (`@Scheduled` + ShedLock) que gera faturas e marca atrasos. A
-  idempotência do job é uma constraint do banco, não uma checagem em código.
-  O vencimento da mensalidade é o dia do mês em que o aluno se cadastrou, fixo:
-  dar baixa não o move (regra substituída, ver SPEC-004). O aluno pode assinar
-  vários planos e recebe **uma** fatura por mês com a soma, com desconto
-  configurável a partir do segundo (SPEC-012).
-- **SPEC-005 (`notification`)** — consome os seis eventos do catálogo e avisa o
-  aluno por WhatsApp (Evolution API). Único módulo que fala com o mundo
-  externo. `notification_log` com UNIQUE por (template, aluno, referência):
-  a idempotência do at-least-once também vira constraint.
-- **SPEC-006 (fundação do frontend)** — SPA com fluxo de sessão completo
-  (login, refresh transparente, logout, recuperação ao recarregar) e shell de
-  navegação por papel. Trouxe o `GET /auth/me` e tornou 401 — e não 403 — a
-  resposta a requisição não autenticada em toda a API.
-- **SPEC-007 (agenda do dia)** — a tela central do ADMIN: visão de um dia
-  agrupada por hora e professor, com cancelar, remarcar e desfazer exceção.
+- **Foundation** (`shared` + `auth`) — JWT in an httpOnly cookie, refresh
+  rotation with reuse detection, login rate limiting, automatic audit
+  logging.
+- **`registration`** — student/teacher CRUD, deactivate instead of delete,
+  paginated listings, access revoked automatically when someone is
+  deactivated.
+- **`scheduling`** — recurring weekly schedule, one-off exceptions
+  (cancel/reschedule), announcements that can suspend classes. A day's
+  schedule is computed on read, never stored.
+- **`billing`** — plan → invoice → payment, with a daily job (ShedLock) that
+  generates invoices and flags overdue ones. Due day is fixed to enrollment
+  day. Multiple plans roll up into one invoice per month, with a discount
+  from the second plan on.
+- **`notification`** — the only module that talks to the outside world.
+  Listens for six event types, notifies students over WhatsApp, and dedupes
+  via a unique constraint so retries can't double-send.
+- **Frontend foundation** — full session lifecycle (login, transparent
+  refresh, logout, reload recovery), role-based navigation shell.
+- **Day schedule** — the admin's main screen: a day's classes grouped by
+  time and teacher, with cancel/reschedule/undo.
 
-Auto-registro e recuperação de senha seguem fora de escopo. Visão semanal,
-drag-and-drop e criação de horário padrão pela tela ficaram para as próximas
-specs.
+Out of scope for now: self-registration, password recovery, weekly view,
+drag-and-drop scheduling.

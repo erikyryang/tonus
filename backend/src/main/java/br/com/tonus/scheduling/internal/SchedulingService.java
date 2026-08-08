@@ -92,9 +92,9 @@ public class SchedulingService {
     }
 
     /**
-     * A coluna "Horário" de /students (SPEC-009): mapa aluno → hora, para o
-     * front cruzar com a tabela de alunos que já tem em mãos. O grafo não
-     * muda — quem cruza os dois é o cliente, não registration.
+     * The "Schedule" column of /students (SPEC-009): student → time map, for the
+     * frontend to cross-reference with the students table it already has at hand. The graph does not
+     * change — whoever crosses the two is the client, not registration.
      */
     @Transactional(readOnly = true)
     public Map<Long, LocalTime> schedulesByStudent() {
@@ -103,17 +103,17 @@ public class SchedulingService {
     }
 
     /**
-     * Apaga o horário e, junto, todas as exceções do aluno.
+     * Deletes the schedule and, along with it, all of the student's exceptions.
      *
-     * Sem a limpeza, uma exceção sobrevive ao horário que a originou: como
-     * schedule_exception é indexada por (student_id, date) e não pelo id do
-     * horário, um CANCELED antigo continuaria valendo e suprimiria em silêncio
-     * a aula de um horário novo criado depois para o mesmo aluno no mesmo dia.
+     * Without the cleanup, an exception survives the schedule that originated it: since
+     * schedule_exception is indexed by (student_id, date) and not by the schedule's
+     * id, an old CANCELED would still apply and would silently suppress
+     * the class of a new schedule created later for the same student on the same day.
      *
-     * A limpeza é de tudo — cancelamento e remarcação — e não seletiva:
-     * apagar o horário devolve o aluno a "sem agenda", em vez de decidir caso a
-     * caso o que sobrevive. É a leitura mais simples de "apagado", e a única
-     * que fecha o bug sem deixar outra combinação por trás.
+     * The cleanup is of everything — cancellation and reschedule — and not selective:
+     * deleting the schedule returns the student to "no schedule", instead of deciding case by
+     * case what survives. It is the simplest reading of "deleted", and the only one
+     * that closes the bug without leaving another combination behind.
      */
     @Transactional
     public void deleteDefaultSchedule(Long id) {
@@ -149,10 +149,10 @@ public class SchedulingService {
     }
 
     /**
-     * Filtros opcionais e combináveis. Specification em vez de uma consulta com
-     * {@code :param IS NULL} para cada filtro: aquilo obriga o Postgres a
-     * inferir tipo de parâmetro nulo, e a consulta quebra na borda em vez de na
-     * compilação.
+     * Optional and combinable filters. Specification instead of a query with
+     * {@code :param IS NULL} for each filter: that forces Postgres to
+     * infer the type of a null parameter, and the query breaks at the edge instead of at
+     * compile time.
      */
     @Transactional(readOnly = true)
     public Page<ScheduleException> findExceptions(Long studentId, LocalDate from, LocalDate to, Pageable pageable) {
@@ -164,9 +164,9 @@ public class SchedulingService {
     }
 
     /**
-     * Apagar a exceção devolve o dia ao template — é como se desfaz um
-     * cancelamento marcado por engano. Sem isso, o único caminho de correção
-     * seria mexer no banco à mão.
+     * Deleting the exception returns the day to the template — it is how a
+     * mistakenly marked cancellation gets undone. Without this, the only path to correction
+     * would be to touch the database by hand.
      */
     @Transactional
     public void deleteException(Long id) {
@@ -192,11 +192,11 @@ public class SchedulingService {
     }
 
     /**
-     * O disparo não tem entidade nem tabela própria: não há fato de domínio
-     * atrás dele, é só uma mensagem que precisa sair. O broadcastId (UUID)
-     * nasce aqui e vira reference_key em notification — nunca a data, que
-     * engoliria um segundo disparo legítimo no mesmo dia como se fosse
-     * reentrega do primeiro.
+     * The dispatch has no entity nor table of its own: there is no domain fact
+     * behind it, it is just a message that needs to go out. The broadcastId (UUID)
+     * is born here and becomes reference_key in notification — never the date, which
+     * would swallow a second legitimate dispatch on the same day as if it were a
+     * redelivery of the first.
      */
     @Transactional
     public String requestBroadcast(String message) {
@@ -213,17 +213,17 @@ public class SchedulingService {
     }
 
     /**
-     * A agenda de um dia, expandida:
+     * The schedule of a day, expanded:
      *
      * <pre>
-     * agenda(D) = template (se D é dia útil)
-     *           − feriado em D
-     *           − exceções em D
-     *           + remarcações cuja nova_data = D
+     * schedule(D) = template (if D is a weekday)
+     *           − holiday on D
+     *           − exceptions on D
+     *           + reschedules whose new_date = D
      * </pre>
      *
-     * Nada disso é materializado: guardar aula por dia obrigaria a gerar linhas
-     * para o futuro inteiro e reconciliá-las a cada troca de horário.
+     * None of this is materialized: storing a class per day would force generating rows
+     * for the entire future and reconciling them on every schedule change.
      */
     @Transactional(readOnly = true)
     public List<ScheduleEntry> scheduleOf(LocalDate date) {
@@ -236,12 +236,12 @@ public class SchedulingService {
     }
 
     /**
-     * O dia inteiro numa passada só: feriado, agenda e cancelamentos.
+     * The whole day in a single pass: holiday, schedule and cancellations.
      *
-     * Existe separado de {@link #scheduleOf} porque o painel do ADMIN precisa
-     * das três coisas de uma vez, e compor três chamadas públicas repetiria a
-     * consulta de feriado, a de alunos ativos e a de horários padrão a cada
-     * abertura de tela — a mais frequente do sistema.
+     * Exists separately from {@link #scheduleOf} because the ADMIN panel needs
+     * all three things at once, and composing three public calls would repeat the
+     * holiday query, the active students query and the default schedules query on every
+     * screen opening — the most frequent one in the system.
      */
     @Transactional(readOnly = true)
     public DayScheduleView dayOf(LocalDate date) {
@@ -263,15 +263,15 @@ public class SchedulingService {
     }
 
     /**
-     * A expansão propriamente dita, já sem a checagem de feriado — quem chama
-     * resolveu isso antes. Uma implementação só: duas fariam a mesma regra
-     * divergir entre a agenda do ADMIN e a de aluno e professor.
+     * The expansion itself, already without the holiday check — the caller
+     * resolved that before. One implementation only: two would make the same rule
+     * diverge between the ADMIN's schedule and the student's and teacher's.
      *
-     * Não consulta nada: recebe tudo pronto. Enquanto ela mesma buscava as
-     * remarcações do dia, expandir uma janela custava uma consulta por data —
-     * quem tem o intervalo inteiro em mãos passa a fatia de cada dia e paga uma
-     * vez só. É o que mantém a regra única sem impor o custo do dia avulso a
-     * quem pergunta por vários.
+     * Queries nothing: receives everything ready. While it used to fetch the
+     * day's reschedules itself, expanding a window cost one query per date —
+     * whoever has the whole interval in hand passes the slice of each day and pays only
+     * once. That is what keeps the rule single without imposing the cost of the single day on
+     * whoever asks about several.
      */
     private List<ScheduleEntry> expand(LocalDate date,
                                        Map<Long, StudentSummary> students,
@@ -305,13 +305,13 @@ public class SchedulingService {
     }
 
     /**
-     * Os cancelamentos do dia. Andam ao lado da agenda, não dentro dela: a aula
-     * cancelada não acontece, então incluí-la entre as demais faria a recepção
-     * chamar um aluno que não vem. Fora da agenda e visível, o ADMIN vê o que
-     * cancelou e pode desfazer.
+     * The day's cancellations. They go alongside the schedule, not inside it: the
+     * canceled class does not happen, so including it among the others would make the reception
+     * call a student who is not coming. Outside the schedule and visible, the ADMIN sees what
+     * they canceled and can undo it.
      *
-     * Fim de semana não tem cancelamento a mostrar: não havia aula para
-     * cancelar, e a exceção registrada nesse dia não muda nada.
+     * Weekend has no cancellation to show: there was no class to
+     * cancel, and the exception registered on that day changes nothing.
      */
     private List<CanceledEntry> cancellations(LocalDate date,
                                               Map<Long, StudentSummary> students,
@@ -342,14 +342,14 @@ public class SchedulingService {
     }
 
     /**
-     * O dia do aluno: a fatia dele do dia do estúdio, com o feriado e os
-     * próprios cancelamentos.
+     * The student's day: their slice of the studio's day, with the holiday and their
+     * own cancellations.
      *
-     * Carrega as três coisas pela mesma razão do painel do ADMIN, e não por
-     * simetria: sem a descrição do feriado o aluno veria um dia vazio sem saber
-     * por quê, e sem o cancelamento "não tem aula hoje" ficaria idêntico a "sua
-     * aula de hoje foi cancelada". Filtrar {@link #dayOf} em vez de expandir de
-     * novo mantém uma implementação só da regra.
+     * Carries the three things for the same reason as the ADMIN panel, and not for
+     * symmetry: without the holiday description the student would see an empty day without knowing
+     * why, and without the cancellation "no class today" would look identical to "your
+     * class today was canceled". Filtering {@link #dayOf} instead of expanding
+     * again keeps a single implementation of the rule.
      */
     @Transactional(readOnly = true)
     public DayScheduleView dayOfStudent(Long studentId, LocalDate date) {
@@ -360,18 +360,18 @@ public class SchedulingService {
     }
 
     /**
-     * A janela do aluno: um dia por data, com o mesmo conteúdo do dia avulso.
+     * The student's window: one day per date, with the same content as the single day.
      *
-     * O custo é por intervalo, não por dia. Cada consulta cobre a janela
-     * inteira — o aluno, o horário padrão dele, os feriados do período e as
-     * exceções das duas pontas — e a expansão de cada data trabalha sobre
-     * fatias em memória. A alternativa óbvia, chamar {@link #dayOfStudent} num
-     * laço, refaria tudo isso por data e ainda carregaria o estúdio inteiro de
-     * cada vez para descartar todo mundo menos um.
+     * The cost is per interval, not per day. Each query covers the whole
+     * window — the student, their default schedule, the holidays of the period and the
+     * exceptions on both ends — and the expansion of each date works over
+     * in-memory slices. The obvious alternative, calling {@link #dayOfStudent} in a
+     * loop, would redo all of this per date and would still load the whole studio
+     * each time just to discard everyone but one.
      *
-     * O aluno inativo recebe a janela vazia, e não erro: ele ainda consegue
-     * entrar enquanto o login não é revogado (a revogação é assíncrona), e um
-     * 500 no lugar de "sem aula" seria a pior forma de contar isso.
+     * The inactive student receives an empty window, not an error: they can still
+     * log in while the login is not revoked (revocation is asynchronous), and a
+     * 500 instead of "no class" would be the worst way to convey that.
      */
     @Transactional(readOnly = true)
     public List<DayScheduleView> weekOfStudent(Long studentId, LocalDate from, int days) {
@@ -415,13 +415,13 @@ public class SchedulingService {
     }
 
     /**
-     * A grade do professor. O grupo emerge de professor + hora: não existe
-     * turma como entidade, então não há o que manter em sincronia.
+     * The teacher's grid. The group emerges from teacher + time: there is no
+     * class as an entity, so there is nothing to keep in sync.
      *
-     * O telefone vem junto porque o professor atende aquele aluno — desmarcar,
-     * avisar de atraso — e é buscado em lote, só para os alunos que ficaram na
-     * grade depois do filtro: uma consulta, e nenhum telefone de aluno de outro
-     * professor sai do registration.
+     * The phone comes along because the teacher attends that student — canceling,
+     * warning of a delay — and it is fetched in batch, only for the students that remained in the
+     * grid after the filter: one query, and no phone of a student of another
+     * teacher leaves registration.
      */
     @Transactional(readOnly = true)
     public List<TeacherClassEntry> gridOfTeacher(Long teacherId, LocalDate date) {
@@ -439,9 +439,9 @@ public class SchedulingService {
     }
 
     /**
-     * Indexar os alunos ativos resolve duas coisas de uma vez: dá nome e
-     * professor de cada aula, e exclui da agenda quem saiu do estúdio — aluno
-     * inativo não está no mapa, e o horário padrão dele fica sem efeito.
+     * Indexing the active students solves two things at once: it gives name and
+     * teacher of each class, and excludes from the schedule whoever left the studio — an
+     * inactive student is not in the map, and their default schedule has no effect.
      */
     private Map<Long, StudentSummary> activeStudentsById() {
         return registrationFacade.findActiveStudents().stream()
@@ -463,9 +463,9 @@ public class SchedulingService {
     }
 
     /**
-     * Comunicado que não suspende não apaga nada: o dia segue com a agenda de
-     * sempre, e o aviso viaja ao lado dela. Dia sem comunicado nenhum também
-     * não suspende — daí o nulo entrar aqui em vez de virar checagem espalhada.
+     * An announcement that does not suspend erases nothing: the day continues with its usual
+     * schedule, and the notice travels alongside it. A day with no announcement at all also
+     * does not suspend — hence the null coming in here instead of turning into a scattered check.
      */
     private static boolean suspends(DayScheduleView.Announcement announcement) {
         return announcement != null && announcement.suspendsClasses();
@@ -481,17 +481,17 @@ public class SchedulingService {
     }
 
     /**
-     * A aula remarcada precisa poder acontecer.
+     * The rescheduled class needs to be able to happen.
      *
-     * Data passada é praticamente sempre erro de digitação, e a remarcação
-     * dispara aviso ao aluno — avisar sobre aula que já passou é pior que
-     * recusar o registro.
+     * A past date is practically always a typo, and the reschedule
+     * triggers a notice to the student — notifying about a class that has already passed is worse than
+     * refusing the registration.
      *
-     * Feriado já cadastrado é conferido aqui, mas a invariante é assumidamente
-     * parcial: nada impede cadastrar o feriado *depois* da remarcação, e nesse
-     * caso a aula simplesmente some da agenda do dia (a expansão suprime o dia
-     * inteiro). A checagem existe para o ADMIN descobrir na hora o que
-     * descobriria de qualquer jeito, não para garantir consistência.
+     * An already registered holiday is checked here, but the invariant is admittedly
+     * partial: nothing prevents registering the holiday *after* the reschedule, and in that
+     * case the class simply disappears from the day's schedule (the expansion suppresses the whole
+     * day). The check exists so the ADMIN finds out right away what they
+     * would find out anyway, not to guarantee consistency.
      */
     private void requireUsableRescheduleDate(LocalDate newDate) {
         LocalDate today = LocalDate.now(clock);
@@ -528,9 +528,9 @@ public class SchedulingService {
     }
 
     /**
-     * Mesma razão do registration: paginação sem ORDER BY total é
-     * não-determinística no Postgres, e a mesma consulta pode repetir ou omitir
-     * linhas entre páginas.
+     * Same reason as registration: pagination without a total ORDER BY is
+     * non-deterministic in Postgres, and the same query can repeat or omit
+     * rows between pages.
      */
     private Pageable withStableSort(Pageable pageable) {
         if (pageable.getSort().getOrderFor("id") != null) {

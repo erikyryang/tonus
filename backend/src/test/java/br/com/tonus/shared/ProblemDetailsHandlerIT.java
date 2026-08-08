@@ -19,9 +19,9 @@ class ProblemDetailsHandlerIT extends AbstractIntegrationTest {
                         .content("{}"))
                 .andExpect(status().is4xxClientError())
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
-                // "type" ausente é RFC 9457 válido: omitido, o cliente assume o
-                // default "about:blank" — o Jackson 3 do Spring 7 não serializa
-                // mais o valor default, diferente do Jackson 2.
+                // A missing "type" is valid RFC 9457: when omitted, the client
+                // assumes the default "about:blank" — Spring 7's Jackson 3 no
+                // longer serializes the default value, unlike Jackson 2.
                 .andExpect(jsonPath("$.title", notNullValue()))
                 .andExpect(jsonPath("$.status", notNullValue()))
                 .andExpect(jsonPath("$.stackTrace").doesNotExist());

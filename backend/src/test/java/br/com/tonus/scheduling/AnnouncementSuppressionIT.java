@@ -6,21 +6,21 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * O comunicado que suspende as aulas apaga o dia inteiro; o que não suspende
- * não encosta na agenda.
+ * The announcement that suspends classes erases the whole day; the one that does not suspend
+ * does not touch the schedule.
  *
- * A supressão continua dependendo de o comunicado ser global: não existe
- * "comunicado do professor" nem "da turma". Um único registro apaga o dia
- * inteiro, e o dia seguinte segue normal.
+ * Suppression still depends on the announcement being global: there is no
+ * "teacher's announcement" nor "class's announcement". A single record erases the whole
+ * day, and the following day remains normal.
  */
 class AnnouncementSuppressionIT extends AbstractSchedulingIntegrationTest {
 
     private static final String SUSPENDED_DAY = "2026-08-12";
 
     /**
-     * Comunicado é global e o banco é compartilhado pela suíte: cada classe usa
-     * datas próprias, senão o dia de uma apaga a agenda da outra. Esta é uma
-     * quarta-feira que ninguém mais toca.
+     * Announcement is global and the database is shared by the suite: each class uses
+     * its own dates, otherwise one's day erases the other's schedule. This is a
+     * Wednesday that no one else touches.
      */
     private static final String ANNOUNCED_DAY = "2026-10-21";
 
@@ -47,9 +47,9 @@ class AnnouncementSuppressionIT extends AbstractSchedulingIntegrationTest {
     }
 
     /**
-     * O comunicado que só informa mantém a agenda de pé. É a razão de o
-     * conceito ter deixado de ser "feriado": avisar todo mundo de alguma coisa
-     * não pode custar o dia de aula.
+     * The announcement that only informs keeps the schedule standing. It is the reason the
+     * concept stopped being "holiday": notifying everyone about something
+     * must not cost the class day.
      */
     @Test
     void announcementWithoutSuspensionLeavesTheScheduleIntact() throws Exception {
@@ -67,7 +67,7 @@ class AnnouncementSuppressionIT extends AbstractSchedulingIntegrationTest {
         assertThat(day.get("announcement").get("suspendsClasses").asBoolean()).isFalse();
     }
 
-    /** O dia sem comunicado nenhum não carrega comunicado nenhum. */
+    /** A day with no announcement at all carries no announcement at all. */
     @Test
     void dayWithoutAnnouncementCarriesNone() throws Exception {
         assertThat(daySchedule("2029-01-10").get("announcement").isNull()).isTrue();
@@ -87,8 +87,8 @@ class AnnouncementSuppressionIT extends AbstractSchedulingIntegrationTest {
     }
 
     /**
-     * A suspensão apaga o dia inclusive para quem foi remarcado para ele: a
-     * aula remarcada cai no mesmo dia sem aula que as demais.
+     * The suspension erases the day even for whoever was rescheduled into it: the
+     * rescheduled class falls on the same no-class day as the others.
      */
     @Test
     void suspensionAlsoSuppressesReschedulesLandingOnIt() throws Exception {

@@ -10,30 +10,30 @@ public interface ScheduleExceptionRepository
 
     boolean existsByStudentIdAndDate(Long studentId, LocalDate date);
 
-    /** O que sai da agenda de D: toda exceção marcada naquele dia. */
+    /** What leaves D's schedule: every exception marked on that day. */
     List<ScheduleException> findByDate(LocalDate date);
 
-    /** O que entra na agenda de D: as remarcações cujo destino é D. */
+    /** What enters D's schedule: the reschedules whose destination is D. */
     List<ScheduleException> findByNewDate(LocalDate newDate);
 
     /**
-     * As exceções de um aluno num intervalo — as duas pontas de uma vez.
+     * The exceptions of a student in an interval — both ends at once.
      *
-     * `date` é de onde a aula saiu e `newDate` é para onde ela foi, e a janela
-     * do aluno precisa das duas: uma aula pode ter saído de dentro da janela
-     * para fora dela, ou entrado de fora para dentro. Buscar por intervalo em
-     * vez de por dia é o que faz a janela de sete dias custar uma consulta em
-     * vez de sete.
+     * `date` is where the class left from and `newDate` is where it went to, and the
+     * student's window needs both: a class could have left from inside the window
+     * to outside it, or entered from outside to inside. Querying by interval instead
+     * of by day is what makes the seven-day window cost one query instead
+     * of seven.
      */
     List<ScheduleException> findByStudentIdAndDateBetween(Long studentId, LocalDate from, LocalDate to);
 
     List<ScheduleException> findByStudentIdAndNewDateBetween(Long studentId, LocalDate from, LocalDate to);
 
     /**
-     * Usado ao apagar o horário padrão do aluno. A exceção é indexada por
-     * (student_id, date), sem qualquer vínculo com o id do horário — sem esta
-     * limpeza, uma exceção antiga sobreviveria à exclusão e voltaria a
-     * suprimir um horário novo criado depois para o mesmo aluno no mesmo dia.
+     * Used when deleting the student's default schedule. The exception is indexed by
+     * (student_id, date), with no link to the schedule's id — without this
+     * cleanup, an old exception would survive the deletion and would go back to
+     * suppressing a new schedule created later for the same student on the same day.
      */
     void deleteByStudentId(Long studentId);
 }

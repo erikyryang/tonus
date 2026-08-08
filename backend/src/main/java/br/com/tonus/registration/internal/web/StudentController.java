@@ -19,8 +19,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Não existe DELETE: saída do estúdio é desativação, para não apagar histórico
- * de fatura (SPEC-002).
+ * There is no DELETE: leaving the studio is deactivation, so as not to erase invoice
+ * history (SPEC-002).
  */
 @RestController
 @RequestMapping("/students")

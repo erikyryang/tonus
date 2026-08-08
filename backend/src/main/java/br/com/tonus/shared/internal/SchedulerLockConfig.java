@@ -9,14 +9,15 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
- * Liga agendamento e lock distribuído para a aplicação inteira.
+ * Enables scheduling and distributed locking for the whole application.
  *
- * Ficava em billing enquanto o job diário de cobrança era o único consumidor —
- * a decisão registrada então era "a tabela de lock é infra genérica e mora em
- * shared, mas quem liga o suporte é quem usa". Com o job de republicação de
- * eventos ({@link EventRepublicationJob}), passou a haver dois consumidores em
- * módulos diferentes, e manter a chave em billing faria o job de shared depender
- * de um módulo que shared não pode conhecer.
+ * Used to live in billing while the daily billing job was the only consumer
+ * — the decision recorded back then was "the lock table is generic
+ * infrastructure and lives in shared, but whoever uses it turns on the
+ * support". With the event republication job ({@link EventRepublicationJob}),
+ * there came to be two consumers in different modules, and keeping the
+ * switch in billing would make shared's job depend on a module that shared
+ * cannot know about.
  */
 @Configuration
 @EnableScheduling

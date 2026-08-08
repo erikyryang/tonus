@@ -7,28 +7,28 @@ import org.junit.jupiter.params.provider.CsvSource;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * A coerência entre role e vínculo é função pura: dá para varrer as treze
- * combinações em milissegundos, sem subir Spring nem Postgres. Os testes de
- * integração cobrem que a violação vira 400 com Problem Details; a tabela
- * completa de casos fica aqui.
+ * The coherence between role and link is a pure function: all thirteen
+ * combinations can be swept in milliseconds, without bringing up Spring or
+ * Postgres. The integration tests cover that a violation turns into a 400
+ * with Problem Details; the full table of cases lives here.
  */
 class CreateUserRequestTest {
 
     @ParameterizedTest(name = "{0} com studentId={1} teacherId={2} -> valido={3}")
     @CsvSource(nullValues = "null", value = {
-            // STUDENT precisa de studentId, e só dele
+            // STUDENT needs studentId, and only it
             "STUDENT, 1,    null, true",
             "STUDENT, null, null, false",
             "STUDENT, null, 1,    false",
             "STUDENT, 1,    1,    false",
 
-            // TEACHER precisa de teacherId, e só dele
+            // TEACHER needs teacherId, and only it
             "TEACHER, null, 1,    true",
             "TEACHER, null, null, false",
             "TEACHER, 1,    null, false",
             "TEACHER, 1,    1,    false",
 
-            // ADMIN não representa aluno nem professor: nenhum vínculo
+            // ADMIN represents neither student nor teacher: no link
             "ADMIN,   null, null, true",
             "ADMIN,   1,    null, false",
             "ADMIN,   null, 1,    false",
@@ -41,9 +41,10 @@ class CreateUserRequestTest {
     }
 
     /**
-     * Role nulo é problema do @NotNull, não desta regra. Se aqui devolvesse
-     * false, a resposta traria duas violações para o mesmo erro — e a segunda
-     * ("role e vínculo incompatíveis") só confundiria quem esqueceu o campo.
+     * A null role is @NotNull's problem, not this rule's. If this returned
+     * false here, the response would carry two violations for the same
+     * error — and the second one ("incompatible role and link") would just
+     * confuse whoever forgot the field.
      */
     @ParameterizedTest(name = "role nulo com studentId={0} teacherId={1}")
     @CsvSource(nullValues = "null", value = {"null, null", "1, null", "null, 1", "1, 1"})

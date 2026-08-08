@@ -1,21 +1,22 @@
 package br.com.tonus.notification.internal;
 
 /**
- * Porta de saída para WhatsApp. Trocar de provedor é escrever outro adapter;
- * os listeners não mudam.
+ * Outbound port for WhatsApp. Switching providers means writing another
+ * adapter; the listeners don't change.
  *
- * Fica em internal/, e não na raiz do módulo: a raiz é contrato para outros
- * módulos, e nenhum módulo chama notification — ele só escuta. Expor a porta
- * lá fora convidaria exatamente o que o projeto proíbe, que é outro módulo
- * mandar WhatsApp direto em vez de publicar evento.
+ * Stays in internal/, not at the module root: the root is the contract for
+ * other modules, and no module calls notification — it only listens.
+ * Exposing the port out there would invite exactly what the project
+ * forbids, which is another module sending WhatsApp directly instead of
+ * publishing an event.
  */
 public interface WhatsAppSender {
 
     /**
-     * Entrega a mensagem, ou levanta {@link WhatsAppDeliveryException}. Não
-     * tem retorno de sucesso/falha de propósito: o chamador precisa que a
-     * falha derrube a transação, e valor de retorno ignorado por engano é
-     * silêncio onde deveria haver reprocessamento.
+     * Delivers the message, or raises {@link WhatsAppDeliveryException}. It
+     * has no success/failure return value on purpose: the caller needs the
+     * failure to roll back the transaction, and a return value ignored by
+     * mistake is silence where there should be reprocessing.
      */
     void send(String phone, String message);
 }

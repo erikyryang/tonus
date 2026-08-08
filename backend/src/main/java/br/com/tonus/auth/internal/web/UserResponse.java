@@ -3,11 +3,12 @@ package br.com.tonus.auth.internal.web;
 import br.com.tonus.auth.internal.domain.User;
 
 /**
- * Nunca expõe o hash de senha.
+ * Never exposes the password hash.
  *
- * {@code active} entra porque é o que distingue "acesso revogado" de "nunca
- * teve acesso" para quem consulta o usuário de um aluno — sem ele a tela não
- * saberia se oferece criar ou reativar (SPEC-009).
+ * {@code active} is included because it's what distinguishes "access
+ * revoked" from "never had access" for whoever queries a student's user —
+ * without it the screen wouldn't know whether to offer create or reactivate
+ * (SPEC-009).
  */
 public record UserResponse(Long id, String login, String role, Long studentId, Long teacherId, boolean active) {
 

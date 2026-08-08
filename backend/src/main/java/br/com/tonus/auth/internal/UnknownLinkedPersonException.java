@@ -1,8 +1,8 @@
 package br.com.tonus.auth.internal;
 
 /**
- * Usuário de acesso apontando para um aluno/professor que não existe no
- * cadastro. Erro de entrada (400): o vínculo veio errado do cliente.
+ * Access user pointing to a student/teacher that doesn't exist in
+ * registration. Input error (400): the link came in wrong from the client.
  */
 public class UnknownLinkedPersonException extends RuntimeException {
 

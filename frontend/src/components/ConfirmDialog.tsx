@@ -4,9 +4,9 @@ import { Dialog, DialogActions } from '@/components/ui/dialog';
 import { apiMessage } from '@/lib/apiError';
 
 /**
- * Confirmação de ação com consequência. O corpo não pergunta "tem certeza?":
- * conta o que vai acontecer — acesso revogado, exceções apagadas, WhatsApp
- * enviado. É a diferença entre um obstáculo e uma informação.
+ * Confirmation for an action with consequences. The body doesn't ask "are you sure?":
+ * it states what will happen — access revoked, exceptions deleted, WhatsApp
+ * sent. That's the difference between an obstacle and information.
  */
 export function ConfirmDialog({
   title,
@@ -39,8 +39,8 @@ export function ConfirmDialog({
         )}
 
         <DialogActions>
-          {/* Voltar vem primeiro: é ele que recebe o foco ao abrir o diálogo,
-              e sair com o cursor sobre a ação destrutiva convidaria o Enter. */}
+          {/* Back comes first: it's the one that receives focus when the dialog opens,
+              and leaving the cursor over the destructive action would invite the Enter key. */}
           <Button variant="outline" onClick={onClose} disabled={pending}>
             Voltar
           </Button>

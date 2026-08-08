@@ -14,20 +14,20 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Base dos testes do módulo registration.
+ * Base for the registration module's tests.
  *
- * O seed é feito pela própria API REST (e não por repositório) de propósito:
- * os repositórios vivem em {@code registration.internal.domain} e o teste roda
- * no pacote raiz do módulo. Usar HTTP mantém o teste preso ao contrato público,
- * que é justamente o que os critérios de aceite descrevem.
+ * The seeding is done through the REST API itself (and not through a repository) on purpose:
+ * the repositories live in {@code registration.internal.domain} and the test runs
+ * in the module's root package. Using HTTP keeps the test bound to the public contract,
+ * which is exactly what the acceptance criteria describe.
  *
- * Os testes compartilham um Postgres único para a JVM, sem rollback entre
- * classes: todo nome gerado leva um sufixo aleatório e nenhuma asserção depende
- * de contagem global da tabela.
+ * The tests share a single Postgres for the JVM, with no rollback between
+ * classes: every generated name carries a random suffix and no assertion depends
+ * on a global count of the table.
  *
- * É pública porque scheduling (SPEC-003) precisa semear aluno e professor para
- * montar agenda — mesmo motivo de {@link AbstractAuthIntegrationTest} ser
- * pública. O acoplamento com a API do registration fica confinado aqui.
+ * It is public because scheduling (SPEC-003) needs to seed student and teacher to
+ * build the schedule — same reason {@link AbstractAuthIntegrationTest} is
+ * public. The coupling with the registration API is confined here.
  */
 public abstract class AbstractRegistrationIntegrationTest extends AbstractAuthIntegrationTest {
 
@@ -61,7 +61,7 @@ public abstract class AbstractRegistrationIntegrationTest extends AbstractAuthIn
         return createStudent(name, teacherId, "+5511988880000");
     }
 
-    /** Telefone próprio quando o teste precisa distinguir o de um aluno do de outro. */
+    /** Own phone when the test needs to distinguish one student's from another's. */
     protected long createStudent(String name, long teacherId, String phone) throws Exception {
         MvcResult result = mockMvc.perform(post("/students")
                         .cookie(admin)

@@ -4,16 +4,16 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * O estado completo de um dia para quem enxerga o estúdio inteiro.
+ * The complete state of a day for whoever sees the whole studio.
  *
- * Comunicado, agenda e cancelamentos andam juntos porque só juntos explicam o
- * dia: uma lista vazia sozinha não distingue "as aulas estão suspensas", "é
- * sábado" e "ninguém tem aula marcada", e quem recebesse só a lista teria de
- * adivinhar qual dos três.
+ * Announcement, schedule and cancellations go together because only together they explain the
+ * day: an empty list alone does not distinguish "classes are suspended", "it is
+ * Saturday" and "nobody has a class scheduled", and whoever received only the list would have to
+ * guess which of the three.
  *
- * {@code announcement} é nulo no dia sem comunicado. Quando ele suspende as
- * aulas, as duas listas vêm vazias — o dia inteiro está suprimido. Quando não
- * suspende, ele é só informação ao lado de uma agenda normal.
+ * {@code announcement} is null on a day without an announcement. When it suspends
+ * classes, both lists come empty — the whole day is suppressed. When it does not
+ * suspend, it is just information alongside a normal schedule.
  */
 public record DayScheduleView(LocalDate date,
                               Announcement announcement,
@@ -21,8 +21,8 @@ public record DayScheduleView(LocalDate date,
                               List<CanceledEntry> cancellations) {
 
     /**
-     * O comunicado como o dia o enxerga: o que dizer e se some com as aulas.
-     * Não é a entidade — a agenda não expõe linha de banco (ver CLAUDE.md).
+     * The announcement as the day sees it: what to say and whether it removes classes.
+     * It is not the entity — the schedule does not expose a database row (see CLAUDE.md).
      */
     public record Announcement(String description, boolean suspendsClasses) {
     }

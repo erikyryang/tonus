@@ -7,15 +7,16 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- * O que se manda ao aluno, e o nome pelo qual esse aviso é reconhecido no
- * banco.
+ * What gets sent to the student, and the name by which this notice is
+ * recognized in the database.
  *
- * O nome da constante é identificador e fica em inglês; o corpo, que o aluno
- * lê, é português — é a distinção da decisão de idioma do projeto.
+ * The constant's name is an identifier and stays in English; the body,
+ * which the student reads, is Portuguese — that's the distinction from the
+ * project's language decision.
  *
- * Toda mensagem começa pelo nome do aluno, e por isso {@link #render} recebe o
- * nome separado dos demais argumentos: quem chama não tem como esquecer dele
- * nem trocar a ordem.
+ * Every message starts with the student's name, and that's why {@link
+ * #render} receives the name separate from the remaining arguments: the
+ * caller has no way to forget it or swap the order.
  */
 public enum MessageTemplate {
 
@@ -26,7 +27,7 @@ public enum MessageTemplate {
     INVOICE_DUE_SOON("Olá, %s! Sua mensalidade de %s vence em %s."),
     INVOICE_OVERDUE("Olá, %s! Sua mensalidade com vencimento em %s está em aberto."),
     PAYMENT_REGISTERED("Olá, %s! Recebemos seu pagamento de %s em %s. Obrigado!"),
-    /** Mensagem livre do ADMIN (mudança 9): o texto vem inteiro do disparo, sem formato próprio. */
+    /** Free-form ADMIN message (change 9): the text comes entirely from the trigger, with no format of its own. */
     BROADCAST("Olá, %s! %s");
 
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy");

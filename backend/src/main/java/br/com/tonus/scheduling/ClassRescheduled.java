@@ -4,9 +4,9 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 /**
- * Aula movida de dia. Leva a data original junto porque quem avisa o aluno
- * precisa dizer de onde para onde — "sua aula foi remarcada" sem a origem não
- * informa nada.
+ * Class moved to a different day. Carries the original date along because whoever notifies the student
+ * needs to say from where to where — "your class was rescheduled" without the origin
+ * does not tell anything.
  */
 public record ClassRescheduled(Long studentId, LocalDate originalDate, LocalDate newDate, LocalTime newTime) {
 }

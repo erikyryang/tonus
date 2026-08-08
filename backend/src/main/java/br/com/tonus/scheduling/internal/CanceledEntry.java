@@ -3,15 +3,15 @@ package br.com.tonus.scheduling.internal;
 import java.time.LocalTime;
 
 /**
- * Uma aula que o dia deixou de ter por cancelamento.
+ * A class that the day no longer has due to cancellation.
  *
- * A expansão da agenda a remove por definição, e é justamente por isso que ela
- * precisa existir à parte: o ADMIN só percebe um cancelamento marcado por
- * engano se continuar vendo o que cancelou — e é pelo {@code exceptionId} que
- * ele desfaz.
+ * The schedule expansion removes it by definition, and that is exactly why it
+ * needs to exist separately: the ADMIN only notices a cancellation marked by
+ * mistake if they keep seeing what was canceled — and it is by the {@code exceptionId} that
+ * they undo it.
  *
- * {@code time} é a hora do horário padrão do aluno e pode ser nula: nada exige
- * horário padrão para cancelar uma aula.
+ * {@code time} is the time from the student's default schedule and can be null: nothing requires a
+ * default schedule to cancel a class.
  */
 public record CanceledEntry(Long exceptionId,
                             Long studentId,

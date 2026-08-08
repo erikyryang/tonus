@@ -5,56 +5,60 @@ services:
       POSTGRES_DB: ${DB_NAME:-tonus}
       POSTGRES_USER: ${DB_USER:-tonus}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-tonus}
-    # Só no loopback: o fluxo de dev documentado no CLAUDE.md roda a
-    # aplicação no host (./mvnw spring-boot:run) falando com DB_HOST=localhost,
-    # então a porta precisa ser alcançável daqui — mas publicá-la em todas as
-    # interfaces (0.0.0.0, o padrão do Compose) expõe o Postgres com a senha
-    # padrão do .env.example a qualquer host na mesma rede, ou à internet
-    # inteira se este compose for reaproveitado numa máquina com IP público.
-    # Mesmo raciocínio do serviço evolution abaixo, que não publica porta
-    # nenhuma por não precisar ser alcançado do host.
+    # Loopback only: the dev flow documented in CLAUDE.md runs the app on
+    # the host (./mvnw spring-boot:run) talking to DB_HOST=localhost, so the
+    # port needs to be reachable from there — but publishing it on all
+    # interfaces (0.0.0.0, Compose's default) would expose Postgres with the
+    # default password from .env.example to any host on the same network, or
+    # to the whole internet if this compose file is reused on a machine with
+    # a public IP. Same reasoning applies to the evolution service below,
+    # which doesn't publish any port because it doesn't need to be reached
+    # from the host.
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
       - tonus-db-data:/var/lib/postgresql/data
-      # Cria o banco da Evolution na primeira subida do volume. Ver o
-      # cabeçalho do arquivo para o caso de volume já existente.
+      # Creates the Evolution database on the volume's first startup. See
+      # the file header for what to do if the volume already exists.
       - ./docker/init-evolution-db.sql:/docker-entrypoint-initdb.d/10-evolution.sql:ro
     networks:
       - tonus
 
-  # Gateway de WhatsApp (SPEC-005).
+  # WhatsApp gateway (SPEC-005).
   #
-  # Sem `ports`: a Evolution NÃO é alcançável do host, só de dentro da rede
-  # `tonus`. Quem abre essa porta expõe à internet uma API que manda mensagem
-  # em nome do estúdio e carrega a sessão de WhatsApp — a sessão é credencial,
-  # e o volume abaixo é o que a guarda entre reinícios.
+  # No `ports`: Evolution is NOT reachable from the host, only from inside
+  # the `tonus` network. Opening that port would expose to the internet an
+  # API that sends messages on the studio's behalf and holds the WhatsApp
+  # session — the session is a credential, and the volume below is what
+  # keeps it across restarts.
   #
-  # Atrás de um profile para `docker compose up -d db` continuar subindo só o
-  # banco, que é o fluxo de desenvolvimento documentado no CLAUDE.md. Em
-  # desenvolvimento NOTIFICATION_ENABLED=false e a aplicação nem procura por
-  # ela; subir este serviço só faz sentido junto com a aplicação na mesma rede.
+  # Gated behind a profile so `docker compose up -d db` still brings up just
+  # the database, which is the development flow documented in CLAUDE.md. In
+  # development NOTIFICATION_ENABLED=false and the app doesn't even look for
+  # it; starting this service only makes sense alongside the app on the same
+  # network.
   #
   #   docker compose --profile whatsapp up -d
   evolution:
-    # evoapicloud, não atendai: o produto migrou de repositório e
-    # `docker pull atendai/evolution-api` responde "access denied". Imagem e
-    # variáveis daqui são as mesmas de EvolutionApiContractIT — se uma tag
-    # sumir, quebra no teste e não no deploy.
+    # evoapicloud, not atendai: the product moved repositories and
+    # `docker pull atendai/evolution-api` now returns "access denied". The
+    # image and variables here match EvolutionApiContractIT — if a tag
+    # disappears, it breaks in the test, not in deploy.
     image: evoapicloud/evolution-api:v2.3.7
     profiles:
       - whatsapp
     restart: unless-stopped
     environment:
-      # Sem `:?` de propósito: o compose interpola o arquivo inteiro antes de
-      # olhar profiles, então a variante que exige a variável quebraria o
-      # `docker compose up -d db` do fluxo de desenvolvimento. A chave ausente
-      # é barrada onde importa — a Evolution recusa subir sem ela, e a
-      # aplicação recusa subir com enabled=true e api-key vazia.
+      # No `:?` on purpose: Compose interpolates the whole file before
+      # looking at profiles, so the variant that requires the variable would
+      # break `docker compose up -d db` in the development flow. The missing
+      # key is blocked where it matters — Evolution refuses to start without
+      # it, and the app refuses to start with enabled=true and an empty
+      # api-key.
       AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:-}
-      # Nomes conferidos contra o .env.example do próprio produto. O conjunto
-      # completo é bem maior; aqui está só o mínimo para subir com Postgres e
-      # sem Redis — acrescentar Redis seria infra nova para discutir antes.
+      # Names checked against the product's own .env.example. The full set
+      # is much bigger; this is just the minimum to run with Postgres and no
+      # Redis — adding Redis would be new infra to discuss first.
       SERVER_URL: http://evolution:8080
       DATABASE_PROVIDER: postgresql
       DATABASE_CONNECTION_URI: postgresql://${DB_USER:-tonus}:${DB_PASSWORD:-tonus}@db:5432/evolution?schema=public

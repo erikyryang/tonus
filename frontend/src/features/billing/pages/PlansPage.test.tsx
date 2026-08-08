@@ -108,10 +108,10 @@ describe('cadastro de plano', () => {
 
 describe('desativação de plano', () => {
   /**
-   * A decisão da SPEC-012 é permitir desativar com matrícula ativa — e cobrar
-   * o preço em visibilidade: a confirmação diz quantos alunos deixam de ser
-   * cobrados. Sem o número, o ADMIN encerra um plano sem saber o tamanho do
-   * estrago.
+   * SPEC-012's decision is to allow deactivating with an active enrollment — and pay
+   * the price in visibility: the confirmation says how many students stop being
+   * charged. Without the number, the ADMIN would end a plan without knowing the size of the
+   * damage.
    */
   it('avisa quantos alunos deixam de ser cobrados', async () => {
     const changed: Array<{ id: number; active: boolean }> = [];
@@ -134,7 +134,7 @@ describe('desativação de plano', () => {
     await waitFor(() => expect(changed).toEqual([{ id: 3, active: false }]));
   });
 
-  /** Plano sem ninguém matriculado não inventa alarme. */
+  /** A plan with nobody enrolled doesn't invent an alarm. */
   it('não fala em alunos quando não há matrícula', async () => {
     server.use(
       meOk(ADMIN),

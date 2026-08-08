@@ -1,8 +1,8 @@
 package br.com.tonus.registration;
 
 /**
- * Dados de contato de um aluno. O telefone é dado pessoal: quem consumir nunca
- * deve logá-lo por inteiro.
+ * Contact data of a student. The phone is personal data: whoever consumes it must
+ * never log it in full.
  */
 public record StudentContact(Long studentId, String name, String phone) {
 }

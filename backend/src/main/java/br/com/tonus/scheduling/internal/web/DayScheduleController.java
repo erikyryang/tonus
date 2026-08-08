@@ -9,8 +9,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * A visão do estúdio inteiro num dia — só ADMIN. Aluno e professor têm os
- * endpoints /me, que devolvem apenas a própria fatia.
+ * The view of the whole studio on a day — ADMIN only. Student and teacher have the
+ * /me endpoints, which return only their own slice.
  */
 @RestController
 @RequestMapping("/schedule")

@@ -4,9 +4,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
- * Baixa registrada pelo ADMIN: fatura virou PAGA.
+ * Payment recorded by the ADMIN: invoice became PAID.
  *
- * Consome: ninguém ainda. {@code notification} avisará o aluno.
+ * Consumers: none yet. {@code notification} will notify the student.
  */
 public record PaymentRegistered(Long invoiceId, Long studentId, LocalDate paymentDate, BigDecimal amount) {
 }
