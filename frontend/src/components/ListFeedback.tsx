@@ -29,13 +29,13 @@ export function ListFeedback({
 }) {
   return (
     <>
-      {state.isPending && <p className="text-sm text-slate-500">{loading}</p>}
+      {state.isPending && <p className="text-sm text-muted-foreground">{loading}</p>}
 
-      {!state.isPending && state.isFetching && <p className="text-sm text-slate-400">Atualizando…</p>}
+      {!state.isPending && state.isFetching && <p className="text-sm text-muted-foreground">Atualizando…</p>}
 
       {state.isError && <ErrorNotice message={apiMessage(state.error)} onRetry={state.refetch} />}
 
-      {empty !== undefined && <p className="text-sm text-slate-500">{empty}</p>}
+      {empty !== undefined && <p className="text-sm text-muted-foreground">{empty}</p>}
     </>
   );
 }

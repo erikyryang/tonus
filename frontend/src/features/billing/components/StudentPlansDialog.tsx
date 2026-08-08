@@ -47,7 +47,7 @@ export function StudentPlansDialog({
     <Dialog title={`Planos de ${studentName}`} onClose={onClose} busy={pending}>
       <div className="space-y-4">
         {plans.length === 0 ? (
-          <p className="text-sm text-slate-500">Nenhum plano ativo no catálogo.</p>
+          <p className="text-sm text-muted-foreground">Nenhum plano ativo no catálogo.</p>
         ) : (
           <ul className="space-y-2">
             {plans.map((plan) => {
@@ -58,7 +58,7 @@ export function StudentPlansDialog({
                   <input
                     id={`plan-${plan.id}`}
                     type="checkbox"
-                    className="h-4 w-4 rounded border-slate-300"
+                    className="h-4 w-4 rounded border-input"
                     checked={active}
                     // Active: only the "End" button turns it off. The checkbox here becomes an
                     // indicator, not a control — two paths to the same
@@ -66,7 +66,7 @@ export function StudentPlansDialog({
                     disabled={pending || enrollments === undefined || active}
                     onChange={() => onToggle(plan, enrollment)}
                   />
-                  <label htmlFor={`plan-${plan.id}`} className="text-sm text-slate-900">
+                  <label htmlFor={`plan-${plan.id}`} className="text-sm text-foreground">
                     {plan.name} — {formatMoney(plan.monthlyPrice)}
                   </label>
                   {active && enrollment && (
@@ -94,17 +94,17 @@ export function StudentPlansDialog({
           * is actually needed, the back is the one who should answer it.
           */}
         {activeCount > 1 && discountPercent !== undefined && discountPercent > 0 && (
-          <p className="text-sm text-slate-700">
+          <p className="text-sm text-foreground">
             Com {activeCount} planos, a fatura sai com {discountPercent}% de desconto sobre a soma.
           </p>
         )}
 
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted-foreground">
           A mudança vale para as próximas faturas. As já emitidas não mudam de valor.
         </p>
 
         {error != null && (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-danger">
             {apiMessage(error)}
           </p>
         )}

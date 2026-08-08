@@ -15,7 +15,7 @@ export function BillingStatusBadge({ overdue }: { overdue: boolean }) {
     <span
       className={cn(
         'inline-block rounded-full px-2 py-0.5 text-xs',
-        overdue ? 'bg-red-100 font-semibold text-red-800' : 'bg-slate-100 text-slate-700',
+        overdue ? 'bg-danger-subtle font-semibold text-danger-emphasis' : 'bg-muted text-muted-foreground',
       )}
     >
       {overdue ? 'Atrasado' : 'Em dia'}

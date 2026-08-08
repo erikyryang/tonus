@@ -1,6 +1,8 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
-import { afterAll, afterEach, beforeAll } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach } from 'vitest';
+import { installLocalStorage } from './localStorage';
+import { installMatchMedia } from './matchMedia';
 import { server } from './server';
 
 beforeAll(() => {
@@ -8,9 +10,22 @@ beforeAll(() => {
   resolveRelativeUrls();
 });
 
+/**
+ * Preferência de sistema clara por padrão: o teste que se importa com o tema
+ * reinstala o stub com o valor que quer. Sem isso, todo teste que renderiza a
+ * aplicação quebraria ao montar o ThemeProvider.
+ */
+beforeEach(() => {
+  installLocalStorage();
+  installMatchMedia(false);
+});
+
 afterEach(() => {
   cleanup();
   server.resetHandlers();
+  // A classe do tema vive no <html>, fora da árvore que o cleanup desmonta —
+  // sem remover, um teste escuro contamina o próximo.
+  document.documentElement.classList.remove('dark');
 });
 
 afterAll(() => {

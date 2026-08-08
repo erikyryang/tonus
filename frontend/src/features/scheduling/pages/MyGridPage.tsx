@@ -22,7 +22,7 @@ export function MyGridPage() {
 
   return (
     <section className="space-y-4">
-      <h1 className="text-xl font-semibold text-slate-900">Minha grade</h1>
+      <h1 className="text-xl font-semibold text-foreground">Minha grade</h1>
 
       <DayNavigator date={date} onChange={(next) => setSearchParams({ date: next })} />
 
@@ -36,14 +36,14 @@ export function MyGridPage() {
         <section
           key={slot.time}
           aria-label={`Aulas das ${slot.time}`}
-          className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
+          className="rounded-lg border border-border bg-card p-4 shadow-sm"
         >
-          <h2 className="mb-2 text-base font-semibold text-slate-900">{slot.time}</h2>
-          <ul className="divide-y divide-slate-100">
+          <h2 className="mb-2 text-base font-semibold text-foreground">{slot.time}</h2>
+          <ul className="divide-y divide-border">
             {slot.students.map((student) => (
               <li
                 key={student.studentId}
-                className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2 text-sm text-slate-900"
+                className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2 text-sm text-foreground"
               >
                 <span>{student.studentName}</span>
                 {/*
@@ -58,7 +58,7 @@ export function MyGridPage() {
                   target="_blank"
                   rel="noreferrer"
                   aria-label={`Conversar com ${student.studentName} no WhatsApp: ${student.studentPhone}`}
-                  className="whitespace-nowrap rounded text-slate-600 underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                  className="whitespace-nowrap rounded text-muted-foreground underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {student.studentPhone}
                 </a>

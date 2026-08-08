@@ -26,7 +26,7 @@ export function RequireRole({ allow }: { allow: Role[] }) {
 
 export function LoadingScreen() {
   return (
-    <div role="status" aria-live="polite" className="flex min-h-screen items-center justify-center text-slate-500">
+    <div role="status" aria-live="polite" className="flex min-h-screen items-center justify-center text-muted-foreground">
       Carregando…
     </div>
   );
@@ -40,7 +40,7 @@ export function SessionErrorScreen({ onRetry }: { onRetry: () => void }) {
   return (
     <div
       role="alert"
-      className="flex min-h-screen flex-col items-center justify-center gap-4 p-4 text-center text-slate-700"
+      className="flex min-h-screen flex-col items-center justify-center gap-4 p-4 text-center text-foreground"
     >
       <p>Não foi possível carregar sua sessão.</p>
       <Button variant="outline" onClick={onRetry}>

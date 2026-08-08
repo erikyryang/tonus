@@ -30,10 +30,10 @@ export function ConfirmDialog({
   return (
     <Dialog title={title} onClose={onClose} busy={pending}>
       <div className="space-y-4">
-        <div className="text-sm text-slate-700">{children}</div>
+        <div className="text-sm text-foreground">{children}</div>
 
         {error != null && (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-danger">
             {apiMessage(error)}
           </p>
         )}

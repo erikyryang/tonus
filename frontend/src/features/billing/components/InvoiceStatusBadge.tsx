@@ -12,9 +12,9 @@ export const STATUS_LABEL: Record<InvoiceStatus, string> = {
  * nesta tela, e quem não distingue vermelho de âmbar precisa lê-la mesmo assim.
  */
 const STATUS_STYLE: Record<InvoiceStatus, string> = {
-  OPEN: 'bg-slate-100 text-slate-700',
-  PAID: 'bg-emerald-50 text-emerald-800',
-  OVERDUE: 'bg-red-100 font-semibold text-red-800',
+  OPEN: 'bg-muted text-muted-foreground',
+  PAID: 'bg-success-subtle text-success-emphasis',
+  OVERDUE: 'bg-danger-subtle font-semibold text-danger-emphasis',
 };
 
 export function InvoiceStatusBadge({ status }: { status: InvoiceStatus }) {

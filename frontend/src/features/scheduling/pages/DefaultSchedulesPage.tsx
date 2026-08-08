@@ -63,7 +63,7 @@ export function DefaultSchedulesPage() {
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">Horários</h1>
+        <h1 className="text-xl font-semibold text-foreground">Horários</h1>
         <Button onClick={() => setPending({ kind: 'create' })}>Novo horário</Button>
       </div>
 
@@ -80,7 +80,7 @@ export function DefaultSchedulesPage() {
           <table className="w-full border-collapse text-sm">
             <caption className="sr-only">Horários padrão</caption>
             <thead>
-              <tr className="border-b border-slate-200 text-left text-slate-500">
+              <tr className="border-b border-border text-left text-muted-foreground">
                 <th scope="col" className="px-3 py-2 font-medium">
                   Aluno
                 </th>
@@ -94,8 +94,8 @@ export function DefaultSchedulesPage() {
             </thead>
             <tbody>
               {data.content.map((schedule) => (
-                <tr key={schedule.id} className="border-b border-slate-100">
-                  <td className="px-3 py-2 text-slate-900">{nameOf(schedule.studentId)}</td>
+                <tr key={schedule.id} className="border-b border-border">
+                  <td className="px-3 py-2 text-foreground">{nameOf(schedule.studentId)}</td>
                   <td className="px-3 py-2">{schedule.time}</td>
                   <td className="px-3 py-2 text-right">
                     <ActionMenu

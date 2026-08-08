@@ -31,7 +31,7 @@ export function DayNavigator({ date, onChange }: { date: string; onChange: (date
         }}
       />
 
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-muted-foreground">
         {formatWeekday(date)}, {formatDate(date)}
       </p>
     </nav>

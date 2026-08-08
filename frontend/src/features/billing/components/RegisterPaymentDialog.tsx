@@ -58,7 +58,7 @@ export function RegisterPaymentDialog({
   return (
     <Dialog title="Renovar fatura" onClose={onClose} busy={pending}>
       <form onSubmit={handleSubmit(onConfirm)} noValidate className="space-y-4">
-        <p className="text-sm text-slate-700">
+        <p className="text-sm text-foreground">
           Fatura de <strong>{studentLabel(invoice)}</strong> — {formatMoney(invoice.amount)}.
         </p>
 
@@ -71,18 +71,18 @@ export function RegisterPaymentDialog({
             aria-invalid={errors.paymentDate ? true : undefined}
             {...register('paymentDate')}
           />
-          {errors.paymentDate && <p className="text-sm text-red-600">{errors.paymentDate.message}</p>}
+          {errors.paymentDate && <p className="text-sm text-danger">{errors.paymentDate.message}</p>}
         </div>
 
         {/* The real effect, not "are you sure?": the WhatsApp message goes out and there's no way to unsend it.
             The due date doesn't come into play here anymore: payment doesn't move it (SPEC-004).
             A paid invoice is a renewed cycle — the text talks about renewal, not debt. */}
-        <p className="text-sm font-medium text-slate-900">
+        <p className="text-sm font-medium text-foreground">
           O ciclo do aluno é renovado e ele receberá a confirmação por WhatsApp.
         </p>
 
         {error != null && (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-danger">
             {apiMessage(error)}
           </p>
         )}

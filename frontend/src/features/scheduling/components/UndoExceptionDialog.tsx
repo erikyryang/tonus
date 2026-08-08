@@ -18,13 +18,13 @@ export function UndoExceptionDialog({
 }) {
   return (
     <Dialog title="Desfazer exceção" onClose={onClose} busy={pending}>
-      <p className="text-sm text-slate-700">
+      <p className="text-sm text-foreground">
         Desfazer a exceção de <strong>{studentName}</strong> e devolver o dia ao horário padrão?
       </p>
-      <p className="text-sm text-slate-500">O aluno não recebe aviso de que a exceção foi desfeita.</p>
+      <p className="text-sm text-muted-foreground">O aluno não recebe aviso de que a exceção foi desfeita.</p>
 
       {error != null && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-danger">
           {apiMessage(error)}
         </p>
       )}

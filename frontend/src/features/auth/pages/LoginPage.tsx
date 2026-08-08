@@ -54,9 +54,9 @@ export function LoginPage() {
   });
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
-      <form onSubmit={onSubmit} noValidate className="w-full max-w-sm space-y-4 rounded-lg bg-white p-6 shadow">
-        <h1 className="text-xl font-semibold text-slate-900">Tônus</h1>
+    <main className="flex min-h-screen items-center justify-center bg-background p-4">
+      <form onSubmit={onSubmit} noValidate className="w-full max-w-sm space-y-4 rounded-lg bg-card p-6 shadow">
+        <h1 className="text-xl font-semibold text-foreground">Tônus</h1>
 
         <div className="space-y-1">
           <Label htmlFor="login">Login</Label>
@@ -69,7 +69,7 @@ export function LoginPage() {
             {...register('login')}
           />
           {errors.login && (
-            <p id="login-error" className="text-sm text-red-600">
+            <p id="login-error" className="text-sm text-danger">
               {errors.login.message}
             </p>
           )}
@@ -86,14 +86,14 @@ export function LoginPage() {
             {...register('password')}
           />
           {errors.password && (
-            <p id="password-error" className="text-sm text-red-600">
+            <p id="password-error" className="text-sm text-danger">
               {errors.password.message}
             </p>
           )}
         </div>
 
         {formError && (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-danger">
             {formError}
           </p>
         )}

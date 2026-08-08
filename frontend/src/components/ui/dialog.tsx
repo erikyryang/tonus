@@ -51,7 +51,7 @@ export function Dialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !busy) onClose();
       }}
@@ -62,9 +62,9 @@ export function Dialog({
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className="w-full max-w-md space-y-4 rounded-lg bg-white p-6 shadow-lg focus:outline-none"
+        className="w-full max-w-md space-y-4 rounded-lg bg-popover text-popover-foreground p-6 shadow-lg focus:outline-none"
       >
-        <h2 id={titleId} className="text-lg font-semibold text-slate-900">
+        <h2 id={titleId} className="text-lg font-semibold text-foreground">
           {title}
         </h2>
         {children}

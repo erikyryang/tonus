@@ -51,7 +51,7 @@ export function AnnouncementFormDialog({
         <div className="space-y-1">
           <Label htmlFor="date">Data</Label>
           <Input id="date" type="date" aria-invalid={errors.date ? true : undefined} {...register('date')} />
-          {errors.date && <p className="text-sm text-red-600">{errors.date.message}</p>}
+          {errors.date && <p className="text-sm text-danger">{errors.date.message}</p>}
         </div>
 
         <div className="space-y-1">
@@ -61,14 +61,14 @@ export function AnnouncementFormDialog({
             aria-invalid={errors.description ? true : undefined}
             {...register('description')}
           />
-          {errors.description && <p className="text-sm text-red-600">{errors.description.message}</p>}
+          {errors.description && <p className="text-sm text-danger">{errors.description.message}</p>}
         </div>
 
         <div className="flex items-center gap-2">
           <input
             id="suspendsClasses"
             type="checkbox"
-            className="h-4 w-4 rounded border-slate-300"
+            className="h-4 w-4 rounded border-input"
             {...register('suspendsClasses')}
           />
           <Label htmlFor="suspendsClasses">Suspende as aulas do dia</Label>
@@ -78,7 +78,7 @@ export function AnnouncementFormDialog({
             mensagem, e mensagem enviada não volta atrás. O texto muda com a
             caixa porque as duas mensagens são opostas — quem avisa precisa
             saber qual delas o aluno vai ler. */}
-        <p className="text-sm font-medium text-slate-900">
+        <p className="text-sm font-medium text-foreground">
           Ao salvar, todos os alunos ativos serão notificados por WhatsApp
           {suspends
             ? ' de que não haverá aula nesse dia.'
@@ -86,7 +86,7 @@ export function AnnouncementFormDialog({
         </p>
 
         {error != null && (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-danger">
             {apiMessage(error)}
           </p>
         )}

@@ -81,14 +81,14 @@ export function ActionMenu({ label, actions }: { label: string; actions: MenuAct
           role="menu"
           aria-label={label}
           onKeyDown={onMenuKeyDown}
-          className="absolute right-0 z-10 mt-1 min-w-36 rounded-md border border-slate-200 bg-white py-1 shadow-md"
+          className="absolute right-0 z-10 mt-1 min-w-36 rounded-md border border-border bg-popover text-popover-foreground py-1 shadow-md"
         >
           {actions.map((action) => (
             <button
               key={action.label}
               type="button"
               role="menuitem"
-              className="block w-full px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
+              className="block w-full px-3 py-1.5 text-left text-sm text-foreground hover:bg-accent focus:bg-accent focus:outline-none"
               onClick={() => {
                 close({ restoreFocus: true });
                 action.onSelect();

@@ -54,12 +54,12 @@ export function MySchedulePage() {
 
   return (
     <section className="space-y-4">
-      <h1 className="text-xl font-semibold text-slate-900">Minha agenda</h1>
+      <h1 className="text-xl font-semibold text-foreground">Minha agenda</h1>
 
       <ListFeedback state={week} loading="Carregando a sua agenda…" />
 
       {complete && templateTimes.length === 1 && (
-        <p className="text-sm text-slate-700">
+        <p className="text-sm text-foreground">
           Seu horário: <strong>{templateTimes[0]}</strong>, de segunda a sexta.
         </p>
       )}
@@ -67,13 +67,13 @@ export function MySchedulePage() {
       {/* Sem horário e sem exceção: dizer "sem aula" sete vezes esconderia que
           o cadastro do horário é o que está faltando. */}
       {complete && couldHaveShownClass && !hasSchedule && (
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-muted-foreground">
           Você ainda não tem horário cadastrado. Fale com a recepção para marcar o seu.
         </p>
       )}
 
       {hasContent && (
-        <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
+        <ul className="divide-y divide-border rounded-lg border border-border bg-card">
           {days.map((day) => (
             <DayRow key={day.date} day={day} />
           ))}
@@ -91,7 +91,7 @@ function DayRow({ day }: { day: DaySchedule }) {
       aria-label={`${formatWeekday(day.date)}, ${formatDate(day.date)}`}
       className="flex flex-wrap items-center justify-between gap-2 px-4 py-3"
     >
-      <span className="text-sm text-slate-700">
+      <span className="text-sm text-foreground">
         {formatWeekday(day.date)}, {formatDate(day.date)}
       </span>
       <span className="flex flex-wrap items-center gap-2">
@@ -109,7 +109,7 @@ function DayRow({ day }: { day: DaySchedule }) {
 function DayStatus({ day }: { day: DaySchedule }) {
   if (day.announcement?.suspendsClasses) {
     return (
-      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">
+      <span className="rounded-full bg-warning-subtle px-2 py-0.5 text-xs text-warning-emphasis">
         Sem aula — {day.announcement.description}
       </span>
     );
@@ -122,7 +122,7 @@ function DayStatus({ day }: { day: DaySchedule }) {
    * única tela que ele abre.
    */
   const notice = day.announcement ? (
-    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
+    <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
       {day.announcement.description}
     </span>
   ) : null;
@@ -131,7 +131,7 @@ function DayStatus({ day }: { day: DaySchedule }) {
     return (
       <>
         {notice}
-        <span className="text-sm text-slate-500">{isWeekend(day.date) ? 'Fim de semana' : 'Sem aula'}</span>
+        <span className="text-sm text-muted-foreground">{isWeekend(day.date) ? 'Fim de semana' : 'Sem aula'}</span>
       </>
     );
   }
@@ -141,9 +141,9 @@ function DayStatus({ day }: { day: DaySchedule }) {
       {notice}
       {day.entries.map((entry) => (
         <span key={`${entry.time}-${entry.exceptionId ?? 'template'}`} className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-slate-900">{entry.time}</span>
+          <span className="text-sm font-semibold text-foreground">{entry.time}</span>
           {entry.originDate && (
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">
+            <span className="rounded-full bg-warning-subtle px-2 py-0.5 text-xs text-warning-emphasis">
               remarcada de {formatDayMonth(entry.originDate)}
             </span>
           )}
@@ -152,7 +152,7 @@ function DayStatus({ day }: { day: DaySchedule }) {
       {day.cancellations.map((cancellation) => (
         <span
           key={cancellation.exceptionId}
-          className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-800"
+          className="rounded-full bg-danger-subtle px-2 py-0.5 text-xs text-danger-emphasis"
         >
           {cancellation.time ? `Aula das ${cancellation.time} cancelada` : 'Aula cancelada'}
         </span>

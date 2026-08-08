@@ -44,14 +44,14 @@ export function CreateAccessDialog({
   return (
     <Dialog title="Criar acesso" onClose={onClose} busy={pending}>
       <form onSubmit={handleSubmit(onConfirm)} noValidate className="space-y-4">
-        <p className="text-sm text-slate-700">
+        <p className="text-sm text-foreground">
           Login do aluno <strong>{studentName}</strong>.
         </p>
 
         <div className="space-y-1">
           <Label htmlFor="login">Login</Label>
           <Input id="login" autoComplete="off" aria-invalid={errors.login ? true : undefined} {...register('login')} />
-          {errors.login && <p className="text-sm text-red-600">{errors.login.message}</p>}
+          {errors.login && <p className="text-sm text-danger">{errors.login.message}</p>}
         </div>
 
         <div className="space-y-1">
@@ -63,15 +63,15 @@ export function CreateAccessDialog({
             aria-invalid={errors.password ? true : undefined}
             {...register('password')}
           />
-          {errors.password && <p className="text-sm text-red-600">{errors.password.message}</p>}
+          {errors.password && <p className="text-sm text-danger">{errors.password.message}</p>}
         </div>
 
         {/* The password is agreed upon outside the system: there is no "forgot my password"
             at this stage, and whoever creates the access is who hands it to the student. */}
-        <p className="text-sm text-slate-600">Anote a senha: ela não é exibida de novo.</p>
+        <p className="text-sm text-muted-foreground">Anote a senha: ela não é exibida de novo.</p>
 
         {error != null && (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-danger">
             {apiMessage(error)}
           </p>
         )}

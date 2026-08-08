@@ -4,6 +4,30 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tônus</title>
+    <!--
+      NÃO REMOVER por limpeza. Este script precisa ser inline e síncrono, aqui,
+      antes do bundle: qualquer coisa que rode depois do React montar chega
+      tarde e o usuário vê branco antes do escuro. É a única exceção autorizada
+      à regra de "nada de JS solto fora dos módulos" (SPEC-013).
+      A chave e a classe combinam com src/app/theme.tsx — mudou lá, muda aqui.
+      O CSP do build libera esta tag por hash (plugin em vite.config.ts), então
+      editar o conteúdo sem rebuildar quebra o carregamento do tema.
+    -->
+    <script>
+      (function () {
+        var stored = null;
+        try {
+          stored = window.localStorage.getItem('tonus-theme');
+        } catch (error) {
+          /* Storage bloqueado (aba anônima): segue a preferência do sistema. */
+        }
+        var theme = stored === 'light' || stored === 'dark' ? stored : 'system';
+        var dark =
+          theme === 'dark' ||
+          (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.classList.toggle('dark', dark);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

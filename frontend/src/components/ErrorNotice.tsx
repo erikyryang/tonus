@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 export function ErrorNotice({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div className="space-y-2">
-      <p role="alert" className="text-sm text-red-600">
+      <p role="alert" className="text-sm text-danger">
         {message}
       </p>
       <Button variant="outline" size="sm" onClick={onRetry}>

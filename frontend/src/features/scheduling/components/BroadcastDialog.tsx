@@ -70,10 +70,10 @@ export function BroadcastDialog({
             aria-invalid={errors.message ? true : undefined}
             {...register('message')}
           />
-          <p className="text-right text-xs text-slate-500">
+          <p className="text-right text-xs text-muted-foreground">
             {message.length}/{MAX_LENGTH}
           </p>
-          {errors.message && <p className="text-sm text-red-600">{errors.message.message}</p>}
+          {errors.message && <p className="text-sm text-danger">{errors.message.message}</p>}
         </div>
 
         {countError != null ? (
@@ -82,7 +82,7 @@ export function BroadcastDialog({
             onRetry={onRetryCount}
           />
         ) : (
-          <p className="text-sm font-medium text-slate-900">
+          <p className="text-sm font-medium text-foreground">
             {activeCount === undefined
               ? 'Contando os alunos ativos…'
               : `Enviar para ${activeCount} ${activeCount === 1 ? 'aluno ativo' : 'alunos ativos'}?`}
@@ -90,7 +90,7 @@ export function BroadcastDialog({
         )}
 
         {error != null && (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-danger">
             {apiMessage(error)}
           </p>
         )}

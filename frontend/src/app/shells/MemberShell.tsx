@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { useSessionUser } from '@/features/auth/components/RequireRole';
 import { useLogout } from '@/features/auth/session';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from '../ThemeToggle';
 
 /**
  * O professor tem uma tela só (a grade) e não ganha navegação: uma barra com
@@ -19,24 +20,27 @@ export function MemberShell() {
   const logout = useLogout();
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50">
-      <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
-        <span className="text-sm font-medium text-slate-700">{user.name}</span>
-        <Button variant="ghost" size="sm" onClick={() => logout.mutate()} disabled={logout.isPending}>
-          {logout.isPending ? 'Saindo…' : 'Sair'}
-        </Button>
+    <div className="flex min-h-screen flex-col bg-background">
+      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-card px-4 py-3">
+        <span className="text-sm font-medium text-foreground">{user.name}</span>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <Button variant="ghost" size="sm" onClick={() => logout.mutate()} disabled={logout.isPending}>
+            {logout.isPending ? 'Saindo…' : 'Sair'}
+          </Button>
+        </div>
       </header>
 
       {user.role === 'STUDENT' && (
-        <nav aria-label="Navegação principal" className="flex gap-1 border-b border-slate-200 bg-white px-2 py-2">
+        <nav aria-label="Navegação principal" className="flex gap-1 border-b border-border bg-card px-2 py-2">
           {STUDENT_NAV.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
                 cn(
-                  'rounded-md px-3 py-2 text-sm text-slate-700',
-                  isActive && 'bg-slate-100 font-medium text-slate-900',
+                  'rounded-md px-3 py-2 text-sm text-foreground',
+                  isActive && 'bg-accent font-medium text-foreground',
                 )
               }
             >

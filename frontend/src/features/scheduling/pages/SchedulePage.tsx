@@ -70,7 +70,7 @@ export function SchedulePage() {
 
   return (
     <section className="space-y-4">
-      <h1 className="text-xl font-semibold text-slate-900">Agenda</h1>
+      <h1 className="text-xl font-semibold text-foreground">Agenda</h1>
 
       <DayNavigator date={date} onChange={(next) => setSearchParams({ date: next })} />
 
@@ -78,17 +78,17 @@ export function SchedulePage() {
           tela não anuncia — ele observa mudanças em regiões que já existem. */}
       <div role="status" aria-live="polite">
         {toast && (
-          <span className="inline-block rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{toast}</span>
+          <span className="inline-block rounded-md bg-success-subtle px-3 py-2 text-sm text-success-emphasis">{toast}</span>
         )}
       </div>
 
-      {day.isPending && <p className="text-sm text-slate-500">Carregando a agenda…</p>}
+      {day.isPending && <p className="text-sm text-muted-foreground">Carregando a agenda…</p>}
 
-      {!day.isPending && day.isFetching && <p className="text-sm text-slate-400">Atualizando…</p>}
+      {!day.isPending && day.isFetching && <p className="text-sm text-muted-foreground">Atualizando…</p>}
 
       {day.isError && (
         <div className="space-y-2">
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-danger">
             {apiMessage(day.error)}
           </p>
           <Button variant="outline" size="sm" onClick={() => void day.refetch()}>
@@ -170,14 +170,14 @@ function DayBody({
    */
   if (day.announcement?.suspendsClasses) {
     return (
-      <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+      <p className="rounded-md border border-warning-emphasis/25 bg-warning-subtle px-3 py-2 text-sm text-warning-emphasis">
         Aulas suspensas: {day.announcement.description}.
       </p>
     );
   }
 
   const notice = day.announcement ? (
-    <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+    <p className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground">
       Comunicado: {day.announcement.description}.
     </p>
   ) : null;
@@ -188,7 +188,7 @@ function DayBody({
     return (
       <div className="space-y-4">
         {notice}
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-muted-foreground">
           {isWeekend(date) ? 'Sem aulas aos fins de semana.' : 'Nenhuma aula neste dia.'}
         </p>
       </div>

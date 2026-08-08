@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { useSessionUser } from '@/features/auth/components/RequireRole';
 import { useLogout } from '@/features/auth/session';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from '../ThemeToggle';
 
 const NAV_ITEMS = [
   { to: '/admin/schedule', label: 'Agenda' },
@@ -20,9 +21,9 @@ export function AdminShell() {
   const logout = useLogout();
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
-      <aside className="w-56 shrink-0 border-r border-slate-200 bg-white p-4">
-        <p className="mb-6 text-lg font-semibold text-slate-900">Tônus</p>
+    <div className="flex min-h-screen bg-background">
+      <aside className="flex w-56 shrink-0 flex-col border-r border-border bg-card p-4">
+        <p className="mb-6 text-lg font-semibold text-foreground">Tônus</p>
         <nav aria-label="Navegação principal" className="flex flex-col gap-1">
           {NAV_ITEMS.map((item) => (
             <NavLink
@@ -30,8 +31,8 @@ export function AdminShell() {
               to={item.to}
               className={({ isActive }) =>
                 cn(
-                  'rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-100',
-                  isActive && 'bg-slate-100 font-medium text-slate-900',
+                  'rounded-md px-3 py-2 text-sm text-foreground hover:bg-accent',
+                  isActive && 'bg-accent font-medium text-foreground',
                 )
               }
             >
@@ -39,11 +40,12 @@ export function AdminShell() {
             </NavLink>
           ))}
         </nav>
+        <ThemeToggle orientation="vertical" className="mt-auto" />
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-3">
-          <span className="text-sm text-slate-700">{user.name}</span>
+        <header className="flex items-center justify-between border-b border-border bg-card px-6 py-3">
+          <span className="text-sm text-foreground">{user.name}</span>
           <Button variant="outline" size="sm" onClick={() => logout.mutate()} disabled={logout.isPending}>
             {logout.isPending ? 'Saindo…' : 'Sair'}
           </Button>

@@ -57,21 +57,21 @@ export function DefaultScheduleFormDialog({
               </option>
             ))}
           </Select>
-          {errors.studentId && <p className="text-sm text-red-600">{errors.studentId.message}</p>}
+          {errors.studentId && <p className="text-sm text-danger">{errors.studentId.message}</p>}
         </div>
 
         <div className="space-y-1">
           <Label htmlFor="time">Hora</Label>
           <Input id="time" type="time" aria-invalid={errors.time ? true : undefined} {...register('time')} />
-          {errors.time && <p className="text-sm text-red-600">{errors.time.message}</p>}
+          {errors.time && <p className="text-sm text-danger">{errors.time.message}</p>}
         </div>
 
         {/* O horário vale de segunda a sexta: a expansão da agenda não gera aula
             em fim de semana, e a tela não deve sugerir que gera. */}
-        <p className="text-sm text-slate-600">A aula se repete de segunda a sexta, exceto em feriados.</p>
+        <p className="text-sm text-muted-foreground">A aula se repete de segunda a sexta, exceto em feriados.</p>
 
         {error != null && (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-danger">
             {apiMessage(error)}
           </p>
         )}

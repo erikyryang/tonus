@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { fileURLToPath, URL } from 'node:url';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
@@ -12,10 +13,23 @@ import { defineConfig } from 'vitest/config';
  * security headers (X-Frame-Options, Referrer-Policy) are handled by Caddy
  * in production — see docs/design-summary.md.
  */
+/**
+ * O script que aplica o tema antes do bundle precisa ser inline (senão pisca
+ * tema errado) e `script-src 'self'` bloqueia inline. Liberar por hash mantém
+ * a política estrita: só passa exatamente este conteúdo, e editá-lo sem
+ * rebuildar invalida o hash em vez de abrir a porta para qualquer inline.
+ */
+function inlineScriptHashes(html: string): string[] {
+  const inlineScript = /<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi;
+  return [...html.matchAll(inlineScript)].map(
+    ([, content]) => `'sha256-${createHash('sha256').update(content, 'utf8').digest('base64')}'`,
+  );
+}
+
 function cspMetaTag(): Plugin {
-  const policy = [
+  const policy = (html: string) => [
     "default-src 'self'",
-    "script-src 'self'",
+    ["script-src 'self'", ...inlineScriptHashes(html)].join(' '),
     "style-src 'self'",
     "img-src 'self' data:",
     "font-src 'self'",
@@ -31,7 +45,7 @@ function cspMetaTag(): Plugin {
     transformIndexHtml(html) {
       return html.replace(
         '<meta charset="UTF-8" />',
-        `<meta charset="UTF-8" />\n    <meta http-equiv="Content-Security-Policy" content="${policy}" />`,
+        `<meta charset="UTF-8" />\n    <meta http-equiv="Content-Security-Policy" content="${policy(html)}" />`,
       );
     },
   };

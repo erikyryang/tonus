@@ -54,7 +54,7 @@ export function InvoicesPage() {
 
   return (
     <section className="space-y-4">
-      <h1 className="text-xl font-semibold text-slate-900">Faturas</h1>
+      <h1 className="text-xl font-semibold text-foreground">Faturas</h1>
 
       <div role="group" aria-label="Filtrar por status" className="flex gap-2">
         {FILTERS.map((filter) => (
@@ -129,7 +129,7 @@ function InvoiceTable({
     <table className="w-full border-collapse text-sm">
       <caption className="sr-only">Faturas</caption>
       <thead>
-        <tr className="border-b border-slate-200 text-left text-slate-500">
+        <tr className="border-b border-border text-left text-muted-foreground">
           <th scope="col" className="px-3 py-2 font-medium">
             Aluno
           </th>
@@ -158,18 +158,18 @@ function InvoiceTable({
             // color alone is neither an assertion nor an accessible signal.
             data-status={invoice.status}
             className={cn(
-              'border-b border-slate-100',
-              invoice.status === 'OVERDUE' && 'bg-red-50',
+              'border-b border-border',
+              invoice.status === 'OVERDUE' && 'bg-danger-subtle/50',
             )}
           >
-            <td className="px-3 py-2 text-slate-900">{studentLabel(invoice)}</td>
+            <td className="px-3 py-2 text-foreground">{studentLabel(invoice)}</td>
             <td className="px-3 py-2">{formatReferenceMonth(invoice.referenceMonth)}</td>
             <td className="px-3 py-2">{formatMoney(invoice.amount)}</td>
             <td className="px-3 py-2">{formatDate(invoice.dueDate)}</td>
             <td className="px-3 py-2">
               <InvoiceStatusBadge status={invoice.status} />
               {invoice.paymentDate && (
-                <span className="ml-2 text-xs text-slate-500">pago em {formatDate(invoice.paymentDate)}</span>
+                <span className="ml-2 text-xs text-muted-foreground">pago em {formatDate(invoice.paymentDate)}</span>
               )}
             </td>
             <td className="px-3 py-2 text-right">

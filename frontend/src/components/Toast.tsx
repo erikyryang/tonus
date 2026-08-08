@@ -44,7 +44,7 @@ export function Toast({ message, serial }: { message: string | null; serial: num
       {message && (
         <span
           key={serial}
-          className="inline-block rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
+          className="inline-block rounded-md bg-success-subtle px-3 py-2 text-sm text-success-emphasis"
         >
           {message}
         </span>

@@ -53,7 +53,7 @@ export function AnnouncementsPage() {
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">Comunicados</h1>
+        <h1 className="text-xl font-semibold text-foreground">Comunicados</h1>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setPending({ kind: 'broadcast' })}>
             Enviar mensagem
@@ -75,7 +75,7 @@ export function AnnouncementsPage() {
           <table className="w-full border-collapse text-sm">
             <caption className="sr-only">Comunicados</caption>
             <thead>
-              <tr className="border-b border-slate-200 text-left text-slate-500">
+              <tr className="border-b border-border text-left text-muted-foreground">
                 <th scope="col" className="px-3 py-2 font-medium">
                   Data
                 </th>
@@ -92,19 +92,19 @@ export function AnnouncementsPage() {
             </thead>
             <tbody>
               {data.content.map((announcement) => (
-                <tr key={announcement.id} className="border-b border-slate-100">
-                  <td className="px-3 py-2 text-slate-900">{formatDate(announcement.date)}</td>
+                <tr key={announcement.id} className="border-b border-border">
+                  <td className="px-3 py-2 text-foreground">{formatDate(announcement.date)}</td>
                   <td className="px-3 py-2">{announcement.description}</td>
                   {/* O efeito é o que distingue um comunicado do outro na
                       lista: sem a coluna, "Recesso" e "Obra na rua" pareceriam
                       a mesma coisa, e uma delas apaga o dia. */}
                   <td className="px-3 py-2">
                     {announcement.suspendsClasses ? (
-                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-900">
+                      <span className="rounded-full bg-warning-subtle px-2 py-0.5 text-xs text-warning-emphasis">
                         Aulas suspensas
                       </span>
                     ) : (
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                         Aulas normais
                       </span>
                     )}

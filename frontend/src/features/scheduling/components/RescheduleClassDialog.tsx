@@ -55,7 +55,7 @@ export function RescheduleClassDialog({
   return (
     <Dialog title="Remarcar aula" onClose={onClose} busy={pending}>
       <form onSubmit={handleSubmit(onConfirm)} noValidate className="space-y-4">
-        <p className="text-sm text-slate-700">
+        <p className="text-sm text-foreground">
           Aula de <strong>{studentName}</strong> em {formatDate(date)}.
         </p>
 
@@ -68,19 +68,19 @@ export function RescheduleClassDialog({
             aria-invalid={errors.newDate ? true : undefined}
             {...register('newDate')}
           />
-          {errors.newDate && <p className="text-sm text-red-600">{errors.newDate.message}</p>}
+          {errors.newDate && <p className="text-sm text-danger">{errors.newDate.message}</p>}
         </div>
 
         <div className="space-y-1">
           <Label htmlFor="newTime">Nova hora</Label>
           <Input id="newTime" type="time" aria-invalid={errors.newTime ? true : undefined} {...register('newTime')} />
-          {errors.newTime && <p className="text-sm text-red-600">{errors.newTime.message}</p>}
+          {errors.newTime && <p className="text-sm text-danger">{errors.newTime.message}</p>}
         </div>
 
-        <p className="text-sm text-slate-500">O aluno será avisado por WhatsApp.</p>
+        <p className="text-sm text-muted-foreground">O aluno será avisado por WhatsApp.</p>
 
         {error != null && (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-danger">
             {apiMessage(error)}
           </p>
         )}

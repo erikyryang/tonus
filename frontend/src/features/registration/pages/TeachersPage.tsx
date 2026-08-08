@@ -52,7 +52,7 @@ export function TeachersPage() {
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">Professores</h1>
+        <h1 className="text-xl font-semibold text-foreground">Professores</h1>
         <Button onClick={() => setPending({ kind: 'create' })}>Novo professor</Button>
       </div>
 
@@ -75,7 +75,7 @@ export function TeachersPage() {
           <table className="w-full border-collapse text-sm">
             <caption className="sr-only">Professores</caption>
             <thead>
-              <tr className="border-b border-slate-200 text-left text-slate-500">
+              <tr className="border-b border-border text-left text-muted-foreground">
                 <th scope="col" className="px-3 py-2 font-medium">
                   Nome
                 </th>
@@ -92,8 +92,8 @@ export function TeachersPage() {
             </thead>
             <tbody>
               {data.content.map((teacher) => (
-                <tr key={teacher.id} data-active={teacher.active} className="border-b border-slate-100">
-                  <td className="px-3 py-2 text-slate-900">{teacher.name}</td>
+                <tr key={teacher.id} data-active={teacher.active} className="border-b border-border">
+                  <td className="px-3 py-2 text-foreground">{teacher.name}</td>
                   <td className="px-3 py-2">{teacher.phone}</td>
                   <td className="px-3 py-2">{teacher.active ? 'Ativo' : 'Inativo'}</td>
                   <td className="px-3 py-2 text-right">

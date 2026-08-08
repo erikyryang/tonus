@@ -1,12 +1,125 @@
 @import 'tailwindcss';
 
+/*
+ * Estratégia `class` do Tailwind v4 (o v4 configura no CSS, não em
+ * tailwind.config.js): o `dark:` passa a depender da classe no <html>, que o
+ * script inline do index.html aplica antes do bundle. Sem isto, `dark:`
+ * seguiria só o prefers-color-scheme e a escolha do usuário não valeria nada.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-overlay: var(--overlay);
+
+  /*
+   * Cores de estado. Cada uma tem três papéis, e é por isso que herdar a cor do
+   * tema claro não basta: `-subtle` é fundo de badge, `-emphasis` é o texto que
+   * vai em cima dele, e a versão sem sufixo é texto sobre o fundo da página.
+   * Vermelho de tema claro sobre fundo escuro perde contraste.
+   */
+  --color-danger: var(--danger);
+  --color-danger-subtle: var(--danger-subtle);
+  --color-danger-emphasis: var(--danger-emphasis);
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
+  --color-success-emphasis: var(--success-emphasis);
+  --color-warning: var(--warning);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-warning-emphasis: var(--warning-emphasis);
+}
+
+:root {
+  color-scheme: light;
+
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --muted: #f1f5f9;
+  /* slate-600, não slate-500: sobre `muted` o 500 dá 4.34:1 e perde o AA. */
+  --muted-foreground: #475569;
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+  --border: #e2e8f0;
+  --input: #cbd5e1;
+  --ring: #64748b;
+  --primary: #0f172a;
+  --primary-foreground: #f8fafc;
+  --overlay: rgb(15 23 42 / 0.4);
+
+  --danger: #dc2626;
+  --danger-subtle: #fee2e2;
+  --danger-emphasis: #991b1b;
+  --success: #047857;
+  --success-subtle: #ecfdf5;
+  --success-emphasis: #065f46;
+  --warning: #b45309;
+  --warning-subtle: #fef3c7;
+  --warning-emphasis: #92400e;
+}
+
+/*
+ * `color-scheme: dark` faz o navegador escurecer o que não é nosso: barra de
+ * rolagem, autofill e date picker nativo. Sem isso sobram retângulos brancos
+ * que nenhuma classe do Tailwind alcança.
+ */
+.dark {
+  color-scheme: dark;
+
+  --background: #020617;
+  --foreground: #f1f5f9;
+  --card: #0f172a;
+  --card-foreground: #f1f5f9;
+  /* Um degrau acima de `card`: menu aberto sobre um card precisa se separar. */
+  --popover: #1e293b;
+  --popover-foreground: #f1f5f9;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --accent: #1e293b;
+  --accent-foreground: #f1f5f9;
+  /* slate-700: o 800 some sobre o card e a borda deixa de existir. */
+  --border: #334155;
+  --input: #475569;
+  --ring: #94a3b8;
+  --primary: #f1f5f9;
+  --primary-foreground: #0f172a;
+  --overlay: rgb(2 6 23 / 0.7);
+
+  --danger: #f87171;
+  --danger-subtle: #450a0a;
+  --danger-emphasis: #fecaca;
+  --success: #34d399;
+  --success-subtle: #022c22;
+  --success-emphasis: #a7f3d0;
+  --warning: #fbbf24;
+  --warning-subtle: #451a03;
+  --warning-emphasis: #fde68a;
+}
+
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
   }
 
   body {
-    @apply bg-slate-50 text-slate-900 antialiased;
+    @apply bg-background text-foreground antialiased;
     font-family:
       system-ui,
       -apple-system,
@@ -17,6 +130,6 @@
 
   /* Foco visível é requisito de acessibilidade: nunca remover sem substituir. */
   :focus-visible {
-    @apply outline-2 outline-offset-2 outline-slate-500;
+    @apply outline-2 outline-offset-2 outline-ring;
   }
 }

@@ -117,7 +117,7 @@ export function StudentsPage() {
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">Alunos</h1>
+        <h1 className="text-xl font-semibold text-foreground">Alunos</h1>
         <Button onClick={() => setPending({ kind: 'create' })}>Novo aluno</Button>
       </div>
 
@@ -382,7 +382,7 @@ function StudentTable({
     <table className="w-full border-collapse text-sm">
       <caption className="sr-only">Alunos</caption>
       <thead>
-        <tr className="border-b border-slate-200 text-left text-slate-500">
+        <tr className="border-b border-border text-left text-muted-foreground">
           <th scope="col" className="px-3 py-2 font-medium">
             Nome
           </th>
@@ -408,8 +408,8 @@ function StudentTable({
       </thead>
       <tbody>
         {students.map((student) => (
-          <tr key={student.id} data-active={student.active} className="border-b border-slate-100">
-            <td className="px-3 py-2 text-slate-900">{student.name}</td>
+          <tr key={student.id} data-active={student.active} className="border-b border-border">
+            <td className="px-3 py-2 text-foreground">{student.name}</td>
             <td className="px-3 py-2">{student.phone}</td>
             {/* O back devolve só o id; o nome vem da lista de apoio. Enquanto
                 ela não chega, o id é melhor que célula em branco. */}

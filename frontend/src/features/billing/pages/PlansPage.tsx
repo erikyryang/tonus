@@ -56,7 +56,7 @@ export function PlansPage() {
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">Planos</h1>
+        <h1 className="text-xl font-semibold text-foreground">Planos</h1>
         <Button onClick={() => setPending({ kind: 'create' })}>Novo plano</Button>
       </div>
 
@@ -75,7 +75,7 @@ export function PlansPage() {
           <table className="w-full border-collapse text-sm">
             <caption className="sr-only">Planos</caption>
             <thead>
-              <tr className="border-b border-slate-200 text-left text-slate-500">
+              <tr className="border-b border-border text-left text-muted-foreground">
                 <th scope="col" className="px-3 py-2 font-medium">
                   Nome
                 </th>
@@ -95,8 +95,8 @@ export function PlansPage() {
             </thead>
             <tbody>
               {data.content.map((plan) => (
-                <tr key={plan.id} data-active={plan.active} className="border-b border-slate-100">
-                  <td className="px-3 py-2 text-slate-900">{plan.name}</td>
+                <tr key={plan.id} data-active={plan.active} className="border-b border-border">
+                  <td className="px-3 py-2 text-foreground">{plan.name}</td>
                   <td className="px-3 py-2">{formatMoney(plan.monthlyPrice)}</td>
                   <td className="px-3 py-2">{plan.activeEnrollments}</td>
                   <td className="px-3 py-2">{plan.active ? 'Ativo' : 'Inativo'}</td>

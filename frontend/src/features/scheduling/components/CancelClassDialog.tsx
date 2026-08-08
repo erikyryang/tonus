@@ -25,13 +25,13 @@ export function CancelClassDialog({
 }) {
   return (
     <Dialog title="Cancelar aula" onClose={onClose} busy={pending}>
-      <p className="text-sm text-slate-700">
+      <p className="text-sm text-foreground">
         Cancelar a aula de <strong>{studentName}</strong> em {formatDate(date)}?
       </p>
-      <p className="text-sm font-medium text-slate-900">O aluno será avisado por WhatsApp.</p>
+      <p className="text-sm font-medium text-foreground">O aluno será avisado por WhatsApp.</p>
 
       {error != null && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-danger">
           {apiMessage(error)}
         </p>
       )}

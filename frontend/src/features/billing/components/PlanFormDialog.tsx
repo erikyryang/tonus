@@ -67,7 +67,7 @@ export function PlanFormDialog({
         <div className="space-y-1">
           <Label htmlFor="name">Nome</Label>
           <Input id="name" aria-invalid={errors.name ? true : undefined} {...register('name')} />
-          {errors.name && <p className="text-sm text-red-600">{errors.name.message}</p>}
+          {errors.name && <p className="text-sm text-danger">{errors.name.message}</p>}
         </div>
 
         <div className="space-y-1">
@@ -79,17 +79,17 @@ export function PlanFormDialog({
             aria-invalid={errors.monthlyPrice ? true : undefined}
             {...register('monthlyPrice')}
           />
-          {errors.monthlyPrice && <p className="text-sm text-red-600">{errors.monthlyPrice.message}</p>}
+          {errors.monthlyPrice && <p className="text-sm text-danger">{errors.monthlyPrice.message}</p>}
         </div>
 
         {/* Changing the price doesn't rewrite an issued invoice: the charged value is a copy
             of what was in effect for that reference month (SPEC-012). */}
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted-foreground">
           O novo valor vale para as próximas faturas. As já emitidas mantêm o valor cobrado.
         </p>
 
         {error != null && (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-danger">
             {apiMessage(error)}
           </p>
         )}

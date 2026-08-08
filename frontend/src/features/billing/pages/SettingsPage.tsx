@@ -52,7 +52,7 @@ export function SettingsPage() {
 
   return (
     <section className="max-w-lg space-y-4">
-      <h1 className="text-xl font-semibold text-slate-900">Configuração de cobrança</h1>
+      <h1 className="text-xl font-semibold text-foreground">Configuração de cobrança</h1>
 
       <Toast message={toast.message} serial={toast.serial} />
 
@@ -78,16 +78,16 @@ export function SettingsPage() {
               {...register('multiPlanDiscountPercent')}
             />
             {errors.multiPlanDiscountPercent && (
-              <p className="text-sm text-red-600">{errors.multiPlanDiscountPercent.message}</p>
+              <p className="text-sm text-danger">{errors.multiPlanDiscountPercent.message}</p>
             )}
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-muted-foreground">
               Aplicado sobre a soma das mensalidades a partir do segundo plano do aluno. Com 0, cada plano é
               cobrado pelo valor cheio.
             </p>
           </div>
 
           {updateSettings.error != null && (
-            <p role="alert" className="text-sm text-red-600">
+            <p role="alert" className="text-sm text-danger">
               {apiMessage(updateSettings.error)}
             </p>
           )}

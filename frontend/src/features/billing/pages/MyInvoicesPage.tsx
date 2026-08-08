@@ -25,7 +25,7 @@ export function MyInvoicesPage() {
 
   return (
     <section className="space-y-4">
-      <h1 className="text-xl font-semibold text-slate-900">Minhas faturas</h1>
+      <h1 className="text-xl font-semibold text-foreground">Minhas faturas</h1>
 
       <ListFeedback
         state={invoices}
@@ -44,21 +44,21 @@ export function MyInvoicesPage() {
                 // is not an accessible signal.
                 data-status={invoice.status}
                 className={cn(
-                  'flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-4',
-                  invoice.status === 'OVERDUE' && 'border-red-200 bg-red-50',
+                  'flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card p-4',
+                  invoice.status === 'OVERDUE' && 'border-danger-emphasis/30 bg-danger-subtle/50',
                 )}
               >
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">
+                  <p className="text-sm font-semibold text-foreground">
                     {formatReferenceMonth(invoice.referenceMonth)}
                   </p>
-                  <p className="text-sm text-slate-600">vence em {formatDate(invoice.dueDate)}</p>
+                  <p className="text-sm text-muted-foreground">vence em {formatDate(invoice.dueDate)}</p>
                   {invoice.paymentDate && (
-                    <p className="text-xs text-slate-500">pago em {formatDate(invoice.paymentDate)}</p>
+                    <p className="text-xs text-muted-foreground">pago em {formatDate(invoice.paymentDate)}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-semibold text-slate-900">{formatMoney(invoice.amount)}</span>
+                  <span className="text-sm font-semibold text-foreground">{formatMoney(invoice.amount)}</span>
                   <InvoiceStatusBadge status={invoice.status} />
                 </div>
               </li>

@@ -43,7 +43,7 @@ export function TeacherFormDialog({
         <div className="space-y-1">
           <Label htmlFor="name">Nome</Label>
           <Input id="name" aria-invalid={errors.name ? true : undefined} {...register('name')} />
-          {errors.name && <p className="text-sm text-red-600">{errors.name.message}</p>}
+          {errors.name && <p className="text-sm text-danger">{errors.name.message}</p>}
         </div>
 
         <div className="space-y-1">
@@ -55,11 +55,11 @@ export function TeacherFormDialog({
             aria-invalid={errors.phone ? true : undefined}
             {...register('phone')}
           />
-          {errors.phone && <p className="text-sm text-red-600">{errors.phone.message}</p>}
+          {errors.phone && <p className="text-sm text-danger">{errors.phone.message}</p>}
         </div>
 
         {error != null && (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-danger">
             {apiMessage(error)}
           </p>
         )}
