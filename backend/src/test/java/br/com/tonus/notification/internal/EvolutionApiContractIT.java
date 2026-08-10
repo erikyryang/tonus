@@ -68,7 +68,23 @@ class EvolutionApiContractIT {
                             "postgresql://tonus:tonus@db:5432/evolution?schema=public")
                     .withEnv("CACHE_REDIS_ENABLED", "false")
                     .withEnv("CACHE_LOCAL_ENABLED", "true")
+                    // Not the compose value: here it's Testcontainers that maps
+                    // the port, and nothing renders the Manager UI.
                     .withEnv("SERVER_URL", "http://localhost:8080")
+                    .withEnv("CONFIG_SESSION_PHONE_VERSION", "2.3000.1043857760")
+                    .withEnv("CONFIG_SESSION_PHONE_CLIENT", "Tonus")
+                    .withEnv("CONFIG_SESSION_PHONE_NAME", "Chrome")
+                    .withEnv("QRCODE_LIMIT", "30")
+                    .withEnv("LANGUAGE", "pt-BR")
+                    .withEnv("DEL_INSTANCE", "false")
+                    .withEnv("WEBHOOK_GLOBAL_ENABLED", "false")
+                    .withEnv("TELEMETRY_ENABLED", "false")
+                    .withEnv("DATABASE_SAVE_DATA_INSTANCE", "true")
+                    .withEnv("DATABASE_SAVE_DATA_NEW_MESSAGE", "false")
+                    .withEnv("DATABASE_SAVE_MESSAGE_UPDATE", "false")
+                    .withEnv("DATABASE_SAVE_DATA_CONTACTS", "false")
+                    .withEnv("DATABASE_SAVE_DATA_CHATS", "false")
+                    .withEnv("DATABASE_SAVE_DATA_HISTORIC", "false")
                     .withExposedPorts(8080)
                     .waitingFor(Wait.forHttp("/").forStatusCode(200)
                             .withStartupTimeout(Duration.ofMinutes(5)));

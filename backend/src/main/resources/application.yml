@@ -1,6 +1,23 @@
 spring:
   application:
     name: tonus
+  config:
+    # The same .env that Compose already reads, so the file is one source of
+    # truth instead of two. Without this, `docker compose --profile whatsapp
+    # up -d` picks up EVOLUTION_* and `./mvnw spring-boot:run` does not:
+    # flipping NOTIFICATION_ENABLED=true in .env would configure the gateway
+    # and leave the application on LoggingWhatsAppSender, silently, with
+    # nothing in the log explaining why no message went out.
+    #
+    # [.properties] because the filename carries no extension and Boot has no
+    # other way to know the format. `optional:` because a fresh clone has no
+    # .env until someone copies .env.example, and the defaults below already
+    # cover development.
+    #
+    # Does NOT weaken the rule that secrets come from the environment: real
+    # environment variables outrank config files in Boot's precedence order,
+    # so production keeps overriding this — and .env is gitignored anyway.
+    import: "optional:file:.env[.properties]"
   # "Moments" is a Spring Modulith feature (day/week change events) that this
   # project doesn't use. It comes in transitively via
   # spring-modulith-starter-core and, in tests, breaks Clock resolution:

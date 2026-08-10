@@ -19,6 +19,15 @@ notification:
   # exercises it, and an unchecked job would delete a row in the middle of
   # another test.
   cleanup-cron: "0 0 3 1 1 *"
+  evolution:
+    # Pinned, not inherited. The application imports .env
+    # (spring.config.import in application.yml) and the suite runs with
+    # backend/ as the working directory, so a developer who turned WhatsApp
+    # on locally would otherwise drag NOTIFICATION_ENABLED=true into the
+    # tests: with an empty key the whole notification context fails to
+    # start, and with a real one the suite would carry credentials it has no
+    # business holding. The fake is RecordingWhatsAppSender.
+    enabled: false
 
 billing:
   # The daily job runs at 3am in production — and would run in the middle of

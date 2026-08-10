@@ -11,9 +11,8 @@ services:
     # interfaces (0.0.0.0, Compose's default) would expose Postgres with the
     # default password from .env.example to any host on the same network, or
     # to the whole internet if this compose file is reused on a machine with
-    # a public IP. Same reasoning applies to the evolution service below,
-    # which doesn't publish any port because it doesn't need to be reached
-    # from the host.
+    # a public IP. The evolution service below publishes its port the same
+    # way, and for a stronger reason — see the comment there.
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
@@ -26,17 +25,11 @@ services:
 
   # WhatsApp gateway (SPEC-005).
   #
-  # No `ports`: Evolution is NOT reachable from the host, only from inside
-  # the `tonus` network. Opening that port would expose to the internet an
-  # API that sends messages on the studio's behalf and holds the WhatsApp
-  # session — the session is a credential, and the volume below is what
-  # keeps it across restarts.
-  #
   # Gated behind a profile so `docker compose up -d db` still brings up just
   # the database, which is the development flow documented in CLAUDE.md. In
   # development NOTIFICATION_ENABLED=false and the app doesn't even look for
-  # it; starting this service only makes sense alongside the app on the same
-  # network.
+  # it; starting this service only makes sense when you're about to pair a
+  # session or exercise the sending path.
   #
   #   docker compose --profile whatsapp up -d
   evolution:
@@ -48,6 +41,20 @@ services:
     profiles:
       - whatsapp
     restart: unless-stopped
+    # 127.0.0.1 and never 0.0.0.0: this API sends messages on the studio's
+    # behalf and holds the WhatsApp session, which is a credential — the
+    # volume below is what keeps it across restarts. Published at all
+    # because two things need it from the host and neither can reach the
+    # compose network:
+    #   - the Evolution Manager (http://localhost:8081/manager) is a web page,
+    #     and creating the instance + reading the QR code happens there;
+    #   - the app itself, which the dev flow runs on the host, so
+    #     EVOLUTION_BASE_URL has to be http://localhost:8081 — the `evolution`
+    #     hostname only resolves inside the network.
+    # 8081 and not 8080 because the app already owns 8080 on the host
+    # (server.port in application.yml).
+    ports:
+      - "127.0.0.1:8081:8080"
     environment:
       # No `:?` on purpose: Compose interpolates the whole file before
       # looking at profiles, so the variant that requires the variable would
@@ -59,11 +66,57 @@ services:
       # Names checked against the product's own .env.example. The full set
       # is much bigger; this is just the minimum to run with Postgres and no
       # Redis — adding Redis would be new infra to discuss first.
-      SERVER_URL: http://evolution:8080
+      #
+      # The Manager's frontend runs in the host's browser and calls back into
+      # SERVER_URL, so it has to be the address the host can reach. With the
+      # in-network name the page loads and every request from it fails.
+      SERVER_URL: ${EVOLUTION_SERVER_URL:-http://localhost:8081}
       DATABASE_PROVIDER: postgresql
       DATABASE_CONNECTION_URI: postgresql://${DB_USER:-tonus}:${DB_PASSWORD:-tonus}@db:5432/evolution?schema=public
       CACHE_REDIS_ENABLED: "false"
       CACHE_LOCAL_ENABLED: "true"
+
+      # WhatsApp Web version used by Baileys, the engine underneath. Baileys
+      # pins a version in its own source; when that pin goes stale WhatsApp
+      # refuses the handshake and pairing dies with a 405 / "connection
+      # failure" — the QR simply never connects, with nothing in the log
+      # pointing at the cause. Overriding it here is the fix that doesn't
+      # require a new image. Current value from
+      # WhiskeySockets/Baileys → src/Defaults/baileys-version.json.
+      CONFIG_SESSION_PHONE_VERSION: ${WHATSAPP_VERSION:-2.3000.1043857760}
+      # What shows up under WhatsApp → Linked devices on the studio's phone.
+      # Worth naming: whoever looks at that list should recognize what they
+      # authorized.
+      CONFIG_SESSION_PHONE_CLIENT: Tonus
+      CONFIG_SESSION_PHONE_NAME: Chrome
+      # How many times the QR is regenerated before giving up during pairing.
+      QRCODE_LIMIT: "30"
+      LANGUAGE: pt-BR
+
+      # Losing the instance means losing the paired session — no automatic
+      # cleanup of an idle one.
+      DEL_INSTANCE: "false"
+      # Nothing consumes Evolution's webhooks here: the app talks to it, not
+      # the other way around.
+      WEBHOOK_GLOBAL_ENABLED: "false"
+      # No usage data about the studio going to a third party.
+      TELEMETRY_ENABLED: "false"
+
+      # By default Evolution persists message bodies, contacts, chats and
+      # history into the `evolution` database. CLAUDE.md forbids logging a
+      # full phone number or the content of a WhatsApp message, and a table
+      # is the same exposure with a longer shelf life — the studio's own
+      # notices are already in notification_log, and the students' replies
+      # are nobody's business here.
+      #
+      # INSTANCE stays on: that row IS the persisted session. Turning it off
+      # means scanning the QR code again after every restart.
+      DATABASE_SAVE_DATA_INSTANCE: "true"
+      DATABASE_SAVE_DATA_NEW_MESSAGE: "false"
+      DATABASE_SAVE_MESSAGE_UPDATE: "false"
+      DATABASE_SAVE_DATA_CONTACTS: "false"
+      DATABASE_SAVE_DATA_CHATS: "false"
+      DATABASE_SAVE_DATA_HISTORIC: "false"
     volumes:
       - tonus-evolution-instances:/evolution/instances
     depends_on:

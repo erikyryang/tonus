@@ -170,6 +170,36 @@ gotcha to know about: Safari refuses `Secure` cookies over HTTP even on
 `localhost` (Chrome and Firefox don't), so a `200` on `/auth/login` followed
 by a `401` on `/auth/me` in Safari means this, not a bug.
 
+### WhatsApp (optional)
+
+Not needed for day-to-day development: with `NOTIFICATION_ENABLED=false`
+notices go to the log and nobody's phone rings. Only worth doing when you
+need to see a real message go out.
+
+```bash
+cd backend
+# Fill EVOLUTION_API_KEY in .env first: openssl rand -hex 32
+docker compose --profile whatsapp up -d
+```
+
+Evolution is published on **`127.0.0.1:8081`** — 8081 because the API already
+owns 8080, loopback because whoever reaches it can send messages as the studio.
+Open the Manager at <http://localhost:8081/manager>, log in with the
+`EVOLUTION_API_KEY` from `.env`, create an instance named `tonus` (the value of
+`EVOLUTION_INSTANCE`), and scan the QR code with the studio's phone. It shows up
+under *WhatsApp → Linked devices* as "Tonus".
+
+Only then, to actually send: set `NOTIFICATION_ENABLED=true` in `.env` and
+restart the app. Both sides read that same file — Compose natively, the app
+through `spring.config.import` — so there's one place to edit and no way for
+the two to disagree about the API key. Real environment variables still win
+over it, which is how production stays env-only.
+
+If the QR code never connects (405, or "connection failure" in the Evolution
+log), the usual cause is a stale `WHATSAPP_VERSION`: bump it in `.env` to the
+value in [`baileys-version.json`](https://github.com/WhiskeySockets/Baileys/blob/master/src/Defaults/baileys-version.json)
+and recreate the container.
+
 ## Development users
 
 The first login can't come from the API itself — creating a user requires an
