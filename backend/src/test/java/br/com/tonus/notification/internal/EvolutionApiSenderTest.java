@@ -41,7 +41,7 @@ class EvolutionApiSenderTest {
     void setUp() {
         builder = RestClient.builder().baseUrl(BASE_URL);
         server = MockRestServiceServer.bindTo(builder).build();
-        sender = new EvolutionApiSender(builder.build(), API_KEY, INSTANCE);
+        sender = new EvolutionApiSender(builder.build(), API_KEY, () -> INSTANCE);
     }
 
     @Test
@@ -108,7 +108,7 @@ class EvolutionApiSenderTest {
     @Test
     void unreachableServerBecomesDeliveryException() {
         EvolutionApiSender offline = new EvolutionApiSender(
-                RestClient.builder().baseUrl("http://localhost:1").build(), API_KEY, INSTANCE);
+                RestClient.builder().baseUrl("http://localhost:1").build(), API_KEY, () -> INSTANCE);
 
         assertThatThrownBy(() -> offline.send("+5511988887777", "Oi"))
                 .isInstanceOf(WhatsAppDeliveryException.class);
@@ -135,6 +135,33 @@ class EvolutionApiSenderTest {
                 .andRespond(withSuccess());
 
         sender.send("+5511988887777", "Oi");
+
+        server.verify();
+    }
+
+    /**
+     * The instance is resolved at each send, not fixed at startup (SPEC-013).
+     *
+     * Without this the ADMIN's choice on the screen would be decorative: the
+     * setting would be saved, the status would show the new instance, and every
+     * message would keep going to whichever one the application booted with —
+     * an error nobody notices until a student says they got nothing.
+     */
+    @Test
+    void resolvesTheInstanceAtEachSend() {
+        java.util.concurrent.atomic.AtomicReference<String> chosen =
+                new java.util.concurrent.atomic.AtomicReference<>("primeira");
+        EvolutionApiSender resolving = new EvolutionApiSender(builder.build(), API_KEY, chosen::get);
+
+        // Both expectations up front: MockRestServiceServer refuses new ones
+        // once a request has been made. Ordered, so the second send matching
+        // "segunda" is exactly the assertion.
+        server.expect(requestTo(BASE_URL + "/message/sendText/primeira")).andRespond(withSuccess());
+        server.expect(requestTo(BASE_URL + "/message/sendText/segunda")).andRespond(withSuccess());
+
+        resolving.send("+5511988887777", "Oi");
+        chosen.set("segunda");
+        resolving.send("+5511988887777", "Oi");
 
         server.verify();
     }

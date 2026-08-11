@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { to: '/admin/plans', label: 'Planos' },
   { to: '/admin/invoices', label: 'Faturas' },
   { to: '/admin/settings', label: 'Configuração' },
+  { to: '/admin/whatsapp', label: 'WhatsApp' },
 ];
 
 export function AdminShell() {

@@ -28,7 +28,7 @@ public record NotificationProperties(
 
     public NotificationProperties {
         if (evolution == null) {
-            evolution = new Evolution(null, null, null, null, null, false);
+            evolution = new Evolution(null, null, null, null, null, null, null, false);
         }
         // Consecutive failures in a fan-out aren't bad luck, they're the
         // gateway being down. Five is loose enough to tolerate an isolated
@@ -60,8 +60,10 @@ public record NotificationProperties(
             String baseUrl,
             String apiKey,
             String instance,
+            String phoneVersion,
             Duration connectTimeout,
             Duration readTimeout,
+            Duration sessionReadTimeout,
             boolean enabled) {
 
         public Evolution {
@@ -75,6 +77,20 @@ public record NotificationProperties(
             }
             if (readTimeout == null) {
                 readTimeout = Duration.ofSeconds(10);
+            }
+            // Creating an instance and generating a QR code took seconds
+            // against the real Evolution, against a read-timeout dimensioned
+            // for sendText. Reusing the send timeout would turn ordinary
+            // pairing into a timeout.
+            if (sessionReadTimeout == null) {
+                sessionReadTimeout = Duration.ofSeconds(60);
+            }
+            // Displayed as "in effect", and it is best effort: it is what the
+            // APPLICATION was given, which equals the gateway's only if both
+            // started from the same .env. No Evolution endpoint reports the
+            // WhatsApp Web version actually in use.
+            if (phoneVersion == null) {
+                phoneVersion = "";
             }
         }
     }

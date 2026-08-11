@@ -28,7 +28,8 @@ class NotificationConfig {
      */
     @Bean
     @ConditionalOnProperty(prefix = "notification.evolution", name = "enabled", havingValue = "true")
-    WhatsAppSender evolutionApiSender(NotificationProperties properties) {
+    WhatsAppSender evolutionApiSender(NotificationProperties properties,
+            org.springframework.beans.factory.ObjectProvider<WhatsAppAdminService> admin) {
         NotificationProperties.Evolution evolution = properties.evolution();
         requireConfigured("notification.evolution.base-url", evolution.baseUrl());
         requireConfigured("notification.evolution.api-key", evolution.apiKey());
@@ -42,7 +43,14 @@ class NotificationConfig {
                 .requestFactory(requestFactory)
                 .build();
 
-        return new EvolutionApiSender(restClient, evolution.apiKey(), evolution.instance());
+        // Resolved per send, and lazily: the table is the authority (SPEC-013)
+        // and the configured instance is only the fallback for a context that
+        // has no settings — which is what keeps this @Configuration testable on
+        // its own, without dragging in a repository and a database.
+        return new EvolutionApiSender(restClient, evolution.apiKey(), () -> {
+            WhatsAppAdminService adminService = admin.getIfAvailable();
+            return adminService == null ? evolution.instance() : adminService.currentInstance();
+        });
     }
 
     @Bean
@@ -50,6 +58,35 @@ class NotificationConfig {
             havingValue = "false", matchIfMissing = true)
     WhatsAppSender loggingWhatsAppSender() {
         return new LoggingWhatsAppSender();
+    }
+
+    /**
+     * Administering the session does NOT depend on
+     * {@code notification.evolution.enabled}.
+     *
+     * Turning sending on is what one does *after* pairing. Gating the pairing
+     * path on that flag would leave no possible order of operations: no session
+     * without the flag, and no reason for the flag without a session. What it
+     * does depend on is having somewhere to talk to — without base-url and
+     * api-key the stand-in below answers 503.
+     */
+    @Bean
+    WhatsAppSessionGateway whatsAppSessionGateway(NotificationProperties properties) {
+        NotificationProperties.Evolution evolution = properties.evolution();
+        if (!StringUtils.hasText(evolution.baseUrl()) || !StringUtils.hasText(evolution.apiKey())) {
+            return new NotConfiguredSessionGateway();
+        }
+
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout((int) evolution.connectTimeout().toMillis());
+        requestFactory.setReadTimeout((int) evolution.sessionReadTimeout().toMillis());
+
+        return new EvolutionSessionGateway(
+                RestClient.builder()
+                        .baseUrl(evolution.baseUrl())
+                        .requestFactory(requestFactory)
+                        .build(),
+                evolution.apiKey());
     }
 
     private static void requireConfigured(String property, String value) {

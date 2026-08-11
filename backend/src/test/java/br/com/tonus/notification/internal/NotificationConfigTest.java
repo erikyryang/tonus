@@ -97,8 +97,8 @@ class NotificationConfigTest {
 
     private NotificationProperties properties(boolean enabled, String baseUrl, String apiKey) {
         return new NotificationProperties(
-                new Evolution(baseUrl, apiKey, "tonus",
-                        Duration.ofSeconds(3), Duration.ofSeconds(10), enabled),
+                new Evolution(baseUrl, apiKey, "tonus", "2.3000.1043857760",
+                        Duration.ofSeconds(3), Duration.ofSeconds(10), Duration.ofSeconds(60), enabled),
                 5, null);
     }
 }

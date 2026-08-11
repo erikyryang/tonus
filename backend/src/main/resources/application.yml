@@ -140,6 +140,11 @@ notification:
     base-url: ${EVOLUTION_BASE_URL:}
     api-key: ${EVOLUTION_API_KEY:}
     instance: ${EVOLUTION_INSTANCE:tonus}
+    # Only what the screen shows as "in effect" (SPEC-013). The value that
+    # actually governs pairing lives in the gateway's container, and no
+    # Evolution endpoint reports it — this is the same .env value the
+    # container was given, which is the closest the application can get.
+    phone-version: ${WHATSAPP_VERSION:}
     # Timeouts on both sides: without them, an Evolution instance that
     # accepts the connection and never responds hangs an async listener
     # forever.

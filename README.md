@@ -140,8 +140,15 @@ authenticated without permission is `403`.
 | `POST` | `/invoices/{id}/payment` | ADMIN | record a payment |
 | `GET` | `/me/invoices` | STUDENT | own invoices |
 
-`notification` exposes no endpoint — it only listens for events and talks to
-WhatsApp (Evolution API).
+`notification` listens for events and talks to WhatsApp (Evolution API). Since
+SPEC-013 it also exposes the gateway's administration to the ADMIN:
+
+| Method | Route | Who | What it does |
+|---|---|---|---|
+| `GET` | `/whatsapp/status` | ADMIN | instance, connection state, masked number, version |
+| `GET` | `/whatsapp/instances` | ADMIN | instances that exist in the gateway |
+| `PUT` | `/whatsapp/settings` | ADMIN | choose the instance and the desired version |
+| `POST` `DELETE` | `/whatsapp/session` | ADMIN | pair (QR code) and disconnect |
 
 ## Running locally
 
@@ -184,10 +191,15 @@ docker compose --profile whatsapp up -d
 
 Evolution is published on **`127.0.0.1:8081`** — 8081 because the API already
 owns 8080, loopback because whoever reaches it can send messages as the studio.
-Open the Manager at <http://localhost:8081/manager>, log in with the
-`EVOLUTION_API_KEY` from `.env`, create an instance named `tonus` (the value of
-`EVOLUTION_INSTANCE`), and scan the QR code with the studio's phone. It shows up
-under *WhatsApp → Linked devices* as "Tonus".
+
+Pairing is done in Tônus itself, at **`/admin/whatsapp`** (SPEC-013/014): pick
+the instance, read the QR code, scan it with the studio's phone. It shows up
+under *WhatsApp → Linked devices* as "Tonus". Nobody needs the gateway's API key
+to change the studio's WhatsApp number.
+
+The Evolution Manager at <http://localhost:8081/manager> — log in with
+`EVOLUTION_API_KEY` — is still there for what the product's own screen does not
+cover, like deleting an instance.
 
 Only then, to actually send: set `NOTIFICATION_ENABLED=true` in `.env` and
 restart the app. Both sides read that same file — Compose natively, the app

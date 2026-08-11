@@ -1,5 +1,6 @@
 package br.com.tonus.notification.internal;
 
+import java.util.function.Supplier;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
@@ -15,9 +16,15 @@ class EvolutionApiSender implements WhatsAppSender {
 
     private final RestClient restClient;
     private final String apiKey;
-    private final String instance;
+    /**
+     * Resolved at each send, not fixed at construction: the instance is a
+     * setting the ADMIN edits (SPEC-013), and freezing it at startup would
+     * make that choice decorative — every message would keep going to
+     * whichever instance the application booted with.
+     */
+    private final Supplier<String> instance;
 
-    EvolutionApiSender(RestClient restClient, String apiKey, String instance) {
+    EvolutionApiSender(RestClient restClient, String apiKey, Supplier<String> instance) {
         this.restClient = restClient;
         this.apiKey = apiKey;
         this.instance = instance;
@@ -27,7 +34,7 @@ class EvolutionApiSender implements WhatsAppSender {
     public void send(String phone, String message) {
         try {
             restClient.post()
-                    .uri("/message/sendText/{instance}", instance)
+                    .uri("/message/sendText/{instance}", instance.get())
                     .header("apikey", apiKey)
                     .body(new SendTextRequest(digitsOf(phone), message))
                     .retrieve()

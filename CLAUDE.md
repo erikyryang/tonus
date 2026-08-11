@@ -67,7 +67,9 @@ PostgreSQL, Flyway, Testcontainers, ShedLock, Maven.
 ## Conventions
 - A DTO is never a JPA entity. REST DTO (internal/web) ≠ facade record.
   Mapping via static method on the record (no MapStruct for now).
-- Errors: RFC 9457 Problem Details via global handler in shared.
+- Errors: RFC 9457 Problem Details via global handler in shared. An
+  upstream service that is down is 502 and a missing configuration is
+  503 — 500 sends someone hunting a bug that isn't ours.
 - STUDENT/TEACHER endpoints follow the /me/... pattern — id extracted from the
   token, NEVER from the path or query (prevents IDOR).
 - Listings are always paginated.
@@ -79,7 +81,11 @@ PostgreSQL, Flyway, Testcontainers, ShedLock, Maven.
 - Secrets only via environment variables (.env outside git,
   .env.example versioned).
 - Never log the full phone number nor the content of a WhatsApp message.
-- Changes to invoice.status and default_schedule generate an audit record.
+- Changes to invoice.status, default_schedule and whatsapp_settings
+  generate an audit record.
+- Config that a test must not inherit from a developer's .env is pinned
+  in application-test.yml — the app imports .env and the suite runs from
+  backend/, so anything unpinned is whatever that machine happens to have.
 
 ## Tests
 - Integration with Testcontainers (real Postgres). H2 is FORBIDDEN —
@@ -138,5 +144,5 @@ If it is not clear whether the request is "minimum to pass the tests" or
   integration test.
 - Do not create code, pom.xml or configuration outside backend/
   (except docs/ and root files like .gitignore).
-- Do not create the frontend/ folder nor any frontend code
-  in this phase — backend only.
+- Do not call an Evolution route from outside the notification
+  module — the session gateway is a port there, like the sender.

@@ -126,7 +126,7 @@ class EvolutionApiContractIT {
     @Test
     void adapterReachesTheRealSendTextRoute() {
         EvolutionApiSender sender = new EvolutionApiSender(
-                RestClient.builder().baseUrl(baseUrl).build(), API_KEY, "instancia-que-nao-existe");
+                RestClient.builder().baseUrl(baseUrl).build(), API_KEY, () -> "instancia-que-nao-existe");
 
         assertThatThrownBy(() -> sender.send("+5511988887777", "Oi"))
                 .isInstanceOf(WhatsAppDeliveryException.class)
@@ -167,7 +167,7 @@ class EvolutionApiContractIT {
     @Test
     void adapterTurnsARealFailureIntoDeliveryException() {
         EvolutionApiSender sender = new EvolutionApiSender(
-                RestClient.builder().baseUrl(baseUrl).build(), API_KEY, INSTANCE);
+                RestClient.builder().baseUrl(baseUrl).build(), API_KEY, () -> INSTANCE);
 
         assertThatThrownBy(() -> sender.send("+5511988887777", "Sua aula foi cancelada."))
                 .isInstanceOf(WhatsAppDeliveryException.class);
@@ -177,7 +177,7 @@ class EvolutionApiContractIT {
     @Test
     void wrongApiKeyAlsoBecomesDeliveryException() {
         EvolutionApiSender sender = new EvolutionApiSender(
-                RestClient.builder().baseUrl(baseUrl).build(), "chave-errada", INSTANCE);
+                RestClient.builder().baseUrl(baseUrl).build(), "chave-errada", () -> INSTANCE);
 
         assertThatThrownBy(() -> sender.send("+5511988887777", "Oi"))
                 .isInstanceOf(WhatsAppDeliveryException.class);

@@ -72,6 +72,11 @@ public class SecurityConfig {
                         .requestMatchers("/subscriptions/**", "/invoices/**", "/plans/**",
                                 "/plan-enrollments/**", "/billing-settings").hasRole("ADMIN")
 
+                        // WhatsApp gateway: the session belongs to the studio,
+                        // not to a role that has students. A teacher who could
+                        // disconnect it would silence every notice.
+                        .requestMatchers("/whatsapp/**").hasRole("ADMIN")
+
                         // /auth/me and whatever else exists: requires a session,
                         // without choosing a role. Same rule as before this change —
                         // a new endpoint is still born authenticated, and it's the

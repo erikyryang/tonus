@@ -8,6 +8,7 @@ import { InvoicesPage } from '@/features/billing/pages/InvoicesPage';
 import { MyInvoicesPage } from '@/features/billing/pages/MyInvoicesPage';
 import { PlansPage } from '@/features/billing/pages/PlansPage';
 import { SettingsPage } from '@/features/billing/pages/SettingsPage';
+import { WhatsAppPage } from '@/features/notification/pages/WhatsAppPage';
 import { StudentsPage } from '@/features/registration/pages/StudentsPage';
 import { TeachersPage } from '@/features/registration/pages/TeachersPage';
 import { DefaultSchedulesPage } from '@/features/scheduling/pages/DefaultSchedulesPage';
@@ -38,6 +39,7 @@ export function AppRoutes() {
             <Route path="plans" element={<PlansPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="invoices" element={<InvoicesPage />} />
+            <Route path="whatsapp" element={<WhatsAppPage />} />
           </Route>
         </Route>
 

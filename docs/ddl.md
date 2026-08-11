@@ -44,6 +44,7 @@ Toda mudança entra como migration nova; migration aplicada não se edita.
 | V022 | billing | `DROP TABLE subscription` |
 | V023 | notification | template `BROADCAST` no CHECK de `notification_log` (mudança 9) |
 | V024 | shared | `event_publication.{status,last_resubmission_date,completion_attempts}` (Spring Modulith 2.x) |
+| V025 | notification | `whatsapp_settings` (SPEC-013) |
 
 ---
 
@@ -313,3 +314,31 @@ timestamps.
   7 dias, porque as duas configurações moram em módulos diferentes e nada
   mais as relaciona.
 
+---
+
+## `whatsapp_settings` (notification)
+
+`id`, `instance_name`, `desired_phone_version`, timestamps.
+
+- **`ck_whatsapp_settings_singleton CHECK (id = 1)`** — linha única por
+  constraint, não por convenção, mesmo raciocínio de `billing_settings`. Aqui a
+  resposta ambígua seria pior: "qual instância vale?" decide para onde vai toda
+  mensagem para todo aluno, e "a que o LIMIT 1 pegou" não é resposta.
+- `ck_whatsapp_settings_instance CHECK (length(trim(instance_name)) > 0)` —
+  instância em branco faria o adapter montar `/message/sendText/` e receber um
+  404 de rota, que se parece com bug do produto e não com configuração vazia.
+- **`instance_name` tem precedência sobre `EVOLUTION_INSTANCE`.** A
+  configuração é só a semente da migration; a tabela é a autoridade a partir
+  daí. Sem isso a tela ofereceria uma escolha que o envio ignora — e o
+  `EvolutionApiSender` resolve a instância a cada envio justamente por causa
+  disso, em vez de fixá-la na subida.
+- **`desired_phone_version` é intenção, não estado.** A versão que governa o
+  pareamento é variável de ambiente do container da Evolution, e nenhum
+  endpoint dela devolve a que está em uso. A coluna guarda o que o ADMIN quer;
+  a API compara com o que a *aplicação* recebeu e marca `pending` quando
+  divergem. Aplicar continua sendo recriar o container.
+- **`@Audited`**. Trocar instância ou versão muda por onde e como o estúdio
+  fala com todos os alunos — mesma classe de mudança que `invoice.status` e
+  `default_schedule`. É também por isso que a entidade estende `BaseEntity`,
+  ao contrário de `BillingSettings`: o listener de auditoria lê o id por ali e
+  registraria `unknown` para qualquer outra coisa.

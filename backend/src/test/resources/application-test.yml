@@ -20,6 +20,14 @@ notification:
   # another test.
   cleanup-cron: "0 0 3 1 1 *"
   evolution:
+    # Pinned to empty, not inherited. Same reason as `enabled` below, and this
+    # pair is the sharper edge: with a base-url and a key leaking in from a
+    # developer's .env, the session endpoints build the REAL adapter and the
+    # suite starts talking to whatever Evolution happens to be running on that
+    # machine. It was caught by WhatsAppNotConfiguredIT answering 200 where it
+    # asserts 503.
+    base-url: ""
+    api-key: ""
     # Pinned, not inherited. The application imports .env
     # (spring.config.import in application.yml) and the suite runs with
     # backend/ as the working directory, so a developer who turned WhatsApp
