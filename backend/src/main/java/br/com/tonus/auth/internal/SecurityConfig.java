@@ -82,9 +82,18 @@ public class SecurityConfig {
                         // a new endpoint is still born authenticated, and it's the
                         // line above that needs to gain the exception.
                         .anyRequest().authenticated())
-                // Not authenticated is 401; authenticated without permission stays 403.
+                // Not authenticated is 401; authenticated without permission is 403.
+                //
+                // Both handlers write the response themselves instead of calling
+                // sendError. That is not style: sendError makes the container
+                // re-dispatch to /error, the chain filters ERROR dispatches too,
+                // and the stateless context is gone by then — so the 403 came
+                // back as 401. Covered by AuthorizationStatusIT, which runs on a
+                // real container because MockMvc does not re-dispatch and
+                // therefore never saw it.
                 .exceptionHandling(handling -> handling
-                        .authenticationEntryPoint(new ProblemAuthenticationEntryPoint(objectMapper)))
+                        .authenticationEntryPoint(new ProblemAuthenticationEntryPoint(objectMapper))
+                        .accessDeniedHandler(new ProblemAccessDeniedHandler(objectMapper)))
                 .addFilterBefore(new JwtAuthenticationFilter(jwtService), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

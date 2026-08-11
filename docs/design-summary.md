@@ -133,6 +133,17 @@ erro, WhatsApp, label — continua em português.
   constrói nenhuma URL a partir do request (todo `Location` é caminho
   relativo montado à mão), então o que um `X-Forwarded-*` forjado alcança é
   só o `Secure` do cookie — e forjá-lo o deixaria mais restrito, não menos.
+- **401 e 403 são escritos direto na resposta, nunca por `sendError`.** O
+  handler padrão do Spring Security chama `response.sendError(403)`, o
+  container redespacha para `/error`, a cadeia de segurança também filtra
+  dispatches ERROR, e nesse ponto o contexto stateless já não existe — o 401 do
+  entry point substituía o 403 já decidido. A aplicação anunciava 403 no README
+  e afirmava 403 em todo teste, e respondia 401 a todo cliente real. Não é
+  cosmético: pela regra do front, 401 dispara refresh, retry e logout, então
+  cair numa rota de outro papel deslogava o usuário em vez de dizer que faltava
+  permissão. O defeito atravessou porque a suíte inteira é MockMvc, que não faz
+  o redespacho — `AuthorizationStatusIT` roda em container real justamente por
+  isso, e é o único teste do projeto que não confia no MockMvc.
 - Refresh token rotacionado a cada uso; reuso de token já usado revoga a família
   inteira. É assim que se detecta token roubado.
 - Endpoints de aluno/professor no padrão `/me/...`, com id vindo do token e
