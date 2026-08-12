@@ -14,10 +14,21 @@ spring:
     # .env until someone copies .env.example, and the defaults below already
     # cover development.
     #
+    # TWO paths because the file is resolved against the working directory,
+    # and the application is launched from two different ones: `.env` when it
+    # is `cd backend && ./mvnw spring-boot:run` as the README documents, and
+    # `backend/.env` when an IDE run configuration uses the repository root —
+    # which IntelliJ does by default. Exactly one of them ever exists, so
+    # there is no precedence question. With only the first, launching from the
+    # IDE silently found nothing, EVOLUTION_* stayed empty, and the WhatsApp
+    # screen reported the gateway as unconfigured — `optional:` makes that
+    # failure quiet by design, which is right for a missing .env and
+    # misleading for a wrong directory.
+    #
     # Does NOT weaken the rule that secrets come from the environment: real
     # environment variables outrank config files in Boot's precedence order,
     # so production keeps overriding this — and .env is gitignored anyway.
-    import: "optional:file:.env[.properties]"
+    import: "optional:file:.env[.properties],optional:file:backend/.env[.properties]"
   # "Moments" is a Spring Modulith feature (day/week change events) that this
   # project doesn't use. It comes in transitively via
   # spring-modulith-starter-core and, in tests, breaks Clock resolution:
