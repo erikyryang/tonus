@@ -21,8 +21,7 @@ notification  → shared, registration, scheduling, billing
 ```
 
 Declarado em `@ApplicationModule(allowedDependencies = ...)` de cada
-`package-info.java`. `scheduling` (SPEC-003) e `billing` (SPEC-004) já estão
-no ar; `notification` (SPEC-005) ainda não existe como código.
+`package-info.java`.
 
 **Isso é verificado, não combinado.** Cada módulo declara
 `@ApplicationModule(allowedDependencies = ...)` no seu `package-info.java`, e
@@ -46,17 +45,17 @@ Descartadas:
   mas acoplaria os módulos no schema de um jeito invisível ao
   `ApplicationModules.verify()` — coupling sem guarda.
 - **Inverter a posse** (`student.user_id → users.id`): arquiteturalmente mais
-  limpo, `auth` ficaria puro. Custo alto agora: refatoraria o schema da SPEC-001
-  e o caminho token→aluno que os endpoints `/me` vão usar. Continua sendo a
+  limpo, `auth` ficaria puro. Custo alto agora: refatoraria o schema de
+  `auth` e `registration` e o caminho token→aluno que os endpoints `/me` usam. Continua sendo a
   melhor saída se `auth` um dia precisar existir sem `registration`.
 
 ### Por que `notification` depende de `scheduling` e `billing`
 
 Consumir evento **é** dependência de compilação. O listener recebe
 `ClassCanceled`, e esse record mora na raiz do `scheduling`; não existe jeito
-de escutar sem referenciar o tipo. A lista `{shared, registration}` que a
-SPEC-005 previa foi recusada pelo `ArchitectureTest` nomeando as seis
-referências — descoberto na implementação, não no desenho.
+de escutar sem referenciar o tipo. A lista `{shared, registration}` prevista
+no desenho foi recusada pelo `ArchitectureTest` nomeando as seis referências —
+descoberto na implementação, não no desenho.
 
 Vale registrar o que a aresta **não** significa: o acoplamento em tempo de
 execução continua assíncrono e num sentido só. `notification` nunca chama
