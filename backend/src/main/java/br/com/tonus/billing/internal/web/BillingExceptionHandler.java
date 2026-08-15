@@ -18,8 +18,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
         InvoiceController.class,
         MyInvoicesController.class,
         PlanController.class,
-        PlanEnrollmentController.class,
-        BillingSettingsController.class})
+        PlanEnrollmentController.class})
 class BillingExceptionHandler {
 
     @ExceptionHandler({InvoiceNotFoundException.class,

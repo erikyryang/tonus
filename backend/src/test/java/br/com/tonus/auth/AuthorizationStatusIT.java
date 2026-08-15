@@ -83,7 +83,7 @@ class AuthorizationStatusIT {
     @Test
     void authenticatedWithoutPermissionIs403() throws Exception {
         assertThat(statusOf("/plans", teacherCookie)).isEqualTo(403);
-        assertThat(statusOf("/billing-settings", teacherCookie)).isEqualTo(403);
+        assertThat(statusOf("/students", teacherCookie)).isEqualTo(403);
         assertThat(statusOf("/whatsapp/status", teacherCookie)).isEqualTo(403);
     }
 

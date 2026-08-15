@@ -141,14 +141,15 @@ class InvoiceFromPlansIT extends AbstractBillingIntegrationTest {
         return createStudent(unique(name), createTeacher(unique("Professor De " + name)));
     }
 
-    private void setDiscount(String percent) throws Exception {
-        mockMvc.perform(put("/billing-settings")
-                        .cookie(admin)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"multiPlanDiscountPercent":"%s"}
-                                """.formatted(percent)))
-                .andExpect(status().isOk());
+    /**
+     * Seeded by SQL: the endpoint that used to set this was removed along with
+     * the configuration screen. What is under test here is the invoice math,
+     * and it never depended on how the value got into the row.
+     */
+    private void setDiscount(String percent) {
+        jdbcTemplate.update(
+                "UPDATE billing_settings SET multi_plan_discount_percent = ?::numeric, updated_at = now() WHERE id = 1",
+                percent);
     }
 
     private BigDecimal amountOf(long studentId) {

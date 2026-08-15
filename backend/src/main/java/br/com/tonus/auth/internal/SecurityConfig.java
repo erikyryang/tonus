@@ -70,7 +70,7 @@ public class SecurityConfig {
 
                         // Billing.
                         .requestMatchers("/subscriptions/**", "/invoices/**", "/plans/**",
-                                "/plan-enrollments/**", "/billing-settings").hasRole("ADMIN")
+                                "/plan-enrollments/**").hasRole("ADMIN")
 
                         // WhatsApp gateway: the session belongs to the studio,
                         // not to a role that has students. A teacher who could

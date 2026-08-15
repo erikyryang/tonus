@@ -1,6 +1,5 @@
 import { http, HttpResponse } from 'msw';
 import type {
-  BillingSettings,
   Invoice,
   Plan,
   PlanEnrollment,
@@ -137,22 +136,6 @@ export function setEnrollmentActiveOk(onRequest?: (id: number, active: boolean) 
       return HttpResponse.json(enrollment({ id: Number(params.id), planId: 1, active: false }));
     }),
   ];
-}
-
-export function billingSettings(multiPlanDiscountPercent = 0): BillingSettings {
-  return { multiPlanDiscountPercent };
-}
-
-export function settingsHandler(resolve: () => BillingSettings) {
-  return http.get('/api/billing-settings', () => HttpResponse.json(resolve()));
-}
-
-export function updateSettingsOk(onRequest?: (body: BillingSettings) => void) {
-  return http.put('/api/billing-settings', async ({ request }) => {
-    const body = (await request.json()) as BillingSettings;
-    onRequest?.(body);
-    return HttpResponse.json(body);
-  });
 }
 
 /**

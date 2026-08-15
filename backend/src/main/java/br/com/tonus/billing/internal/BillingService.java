@@ -160,17 +160,13 @@ public class BillingService {
     // ---------------------------------------------------------- configuration
 
     @Transactional(readOnly = true)
-    public BillingSettings findSettings() {
-        return requireSettings();
-    }
-
-    @Transactional
-    public BillingSettings updateSettings(BigDecimal multiPlanDiscountPercent) {
-        BillingSettings settings = requireSettings();
-        settings.update(multiPlanDiscountPercent);
-        return billingSettingsRepository.save(settings);
-    }
-
+    /**
+     * The multi-plan discount, read only for the invoice calculation.
+     *
+     * There is no longer a way to change it through the API: the configuration
+     * screen was removed and both /billing-settings verbs went with it. The row
+     * still governs billing, and whoever needs another value edits the table.
+     */
     private BillingSettings requireSettings() {
         return billingSettingsRepository.findById(BillingSettings.SINGLETON_ID)
                 .orElseThrow(() -> new IllegalStateException(

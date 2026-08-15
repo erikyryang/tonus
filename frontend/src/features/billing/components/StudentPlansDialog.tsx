@@ -20,7 +20,6 @@ export function StudentPlansDialog({
   studentName,
   plans,
   enrollments,
-  discountPercent,
   pending,
   error,
   onToggle,
@@ -31,8 +30,6 @@ export function StudentPlansDialog({
   /** Only the active ones: enrolling in a deactivated plan wouldn't generate billing. */
   plans: Plan[];
   enrollments: PlanEnrollment[] | undefined;
-  /** Studio configuration; absent while the query hasn't responded. */
-  discountPercent: number | undefined;
   pending: boolean;
   error: unknown;
   onToggle: (plan: Plan, enrollment: PlanEnrollment | undefined) => void;
@@ -41,7 +38,6 @@ export function StudentPlansDialog({
   onClose: () => void;
 }) {
   const byPlan = new Map((enrollments ?? []).map((enrollment) => [enrollment.planId, enrollment]));
-  const activeCount = (enrollments ?? []).filter((enrollment) => enrollment.active).length;
 
   return (
     <Dialog title={`Planos de ${studentName}`} onClose={onClose} busy={pending}>
@@ -84,19 +80,6 @@ export function StudentPlansDialog({
               );
             })}
           </ul>
-        )}
-
-        {/*
-          * The configured discount appears as information, and the total is NOT
-          * computed here: the invoice value is the back's rule (sum, discount and
-          * rounding just once on the total), and recomputing it on the screen would create
-          * a second truth that diverges at the first cent. When the projected value
-          * is actually needed, the back is the one who should answer it.
-          */}
-        {activeCount > 1 && discountPercent !== undefined && discountPercent > 0 && (
-          <p className="text-sm text-foreground">
-            Com {activeCount} planos, a fatura sai com {discountPercent}% de desconto sobre a soma.
-          </p>
         )}
 
         <p className="text-sm text-muted-foreground">

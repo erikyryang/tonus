@@ -1,12 +1,10 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isConflict } from '@/lib/apiError';
 import {
-  type BillingSettings,
   type InvoiceQuery,
   type PlanInput,
   type PlanQuery,
   billingApi,
-  billingSettingsKey,
   enrollmentsKey,
   invoicesKey,
   myInvoicesKey,
@@ -147,21 +145,6 @@ export function useSetEnrollmentActive() {
     mutationFn: ({ id, active }: { id: number; active: boolean }) =>
       active ? billingApi.activateEnrollment(id) : billingApi.deactivateEnrollment(id),
     onSuccess: invalidate,
-  });
-}
-
-export function useBillingSettings() {
-  return useQuery({
-    queryKey: billingSettingsKey,
-    queryFn: () => billingApi.settings(),
-  });
-}
-
-export function useUpdateBillingSettings() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (input: BillingSettings) => billingApi.updateSettings(input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: billingSettingsKey }),
   });
 }
 

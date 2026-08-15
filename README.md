@@ -134,7 +134,6 @@ authenticated without permission is `403`.
 | `PATCH /{id}/activate` `.../deactivate` | `/plans` | ADMIN | toggle a plan |
 | `POST` `GET` | `/plan-enrollments` | ADMIN | enroll a student |
 | `PATCH /{id}/activate` `.../deactivate` | `/plan-enrollments` | ADMIN | toggle an enrollment |
-| `GET` `PUT` | `/billing-settings` | ADMIN | multi-plan discount |
 | `GET` | `/invoices` | ADMIN | listing |
 | `GET` | `/invoices/overdue-student-ids` | ADMIN | who's behind |
 | `POST` | `/invoices/{id}/payment` | ADMIN | record a payment |

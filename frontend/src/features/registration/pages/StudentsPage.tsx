@@ -15,7 +15,6 @@ import { useAccessOfStudents, useActivateAccess, useCreateStudentAccess } from '
 import { CreateAccessDialog } from '@/features/auth/components/CreateAccessDialog';
 import type { Plan, PlanEnrollment } from '@/features/billing/api/billingApi';
 import {
-  useBillingSettings,
   useEnroll,
   useEnrollmentsOfStudent,
   useOverdueStudentIds,
@@ -85,7 +84,6 @@ export function StudentsPage() {
   const enrollments = useEnrollmentsOfStudent(planStudentId);
   const enroll = useEnroll();
   const setEnrollmentActive = useSetEnrollmentActive();
-  const billingSettings = useBillingSettings();
 
   const createStudent = useCreateStudent();
   const updateStudent = useUpdateStudent();
@@ -275,7 +273,6 @@ export function StudentsPage() {
           studentName={pending.student.name}
           plans={(plans.data ?? []).filter((plan: Plan) => plan.active)}
           enrollments={enrollments.data}
-          discountPercent={billingSettings.data?.multiPlanDiscountPercent}
           pending={enroll.isPending || setEnrollmentActive.isPending}
           error={enroll.error ?? setEnrollmentActive.error}
           onClose={closeDialog}

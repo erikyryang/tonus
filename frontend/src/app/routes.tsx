@@ -7,7 +7,6 @@ import { destinationFor, useSessionState } from '@/features/auth/session';
 import { InvoicesPage } from '@/features/billing/pages/InvoicesPage';
 import { MyInvoicesPage } from '@/features/billing/pages/MyInvoicesPage';
 import { PlansPage } from '@/features/billing/pages/PlansPage';
-import { SettingsPage } from '@/features/billing/pages/SettingsPage';
 import { WhatsAppPage } from '@/features/notification/pages/WhatsAppPage';
 import { StudentsPage } from '@/features/registration/pages/StudentsPage';
 import { TeachersPage } from '@/features/registration/pages/TeachersPage';
@@ -37,7 +36,6 @@ export function AppRoutes() {
             <Route path="default-schedules" element={<DefaultSchedulesPage />} />
             <Route path="announcements" element={<AnnouncementsPage />} />
             <Route path="plans" element={<PlansPage />} />
-            <Route path="settings" element={<SettingsPage />} />
             <Route path="invoices" element={<InvoicesPage />} />
             <Route path="whatsapp" element={<WhatsAppPage />} />
           </Route>

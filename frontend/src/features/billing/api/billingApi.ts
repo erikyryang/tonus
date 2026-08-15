@@ -83,13 +83,6 @@ export const enrollmentsKey = (studentId?: number) =>
     ? (['billing', 'plan-enrollments'] as const)
     : (['billing', 'plan-enrollments', studentId] as const);
 
-/** The studio's configuration: one row, one field. */
-export interface BillingSettings {
-  multiPlanDiscountPercent: number;
-}
-
-export const billingSettingsKey = ['billing', 'settings'] as const;
-
 export const myInvoicesKey = (page: number) => ['billing', 'me', 'invoices', page] as const;
 
 /**
@@ -124,9 +117,6 @@ export const billingApi = {
     apiClient.post<PlanEnrollment>('/plan-enrollments', { studentId, planId }),
   activateEnrollment: (id: number) => apiClient.patch<PlanEnrollment>(`/plan-enrollments/${id}/activate`),
   deactivateEnrollment: (id: number) => apiClient.patch<PlanEnrollment>(`/plan-enrollments/${id}/deactivate`),
-
-  settings: () => apiClient.get<BillingSettings>('/billing-settings'),
-  updateSettings: (input: BillingSettings) => apiClient.put<BillingSettings>('/billing-settings', input),
 
   /** The student id comes from the token: /me/invoices doesn't accept any id. */
   myInvoices: (page: number) => apiClient.get<Page<Invoice>>(`/me/invoices?page=${page}`),

@@ -178,9 +178,8 @@ de descobrir.
 ## Cobrança por planos
 
 O aluno assina N planos e recebe **uma** fatura por mês, com a soma dos planos
-ativos e desconto configurável a partir do segundo. Substituiu a assinatura
-única por aluno; o desenho, a migração em quatro passos e as consequências
-assumidas estão na SPEC-012.
+ativos e desconto a partir do segundo, guardado em `billing_settings`.
+Substituiu a assinatura única por aluno, numa migração em quatro passos.
 
 Duas decisões dali que valem para além do módulo:
 

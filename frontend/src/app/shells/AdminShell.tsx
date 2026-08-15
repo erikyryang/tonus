@@ -13,7 +13,6 @@ const NAV_ITEMS = [
   { to: '/admin/announcements', label: 'Comunicados' },
   { to: '/admin/plans', label: 'Planos' },
   { to: '/admin/invoices', label: 'Faturas' },
-  { to: '/admin/settings', label: 'Configuração' },
   { to: '/admin/whatsapp', label: 'WhatsApp' },
 ];
 

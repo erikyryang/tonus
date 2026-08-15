@@ -59,7 +59,7 @@ denuncia isso — o erro só apareceria quando um aluno não recebesse o aviso.
 
 - Autorização por rota em `SecurityConfig` (`auth`), com `hasRole("ADMIN")` —
   é onde a autorização do projeto mora, junto de `/plans/**` e
-  `/billing-settings`. Não é anotação no controlador.
+  `/plan-enrollments/**`. Não é anotação no controlador.
 - Não é `/me/...`: não há recurso "do próprio usuário" aqui. A sessão é uma
   só, do estúdio.
 - `POST /whatsapp/session` é **idempotente para o caso conectado**: numa
