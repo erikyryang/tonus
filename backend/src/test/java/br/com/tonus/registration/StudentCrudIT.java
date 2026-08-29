@@ -3,6 +3,7 @@ package br.com.tonus.registration;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -18,6 +19,7 @@ class StudentCrudIT extends AbstractRegistrationIntegrationTest {
 
         mockMvc.perform(post("/students")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"%s","phone":"+5511988887777","teacherId":%d}
@@ -51,6 +53,7 @@ class StudentCrudIT extends AbstractRegistrationIntegrationTest {
 
         mockMvc.perform(put("/students/{id}", id)
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"%s","phone":"+5511966665555","teacherId":%d}
@@ -74,6 +77,7 @@ class StudentCrudIT extends AbstractRegistrationIntegrationTest {
 
         mockMvc.perform(put("/students/{id}", studentId)
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"%s","phone":"+5511988880000","teacherId":%d}
@@ -95,6 +99,7 @@ class StudentCrudIT extends AbstractRegistrationIntegrationTest {
 
         mockMvc.perform(post("/students")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"%s","phone":"+5511955554444","teacherId":%d,

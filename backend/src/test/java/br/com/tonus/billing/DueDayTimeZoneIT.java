@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -44,6 +45,7 @@ class DueDayTimeZoneIT extends AbstractRegistrationIntegrationTest {
 
         long planId = idOf(mockMvc.perform(post("/plans")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"%s","monthlyPrice":"200.00"}
@@ -52,6 +54,7 @@ class DueDayTimeZoneIT extends AbstractRegistrationIntegrationTest {
                 .andReturn());
         mockMvc.perform(post("/plan-enrollments")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"studentId":%d,"planId":%d}

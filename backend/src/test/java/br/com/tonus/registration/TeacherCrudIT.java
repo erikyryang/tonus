@@ -3,6 +3,7 @@ package br.com.tonus.registration;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -17,6 +18,7 @@ class TeacherCrudIT extends AbstractRegistrationIntegrationTest {
 
         mockMvc.perform(post("/teachers")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"%s","phone":"+5511999991234"}
@@ -46,6 +48,7 @@ class TeacherCrudIT extends AbstractRegistrationIntegrationTest {
 
         mockMvc.perform(put("/teachers/{id}", id)
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"%s","phone":"+5511977776666"}
@@ -63,6 +66,7 @@ class TeacherCrudIT extends AbstractRegistrationIntegrationTest {
     void rejectsTeacherWithoutName() throws Exception {
         mockMvc.perform(post("/teachers")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"phone":"+5511999991234"}

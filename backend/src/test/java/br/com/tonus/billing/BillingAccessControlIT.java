@@ -3,6 +3,7 @@ package br.com.tonus.billing;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -21,6 +22,7 @@ class BillingAccessControlIT extends AbstractBillingIntegrationTest {
 
         mockMvc.perform(post("/plans")
                         .cookie(linkedStudentCookie(studentId))
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"Plano Proibido","monthlyPrice":"200.00"}
@@ -53,7 +55,7 @@ class BillingAccessControlIT extends AbstractBillingIntegrationTest {
     void teacherCannotRegisterPayment() throws Exception {
         long teacherId = createTeacher(unique("Professor Sem Poder De Baixa"));
 
-        mockMvc.perform(post("/invoices/{id}/payment", 1L).cookie(linkedTeacherCookie(teacherId)))
+        mockMvc.perform(post("/invoices/{id}/payment", 1L).cookie(linkedTeacherCookie(teacherId)).with(csrf()))
                 .andExpect(status().isForbidden());
     }
 

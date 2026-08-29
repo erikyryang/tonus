@@ -10,6 +10,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -34,6 +35,7 @@ abstract class AbstractBillingIntegrationTest extends AbstractRegistrationIntegr
     protected long createPlan(String name, String monthlyPrice) throws Exception {
         return idOf(mockMvc.perform(post("/plans")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"%s","monthlyPrice":"%s"}
@@ -51,6 +53,7 @@ abstract class AbstractBillingIntegrationTest extends AbstractRegistrationIntegr
     protected ResultActions postEnrollment(long studentId, long planId) throws Exception {
         return mockMvc.perform(post("/plan-enrollments")
                 .cookie(admin)
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {"studentId":%d,"planId":%d}
@@ -88,6 +91,7 @@ abstract class AbstractBillingIntegrationTest extends AbstractRegistrationIntegr
         String login = unique("billing-teacher") + "@tonus.com";
         mockMvc.perform(post("/users")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"login":"%s","password":"%s","role":"TEACHER","teacherId":%d}
@@ -100,6 +104,7 @@ abstract class AbstractBillingIntegrationTest extends AbstractRegistrationIntegr
         String login = unique("billing-student") + "@tonus.com";
         mockMvc.perform(post("/users")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"login":"%s","password":"%s","role":"STUDENT","studentId":%d}

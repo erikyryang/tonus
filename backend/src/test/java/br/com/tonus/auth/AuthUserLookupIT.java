@@ -11,6 +11,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import static br.com.tonus.support.Eventually.eventually;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -71,7 +72,7 @@ class AuthUserLookupIT extends AbstractAuthIntegrationTest {
         long studentId = createStudent();
         createStudentUser(studentId);
 
-        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin))
+        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
 
         eventually("acesso do aluno revogado", () -> {
@@ -128,6 +129,7 @@ class AuthUserLookupIT extends AbstractAuthIntegrationTest {
     private long createStudentUser(long studentId) throws Exception {
         MvcResult result = mockMvc.perform(post("/users")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"login":"%s","password":"%s","role":"STUDENT","studentId":%d}

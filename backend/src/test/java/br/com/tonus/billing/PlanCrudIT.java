@@ -7,6 +7,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -47,6 +48,7 @@ class PlanCrudIT extends AbstractBillingIntegrationTest {
 
         mockMvc.perform(put("/plans/{id}", id)
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"Pilates Premium","monthlyPrice":"420.00"}
@@ -60,11 +62,11 @@ class PlanCrudIT extends AbstractBillingIntegrationTest {
     void activatesAndDeactivates() throws Exception {
         long id = createPlan(unique("Sazonal"), "200.00");
 
-        mockMvc.perform(patch("/plans/{id}/deactivate", id).cookie(admin))
+        mockMvc.perform(patch("/plans/{id}/deactivate", id).cookie(admin).with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(false));
 
-        mockMvc.perform(patch("/plans/{id}/activate", id).cookie(admin))
+        mockMvc.perform(patch("/plans/{id}/activate", id).cookie(admin).with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(true));
     }
@@ -82,7 +84,7 @@ class PlanCrudIT extends AbstractBillingIntegrationTest {
                 createTeacher(unique("Professor Do Plano Que Acaba")));
         enroll(studentId, planId);
 
-        mockMvc.perform(patch("/plans/{id}/deactivate", planId).cookie(admin))
+        mockMvc.perform(patch("/plans/{id}/deactivate", planId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(false));
     }
@@ -104,7 +106,7 @@ class PlanCrudIT extends AbstractBillingIntegrationTest {
     void listFiltersByActive() throws Exception {
         long active = createPlan(unique("Ativo"), "100.00");
         long inactive = createPlan(unique("Inativo"), "110.00");
-        mockMvc.perform(patch("/plans/{id}/deactivate", inactive).cookie(admin))
+        mockMvc.perform(patch("/plans/{id}/deactivate", inactive).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
 
         MvcResult result = mockMvc.perform(get("/plans")
@@ -141,6 +143,7 @@ class PlanCrudIT extends AbstractBillingIntegrationTest {
     private ResultActions postPlan(String name, String monthlyPrice) throws Exception {
         return mockMvc.perform(post("/plans")
                 .cookie(admin)
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {"name":"%s","monthlyPrice":"%s"}

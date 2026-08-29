@@ -15,6 +15,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.nullValue;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -89,13 +90,13 @@ class WhatsAppAdminIT extends AbstractRegistrationIntegrationTest {
 
         mockMvc.perform(get("/whatsapp/status").cookie(teacher)).andExpect(status().isForbidden());
         mockMvc.perform(get("/whatsapp/status").cookie(student)).andExpect(status().isForbidden());
-        mockMvc.perform(post("/whatsapp/session").cookie(teacher)).andExpect(status().isForbidden());
-        mockMvc.perform(delete("/whatsapp/session").cookie(student)).andExpect(status().isForbidden());
+        mockMvc.perform(post("/whatsapp/session").cookie(teacher).with(csrf())).andExpect(status().isForbidden());
+        mockMvc.perform(delete("/whatsapp/session").cookie(student).with(csrf())).andExpect(status().isForbidden());
     }
 
     @Test
     void pairingCreatesTheInstanceAndReturnsAQrCode() throws Exception {
-        mockMvc.perform(post("/whatsapp/session").cookie(admin))
+        mockMvc.perform(post("/whatsapp/session").cookie(admin).with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("CONNECTING"))
                 .andExpect(jsonPath("$.qrCode").isNotEmpty());
@@ -109,7 +110,7 @@ class WhatsAppAdminIT extends AbstractRegistrationIntegrationTest {
     void pairingAnAlreadyConnectedSessionReturnsNoQrCodeAndKeepsIt() throws Exception {
         gateway.hasConnectedInstance(INSTANCE, PHONE);
 
-        mockMvc.perform(post("/whatsapp/session").cookie(admin))
+        mockMvc.perform(post("/whatsapp/session").cookie(admin).with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("CONNECTED"))
                 .andExpect(jsonPath("$.qrCode").value(nullValue()));
@@ -123,7 +124,7 @@ class WhatsAppAdminIT extends AbstractRegistrationIntegrationTest {
     void disconnectingKeepsTheInstance() throws Exception {
         gateway.hasConnectedInstance(INSTANCE, PHONE);
 
-        mockMvc.perform(delete("/whatsapp/session").cookie(admin))
+        mockMvc.perform(delete("/whatsapp/session").cookie(admin).with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("DISCONNECTED"));
 
@@ -292,6 +293,7 @@ class WhatsAppAdminIT extends AbstractRegistrationIntegrationTest {
     private ResultActions putSettings(String instance, String version) throws Exception {
         return mockMvc.perform(put("/whatsapp/settings")
                 .cookie(admin)
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {"instance":"%s","desiredPhoneVersion":"%s"}

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MvcResult;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -30,7 +31,7 @@ class DeletingDefaultScheduleCleansExceptionsIT extends AbstractSchedulingIntegr
         long scheduleId = createDefaultSchedule(studentId, "07:00");
         cancelClass(studentId, MONDAY);
 
-        mockMvc.perform(delete("/default-schedules/{id}", scheduleId).cookie(admin))
+        mockMvc.perform(delete("/default-schedules/{id}", scheduleId).cookie(admin).with(csrf()))
                 .andExpect(status().isNoContent());
 
         assertThat(exceptionsOf(studentId)).isEmpty();
@@ -48,7 +49,7 @@ class DeletingDefaultScheduleCleansExceptionsIT extends AbstractSchedulingIntegr
         long oldScheduleId = createDefaultSchedule(studentId, "07:00");
         cancelClass(studentId, MONDAY);
 
-        mockMvc.perform(delete("/default-schedules/{id}", oldScheduleId).cookie(admin))
+        mockMvc.perform(delete("/default-schedules/{id}", oldScheduleId).cookie(admin).with(csrf()))
                 .andExpect(status().isNoContent());
         createDefaultSchedule(studentId, "09:00");
 
@@ -68,7 +69,7 @@ class DeletingDefaultScheduleCleansExceptionsIT extends AbstractSchedulingIntegr
         long scheduleId = createDefaultSchedule(studentId, "07:00");
         rescheduleClass(studentId, MONDAY, WEDNESDAY, "08:00");
 
-        mockMvc.perform(delete("/default-schedules/{id}", scheduleId).cookie(admin))
+        mockMvc.perform(delete("/default-schedules/{id}", scheduleId).cookie(admin).with(csrf()))
                 .andExpect(status().isNoContent());
 
         assertThat(studentIdsOf(daySchedule(WEDNESDAY))).doesNotContain(studentId);
@@ -84,7 +85,7 @@ class DeletingDefaultScheduleCleansExceptionsIT extends AbstractSchedulingIntegr
         long studentId = createStudent(unique("Aluno Sem Excecao"), teacherId);
         long scheduleId = createDefaultSchedule(studentId, "07:00");
 
-        mockMvc.perform(delete("/default-schedules/{id}", scheduleId).cookie(admin))
+        mockMvc.perform(delete("/default-schedules/{id}", scheduleId).cookie(admin).with(csrf()))
                 .andExpect(status().isNoContent());
     }
 

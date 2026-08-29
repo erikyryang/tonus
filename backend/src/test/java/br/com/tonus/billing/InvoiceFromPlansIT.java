@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -69,7 +70,7 @@ class InvoiceFromPlansIT extends AbstractBillingIntegrationTest {
         long dropped = createPlan(unique("Plano Que Sai"), "270.00");
         enroll(studentId, kept);
         enroll(studentId, dropped);
-        mockMvc.perform(patch("/plans/{id}/deactivate", dropped).cookie(admin)).andExpect(status().isOk());
+        mockMvc.perform(patch("/plans/{id}/deactivate", dropped).cookie(admin).with(csrf())).andExpect(status().isOk());
 
         billingService.generateDueInvoices();
 
@@ -85,7 +86,7 @@ class InvoiceFromPlansIT extends AbstractBillingIntegrationTest {
         long paused = createPlan(unique("Plano Pausado"), "270.00");
         enroll(studentId, kept);
         long pausedEnrollment = enroll(studentId, paused);
-        mockMvc.perform(patch("/plan-enrollments/{id}/deactivate", pausedEnrollment).cookie(admin))
+        mockMvc.perform(patch("/plan-enrollments/{id}/deactivate", pausedEnrollment).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
 
         billingService.generateDueInvoices();

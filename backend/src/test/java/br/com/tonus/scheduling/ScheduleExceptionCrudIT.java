@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MvcResult;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -53,7 +54,7 @@ class ScheduleExceptionCrudIT extends AbstractSchedulingIntegrationTest {
 
         assertThat(studentIdsOf(daySchedule(MONDAY))).doesNotContain(studentId);
 
-        mockMvc.perform(delete("/schedule-exceptions/{id}", id).cookie(admin))
+        mockMvc.perform(delete("/schedule-exceptions/{id}", id).cookie(admin).with(csrf()))
                 .andExpect(status().isNoContent());
 
         assertThat(studentIdsOf(daySchedule(MONDAY))).contains(studentId);
@@ -76,7 +77,7 @@ class ScheduleExceptionCrudIT extends AbstractSchedulingIntegrationTest {
 
         assertThat(originsOf(daySchedule(WEDNESDAY), studentId)).contains("RESCHEDULED");
 
-        mockMvc.perform(delete("/schedule-exceptions/{id}", id).cookie(admin))
+        mockMvc.perform(delete("/schedule-exceptions/{id}", id).cookie(admin).with(csrf()))
                 .andExpect(status().isNoContent());
 
         assertThat(originsOf(daySchedule(WEDNESDAY), studentId)).containsOnly("TEMPLATE");
@@ -92,7 +93,7 @@ class ScheduleExceptionCrudIT extends AbstractSchedulingIntegrationTest {
         long studentId = seedStudent("Aluno Da Segunda Chance");
         long id = cancelClass(studentId, MONDAY);
 
-        mockMvc.perform(delete("/schedule-exceptions/{id}", id).cookie(admin))
+        mockMvc.perform(delete("/schedule-exceptions/{id}", id).cookie(admin).with(csrf()))
                 .andExpect(status().isNoContent());
 
         cancelClass(studentId, MONDAY);
@@ -100,7 +101,7 @@ class ScheduleExceptionCrudIT extends AbstractSchedulingIntegrationTest {
 
     @Test
     void deletingUnknownExceptionIsNotFound() throws Exception {
-        mockMvc.perform(delete("/schedule-exceptions/{id}", 999_999_999L).cookie(admin))
+        mockMvc.perform(delete("/schedule-exceptions/{id}", 999_999_999L).cookie(admin).with(csrf()))
                 .andExpect(status().isNotFound());
     }
 

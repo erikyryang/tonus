@@ -10,6 +10,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -64,7 +65,7 @@ class AnnouncementCrudIT extends AbstractSchedulingIntegrationTest {
     void deletesAnnouncement() throws Exception {
         long id = createAnnouncement("2026-11-15", "Proclamacao da Republica", true);
 
-        mockMvc.perform(delete("/announcements/{id}", id).cookie(admin))
+        mockMvc.perform(delete("/announcements/{id}", id).cookie(admin).with(csrf()))
                 .andExpect(status().isNoContent());
     }
 
@@ -118,6 +119,7 @@ class AnnouncementCrudIT extends AbstractSchedulingIntegrationTest {
     void rejectsAnnouncementWithoutSuspendsClasses() throws Exception {
         mockMvc.perform(post("/announcements")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"date":"2027-08-10","description":"Sem efeito declarado"}
@@ -129,6 +131,7 @@ class AnnouncementCrudIT extends AbstractSchedulingIntegrationTest {
     void rejectsAnnouncementWithoutDate() throws Exception {
         mockMvc.perform(post("/announcements")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"description":"Sem data","suspendsClasses":true}
@@ -144,6 +147,7 @@ class AnnouncementCrudIT extends AbstractSchedulingIntegrationTest {
     void rejectsDescriptionLongerThanTheColumn() throws Exception {
         mockMvc.perform(post("/announcements")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"date":"2027-12-01","description":"%s","suspendsClasses":true}

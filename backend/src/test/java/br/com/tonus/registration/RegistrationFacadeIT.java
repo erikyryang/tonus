@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -45,7 +46,7 @@ class RegistrationFacadeIT extends AbstractRegistrationIntegrationTest {
         long active = createStudent(unique("Aluna Ativa"), teacherId);
         long inactive = createStudent(unique("Aluno Inativo"), teacherId);
 
-        mockMvc.perform(patch("/students/{id}/deactivate", inactive).cookie(admin))
+        mockMvc.perform(patch("/students/{id}/deactivate", inactive).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
 
         List<Long> ids = registrationFacade.findActiveStudents().stream()

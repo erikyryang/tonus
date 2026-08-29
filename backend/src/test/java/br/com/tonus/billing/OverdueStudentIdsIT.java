@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MvcResult;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -61,7 +62,7 @@ class OverdueStudentIdsIT extends AbstractBillingIntegrationTest {
         long teacherId = createTeacher(unique("Professor Do Aluno Que Saiu"));
         long studentId = studentWithInvoice(teacherId, "Aluno Que Saiu Devendo", "OVERDUE");
 
-        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin))
+        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
 
         assertThat(overdueStudentIds()).contains(studentId);

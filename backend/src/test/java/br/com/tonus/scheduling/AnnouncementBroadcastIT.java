@@ -6,6 +6,7 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import static br.com.tonus.support.Eventually.eventually;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -30,6 +31,7 @@ class AnnouncementBroadcastIT extends AbstractSchedulingIntegrationTest {
 
         mockMvc.perform(post("/announcements/broadcast")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"message":"Aula de sábado cancelada por manutenção."}
@@ -43,6 +45,7 @@ class AnnouncementBroadcastIT extends AbstractSchedulingIntegrationTest {
     void rejectsBlankMessage() throws Exception {
         mockMvc.perform(post("/announcements/broadcast")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"message":""}
@@ -54,6 +57,7 @@ class AnnouncementBroadcastIT extends AbstractSchedulingIntegrationTest {
     void rejectsMissingMessage() throws Exception {
         mockMvc.perform(post("/announcements/broadcast")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest());
@@ -64,6 +68,7 @@ class AnnouncementBroadcastIT extends AbstractSchedulingIntegrationTest {
         String tooLong = "x".repeat(501);
         mockMvc.perform(post("/announcements/broadcast")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"message\":\"" + tooLong + "\"}"))
                 .andExpect(status().isBadRequest());
@@ -74,6 +79,7 @@ class AnnouncementBroadcastIT extends AbstractSchedulingIntegrationTest {
         String atLimit = "x".repeat(500);
         mockMvc.perform(post("/announcements/broadcast")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"message\":\"" + atLimit + "\"}"))
                 .andExpect(status().isAccepted());
@@ -85,6 +91,7 @@ class AnnouncementBroadcastIT extends AbstractSchedulingIntegrationTest {
 
         mockMvc.perform(post("/announcements/broadcast")
                         .cookie(linkedTeacherCookie(teacherId))
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"message":"Teste"}
@@ -99,7 +106,9 @@ class AnnouncementBroadcastIT extends AbstractSchedulingIntegrationTest {
                         .content("""
                                 {"message":"Teste"}
                                 """))
-                .andExpect(status().isUnauthorized());
+                // 403 and not 401: the CSRF filter runs before authentication,
+                // and an anonymous state-changing request carries no token.
+                .andExpect(status().isForbidden());
     }
 
     private long countBroadcastLogs(long studentId) {

@@ -2,6 +2,7 @@ package br.com.tonus.scheduling;
 
 import org.junit.jupiter.api.Test;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -56,7 +57,7 @@ class DefaultScheduleByStudentIT extends AbstractSchedulingIntegrationTest {
         long studentId = createStudent(unique("Aluno Que Some Do Mapa"), teacherId);
         long scheduleId = createDefaultSchedule(studentId, "07:00");
 
-        mockMvc.perform(delete("/default-schedules/{id}", scheduleId).cookie(admin))
+        mockMvc.perform(delete("/default-schedules/{id}", scheduleId).cookie(admin).with(csrf()))
                 .andExpect(status().isNoContent());
 
         mockMvc.perform(get("/default-schedules/by-student").cookie(admin))

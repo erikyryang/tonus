@@ -16,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MvcResult;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 public abstract class AbstractAuthIntegrationTest extends AbstractIntegrationTest {
@@ -122,6 +123,7 @@ public abstract class AbstractAuthIntegrationTest extends AbstractIntegrationTes
     protected long createTeacher(Cookie admin) throws Exception {
         MvcResult result = mockMvc.perform(post("/teachers")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"Professor De Teste %d","phone":"+5511999990000"}
@@ -138,6 +140,7 @@ public abstract class AbstractAuthIntegrationTest extends AbstractIntegrationTes
     protected long createStudent(Cookie admin, long teacherId) throws Exception {
         MvcResult result = mockMvc.perform(post("/students")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"Aluno De Teste %d","phone":"+5511988880000","teacherId":%d}

@@ -5,6 +5,7 @@ import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletResponse;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -18,7 +19,7 @@ class AuthLogoutIT extends AbstractAuthIntegrationTest {
         Cookie accessCookie = extractCookie(loginResponse, ACCESS_COOKIE);
         Cookie refreshCookie = extractCookie(loginResponse, REFRESH_COOKIE);
 
-        mockMvc.perform(post("/auth/logout").cookie(accessCookie, refreshCookie))
+        mockMvc.perform(post("/auth/logout").cookie(accessCookie, refreshCookie).with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(cookie().maxAge(ACCESS_COOKIE, 0))
                 .andExpect(cookie().maxAge(REFRESH_COOKIE, 0));
@@ -31,10 +32,10 @@ class AuthLogoutIT extends AbstractAuthIntegrationTest {
         Cookie accessCookie = extractCookie(loginResponse, ACCESS_COOKIE);
         Cookie refreshCookie = extractCookie(loginResponse, REFRESH_COOKIE);
 
-        mockMvc.perform(post("/auth/logout").cookie(accessCookie, refreshCookie))
+        mockMvc.perform(post("/auth/logout").cookie(accessCookie, refreshCookie).with(csrf()))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(post("/auth/refresh").cookie(refreshCookie))
+        mockMvc.perform(post("/auth/refresh").cookie(refreshCookie).with(csrf()))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -46,7 +47,7 @@ class AuthLogoutIT extends AbstractAuthIntegrationTest {
      */
     @Test
     void logoutWithoutCookiesIsHarmless() throws Exception {
-        mockMvc.perform(post("/auth/logout"))
+        mockMvc.perform(post("/auth/logout").with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(cookie().maxAge(ACCESS_COOKIE, 0))
                 .andExpect(cookie().maxAge(REFRESH_COOKIE, 0));

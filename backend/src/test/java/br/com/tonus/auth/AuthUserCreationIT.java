@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -36,6 +37,7 @@ class AuthUserCreationIT extends AbstractAuthIntegrationTest {
 
         mockMvc.perform(post("/users")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"login":"%s","password":"%s","role":"STUDENT","studentId":%d}
@@ -57,6 +59,7 @@ class AuthUserCreationIT extends AbstractAuthIntegrationTest {
 
         mockMvc.perform(post("/users")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"login":"%s","password":"%s","role":"TEACHER","teacherId":%d}
@@ -74,9 +77,9 @@ class AuthUserCreationIT extends AbstractAuthIntegrationTest {
                 {"login":"%s","password":"%s","role":"STUDENT","studentId":%d}
                 """.formatted(login, PASSWORD, studentId);
 
-        mockMvc.perform(post("/users").cookie(admin).contentType(MediaType.APPLICATION_JSON).content(body))
+        mockMvc.perform(post("/users").cookie(admin).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isCreated());
-        mockMvc.perform(post("/users").cookie(admin).contentType(MediaType.APPLICATION_JSON).content(body))
+        mockMvc.perform(post("/users").cookie(admin).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isConflict());
     }
 
@@ -86,6 +89,7 @@ class AuthUserCreationIT extends AbstractAuthIntegrationTest {
 
         mockMvc.perform(post("/users")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"password":"%s","role":"STUDENT","studentId":%d}
@@ -100,6 +104,7 @@ class AuthUserCreationIT extends AbstractAuthIntegrationTest {
 
         mockMvc.perform(post("/users")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"login":"%s","password":"s3nha1","role":"STUDENT","studentId":%d}
@@ -118,6 +123,7 @@ class AuthUserCreationIT extends AbstractAuthIntegrationTest {
 
         mockMvc.perform(post("/users")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"login":"%s","password":"%s","role":"STUDENT","studentId":%d}
@@ -141,7 +147,7 @@ class AuthUserCreationIT extends AbstractAuthIntegrationTest {
     @Test
     void returnsNotFoundActivatingUnknownUser() throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
-                        .patch("/users/{id}/activate", 99_999_999L).cookie(admin))
+                        .patch("/users/{id}/activate", 99_999_999L).cookie(admin).with(csrf()))
                 .andExpect(status().isNotFound());
     }
 

@@ -11,6 +11,7 @@ import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.test.web.servlet.ResultActions;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -100,11 +101,12 @@ class PaymentIT extends AbstractBillingIntegrationTest {
         long studentId = createStudent(unique("Aluno Sem Data"), createTeacher(unique("Professor Sem Data")));
         long invoiceId = seedInvoice(studentId, "2026-07-01", "200.00", "2026-07-05", "OPEN");
 
-        mockMvc.perform(post("/invoices/{id}/payment", invoiceId).cookie(admin))
+        mockMvc.perform(post("/invoices/{id}/payment", invoiceId).cookie(admin).with(csrf()))
                 .andExpect(status().isBadRequest());
 
         mockMvc.perform(post("/invoices/{id}/payment", invoiceId)
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest());
@@ -128,6 +130,7 @@ class PaymentIT extends AbstractBillingIntegrationTest {
     private ResultActions pay(long invoiceId, String paymentDate) throws Exception {
         return mockMvc.perform(post("/invoices/{id}/payment", invoiceId)
                 .cookie(admin)
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {"paymentDate":"%s"}

@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -48,6 +49,7 @@ public abstract class AbstractRegistrationIntegrationTest extends AbstractAuthIn
     protected long createTeacher(String name) throws Exception {
         MvcResult result = mockMvc.perform(post("/teachers")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"%s","phone":"+5511999990000"}
@@ -65,6 +67,7 @@ public abstract class AbstractRegistrationIntegrationTest extends AbstractAuthIn
     protected long createStudent(String name, long teacherId, String phone) throws Exception {
         MvcResult result = mockMvc.perform(post("/students")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"%s","phone":"%s","teacherId":%d}

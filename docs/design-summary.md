@@ -119,6 +119,14 @@ erro, WhatsApp, label — continua em português.
 ## Segurança e privacidade
 
 - JWT em cookie httpOnly `SameSite=Strict`. Token **nunca** no corpo da resposta.
+- CSRF habilitado (Spring Security, stateless via cookie): o front ecoa o cookie
+  `XSRF-TOKEN` (não-httpOnly, por design) como header `X-XSRF-TOKEN` em todo
+  método não-GET — padrão double-submit. É a segunda parede sobre o
+  `SameSite=Strict` (cobre navegador antigo e bypass de SameSite). O cookie
+  XSRF é persistente (7d, alinhado ao refresh token) para a sessão sobreviver
+  a restart do browser; só `/auth/login` é exempto (cold start — não há cookie
+  ainda para ecoar). Negação sem token responde 403 Problem Details pelo mesmo
+  handler de autorização.
 - O atributo `Secure` do cookie é derivado de `request.isSecure()`, não de
   configuração por ambiente: HTTPS o exige, HTTP local não. A alternativa —
   uma flag ligada em produção e desligada em dev — foi descartada porque

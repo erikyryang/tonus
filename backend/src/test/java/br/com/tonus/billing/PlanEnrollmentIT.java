@@ -7,6 +7,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -68,11 +69,11 @@ class PlanEnrollmentIT extends AbstractBillingIntegrationTest {
         long planId = createPlan(unique("Plano Que Pausa"), "350.00");
         long enrollmentId = enroll(studentId, planId);
 
-        mockMvc.perform(patch("/plan-enrollments/{id}/deactivate", enrollmentId).cookie(admin))
+        mockMvc.perform(patch("/plan-enrollments/{id}/deactivate", enrollmentId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(false));
 
-        mockMvc.perform(patch("/plan-enrollments/{id}/activate", enrollmentId).cookie(admin))
+        mockMvc.perform(patch("/plan-enrollments/{id}/activate", enrollmentId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(true));
     }
@@ -90,7 +91,7 @@ class PlanEnrollmentIT extends AbstractBillingIntegrationTest {
         long studentId = createStudent(unique("Aluno Inativo Do Plano"),
                 createTeacher(unique("Professor Do Inativo")));
         long planId = createPlan(unique("Plano Do Inativo"), "350.00");
-        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin))
+        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
 
         postEnrollment(studentId, planId).andExpect(status().isBadRequest());
@@ -113,7 +114,7 @@ class PlanEnrollmentIT extends AbstractBillingIntegrationTest {
         long studentId = createStudent(unique("Aluno Do Plano Inativo"),
                 createTeacher(unique("Professor Do Plano Inativo")));
         long planId = createPlan(unique("Plano Inativo"), "350.00");
-        mockMvc.perform(patch("/plans/{id}/deactivate", planId).cookie(admin))
+        mockMvc.perform(patch("/plans/{id}/deactivate", planId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
 
         postEnrollment(studentId, planId).andExpect(status().isBadRequest());

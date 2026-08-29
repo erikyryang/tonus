@@ -10,6 +10,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import static br.com.tonus.support.Eventually.eventually;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -40,7 +41,7 @@ class AccessRevocationIT extends AbstractRegistrationIntegrationTest {
 
         expectLogin(login, status().isOk());
 
-        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin))
+        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
         awaitAccessRevoked(login);
 
@@ -55,7 +56,7 @@ class AccessRevocationIT extends AbstractRegistrationIntegrationTest {
 
         expectLogin(login, status().isOk());
 
-        mockMvc.perform(patch("/teachers/{id}/deactivate", teacherId).cookie(admin))
+        mockMvc.perform(patch("/teachers/{id}/deactivate", teacherId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
         awaitAccessRevoked(login);
 
@@ -75,11 +76,11 @@ class AccessRevocationIT extends AbstractRegistrationIntegrationTest {
 
         Cookie refreshCookie = extractCookie(login(login, PASSWORD), REFRESH_COOKIE);
 
-        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin))
+        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
         awaitAccessRevoked(login);
 
-        mockMvc.perform(post("/auth/refresh").cookie(refreshCookie))
+        mockMvc.perform(post("/auth/refresh").cookie(refreshCookie).with(csrf()))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -90,11 +91,11 @@ class AccessRevocationIT extends AbstractRegistrationIntegrationTest {
         String login = uniqueLogin("aluno-volta");
         createStudentUser(login, studentId);
 
-        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin))
+        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
         awaitAccessRevoked(login);
 
-        mockMvc.perform(patch("/students/{id}/activate", studentId).cookie(admin))
+        mockMvc.perform(patch("/students/{id}/activate", studentId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
 
         expectLogin(login, status().isUnauthorized());
@@ -107,12 +108,12 @@ class AccessRevocationIT extends AbstractRegistrationIntegrationTest {
         String login = uniqueLogin("aluno-reconcedido");
         long userId = createStudentUser(login, studentId);
 
-        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin))
+        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
         awaitAccessRevoked(login);
         expectLogin(login, status().isUnauthorized());
 
-        mockMvc.perform(patch("/users/{id}/activate", userId).cookie(admin))
+        mockMvc.perform(patch("/users/{id}/activate", userId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
 
         expectLogin(login, status().isOk());
@@ -129,9 +130,9 @@ class AccessRevocationIT extends AbstractRegistrationIntegrationTest {
         String login = uniqueLogin("aluno-idempotente");
         createStudentUser(login, studentId);
 
-        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin))
+        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
-        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin))
+        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
         awaitAccessRevoked(login);
 
@@ -147,7 +148,7 @@ class AccessRevocationIT extends AbstractRegistrationIntegrationTest {
         long teacherId = createTeacher(unique("Professor Sem Login"));
         long studentId = createStudent(unique("Aluno Sem Login"), teacherId);
 
-        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin))
+        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
     }
 
@@ -161,7 +162,7 @@ class AccessRevocationIT extends AbstractRegistrationIntegrationTest {
         long teacherId = createTeacher(unique("Professor Do Registry"));
         long studentId = createStudent(unique("Aluno Do Registry"), teacherId);
 
-        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin))
+        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
 
         eventually("publicação do evento concluída", () -> Long.valueOf(0L).equals(
@@ -188,6 +189,7 @@ class AccessRevocationIT extends AbstractRegistrationIntegrationTest {
     private long createUser(String login, String role, String linkField, long linkId) throws Exception {
         MvcResult result = mockMvc.perform(post("/users")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"login":"%s","password":"%s","role":"%s","%s":%d}

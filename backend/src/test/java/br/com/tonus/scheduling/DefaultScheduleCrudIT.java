@@ -6,6 +6,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -43,6 +44,7 @@ class DefaultScheduleCrudIT extends AbstractSchedulingIntegrationTest {
 
         mockMvc.perform(put("/default-schedules/{id}", id)
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"studentId":%d,"time":"09:00"}
@@ -61,7 +63,7 @@ class DefaultScheduleCrudIT extends AbstractSchedulingIntegrationTest {
         long studentId = createStudent(unique("Aluno Do Delete"), teacherId);
         long id = createDefaultSchedule(studentId, "07:00");
 
-        mockMvc.perform(delete("/default-schedules/{id}", id).cookie(admin))
+        mockMvc.perform(delete("/default-schedules/{id}", id).cookie(admin).with(csrf()))
                 .andExpect(status().isNoContent());
 
         mockMvc.perform(get("/default-schedules/{id}", id).cookie(admin))
@@ -85,6 +87,7 @@ class DefaultScheduleCrudIT extends AbstractSchedulingIntegrationTest {
 
         mockMvc.perform(put("/default-schedules/{id}", id)
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"studentId":%d,"time":"07:00"}
@@ -129,6 +132,7 @@ class DefaultScheduleCrudIT extends AbstractSchedulingIntegrationTest {
 
         mockMvc.perform(post("/default-schedules")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"studentId":%d}

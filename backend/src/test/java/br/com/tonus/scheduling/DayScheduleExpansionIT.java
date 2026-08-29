@@ -5,6 +5,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -93,7 +94,7 @@ class DayScheduleExpansionIT extends AbstractSchedulingIntegrationTest {
         long studentId = createStudent(unique("Aluno Que Saiu"), teacherId);
         createDefaultSchedule(studentId, "07:00");
 
-        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin))
+        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
 
         assertThat(studentIdsOf(daySchedule(MONDAY))).doesNotContain(studentId);

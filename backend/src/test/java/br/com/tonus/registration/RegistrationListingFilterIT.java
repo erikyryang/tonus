@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MvcResult;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -20,7 +21,7 @@ class RegistrationListingFilterIT extends AbstractRegistrationIntegrationTest {
         long active = createStudent(unique("Aluno Filtro Ativo"), teacherId);
         long inactive = createStudent(unique("Aluno Filtro Inativo"), teacherId);
 
-        mockMvc.perform(patch("/students/{id}/deactivate", inactive).cookie(admin))
+        mockMvc.perform(patch("/students/{id}/deactivate", inactive).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
 
         assertThat(allIds("/students", "active", "true")).contains(active).doesNotContain(inactive);
@@ -33,7 +34,7 @@ class RegistrationListingFilterIT extends AbstractRegistrationIntegrationTest {
         long active = createStudent(unique("Aluno Sem Filtro Ativo"), teacherId);
         long inactive = createStudent(unique("Aluno Sem Filtro Inativo"), teacherId);
 
-        mockMvc.perform(patch("/students/{id}/deactivate", inactive).cookie(admin))
+        mockMvc.perform(patch("/students/{id}/deactivate", inactive).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
 
         assertThat(allIds("/students")).contains(active, inactive);
@@ -44,7 +45,7 @@ class RegistrationListingFilterIT extends AbstractRegistrationIntegrationTest {
         long active = createTeacher(unique("Professor Filtro Ativo"));
         long inactive = createTeacher(unique("Professor Filtro Inativo"));
 
-        mockMvc.perform(patch("/teachers/{id}/deactivate", inactive).cookie(admin))
+        mockMvc.perform(patch("/teachers/{id}/deactivate", inactive).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
 
         assertThat(allIds("/teachers", "active", "true")).contains(active).doesNotContain(inactive);

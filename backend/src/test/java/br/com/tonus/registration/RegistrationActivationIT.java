@@ -2,6 +2,7 @@ package br.com.tonus.registration;
 
 import org.junit.jupiter.api.Test;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -19,11 +20,11 @@ class RegistrationActivationIT extends AbstractRegistrationIntegrationTest {
         long teacherId = createTeacher(unique("Professora Da Volta"));
         long studentId = createStudent(unique("Aluno Que Volta"), teacherId);
 
-        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin))
+        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(false));
 
-        mockMvc.perform(patch("/students/{id}/activate", studentId).cookie(admin))
+        mockMvc.perform(patch("/students/{id}/activate", studentId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(studentId))
                 .andExpect(jsonPath("$.active").value(true));
@@ -38,7 +39,7 @@ class RegistrationActivationIT extends AbstractRegistrationIntegrationTest {
         long teacherId = createTeacher(unique("Professor Idempotente"));
         long studentId = createStudent(unique("Aluno Idempotente"), teacherId);
 
-        mockMvc.perform(patch("/students/{id}/activate", studentId).cookie(admin))
+        mockMvc.perform(patch("/students/{id}/activate", studentId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(true));
     }
@@ -54,10 +55,10 @@ class RegistrationActivationIT extends AbstractRegistrationIntegrationTest {
         long teacherId = createTeacher(unique("Professor Que Saiu"));
         long studentId = createStudent(unique("Aluno Ja Ativo"), teacherId);
 
-        mockMvc.perform(patch("/teachers/{id}/deactivate", teacherId).cookie(admin))
+        mockMvc.perform(patch("/teachers/{id}/deactivate", teacherId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(patch("/students/{id}/activate", studentId).cookie(admin))
+        mockMvc.perform(patch("/students/{id}/activate", studentId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(true));
     }
@@ -71,12 +72,12 @@ class RegistrationActivationIT extends AbstractRegistrationIntegrationTest {
         long teacherId = createTeacher(unique("Professor Que Sumiu"));
         long studentId = createStudent(unique("Aluno Pendurado"), teacherId);
 
-        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin))
+        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
-        mockMvc.perform(patch("/teachers/{id}/deactivate", teacherId).cookie(admin))
+        mockMvc.perform(patch("/teachers/{id}/deactivate", teacherId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(patch("/students/{id}/activate", studentId).cookie(admin))
+        mockMvc.perform(patch("/students/{id}/activate", studentId).cookie(admin).with(csrf()))
                 .andExpect(status().isBadRequest());
     }
 
@@ -84,9 +85,9 @@ class RegistrationActivationIT extends AbstractRegistrationIntegrationTest {
     void reactivatesTeacher() throws Exception {
         long teacherId = createTeacher(unique("Professor Que Retorna"));
 
-        mockMvc.perform(patch("/teachers/{id}/deactivate", teacherId).cookie(admin))
+        mockMvc.perform(patch("/teachers/{id}/deactivate", teacherId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
-        mockMvc.perform(patch("/teachers/{id}/activate", teacherId).cookie(admin))
+        mockMvc.perform(patch("/teachers/{id}/activate", teacherId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(true));
     }
@@ -95,9 +96,9 @@ class RegistrationActivationIT extends AbstractRegistrationIntegrationTest {
     void reactivatedTeacherAcceptsStudentsAgain() throws Exception {
         long teacherId = createTeacher(unique("Professora Reintegrada"));
 
-        mockMvc.perform(patch("/teachers/{id}/deactivate", teacherId).cookie(admin))
+        mockMvc.perform(patch("/teachers/{id}/deactivate", teacherId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
-        mockMvc.perform(patch("/teachers/{id}/activate", teacherId).cookie(admin))
+        mockMvc.perform(patch("/teachers/{id}/activate", teacherId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
 
         createStudent(unique("Aluno Novo Da Reintegrada"), teacherId);
@@ -105,7 +106,7 @@ class RegistrationActivationIT extends AbstractRegistrationIntegrationTest {
 
     @Test
     void returnsNotFoundActivatingUnknownStudent() throws Exception {
-        mockMvc.perform(patch("/students/{id}/activate", 99_999_999L).cookie(admin))
+        mockMvc.perform(patch("/students/{id}/activate", 99_999_999L).cookie(admin).with(csrf()))
                 .andExpect(status().isNotFound());
     }
 }

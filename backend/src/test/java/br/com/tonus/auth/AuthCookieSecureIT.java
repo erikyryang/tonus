@@ -7,6 +7,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MvcResult;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -97,7 +98,8 @@ class AuthCookieSecureIT extends AbstractAuthIntegrationTest {
 
         MvcResult result = mockMvc.perform(post("/auth/logout")
                         .secure(true)
-                        .cookie(extractCookie(login(login, DEFAULT_PASSWORD), REFRESH_COOKIE)))
+                        .cookie(extractCookie(login(login, DEFAULT_PASSWORD), REFRESH_COOKIE))
+                        .with(csrf()))
                 .andExpect(status().isOk())
                 .andReturn();
 

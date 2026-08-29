@@ -3,6 +3,7 @@ package br.com.tonus.registration;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -19,11 +20,12 @@ class InactiveTeacherRuleIT extends AbstractRegistrationIntegrationTest {
     @Test
     void rejectsNewStudentForInactiveTeacher() throws Exception {
         long teacherId = createTeacher(unique("Professor Que Saiu"));
-        mockMvc.perform(patch("/teachers/{id}/deactivate", teacherId).cookie(admin))
+        mockMvc.perform(patch("/teachers/{id}/deactivate", teacherId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/students")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"Aluno Orfao","phone":"+5511977770000","teacherId":%d}
@@ -38,11 +40,12 @@ class InactiveTeacherRuleIT extends AbstractRegistrationIntegrationTest {
         long leavingTeacher = createTeacher(unique("Professor De Saida"));
         long studentId = createStudent(unique("Aluno Movido"), activeTeacher);
 
-        mockMvc.perform(patch("/teachers/{id}/deactivate", leavingTeacher).cookie(admin))
+        mockMvc.perform(patch("/teachers/{id}/deactivate", leavingTeacher).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
 
         mockMvc.perform(put("/students/{id}", studentId)
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"Aluno Movido","phone":"+5511977770000","teacherId":%d}
@@ -55,11 +58,12 @@ class InactiveTeacherRuleIT extends AbstractRegistrationIntegrationTest {
         long teacherId = createTeacher(unique("Professor Que Sai Depois"));
         long studentId = createStudent(unique("Aluno Que Fica"), teacherId);
 
-        mockMvc.perform(patch("/teachers/{id}/deactivate", teacherId).cookie(admin))
+        mockMvc.perform(patch("/teachers/{id}/deactivate", teacherId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
 
         mockMvc.perform(put("/students/{id}", studentId)
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"Aluno Que Fica Renomeado","phone":"+5511977771111","teacherId":%d}
@@ -76,6 +80,7 @@ class InactiveTeacherRuleIT extends AbstractRegistrationIntegrationTest {
     void unknownStudentWinsOverInvalidTeacher() throws Exception {
         mockMvc.perform(put("/students/{id}", 99_999_999L)
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"Aluno Fantasma","phone":"+5511977770000","teacherId":88888888}

@@ -3,6 +3,7 @@ package br.com.tonus.registration;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -19,6 +20,7 @@ class RegistrationValidationIT extends AbstractRegistrationIntegrationTest {
 
         mockMvc.perform(post("/teachers")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"%s","phone":"+5511999990000"}
@@ -31,6 +33,7 @@ class RegistrationValidationIT extends AbstractRegistrationIntegrationTest {
     void acceptsNameAtColumnLimit() throws Exception {
         mockMvc.perform(post("/teachers")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"%s","phone":"+5511999990000"}
@@ -43,6 +46,7 @@ class RegistrationValidationIT extends AbstractRegistrationIntegrationTest {
         for (String invalid : new String[]{"11999990000", "+55 11 99999-0000", "+0511999990000", "telefone"}) {
             mockMvc.perform(post("/teachers")
                             .cookie(admin)
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
                                     {"name":"Professor Formato","phone":"%s"}
@@ -57,6 +61,7 @@ class RegistrationValidationIT extends AbstractRegistrationIntegrationTest {
 
         mockMvc.perform(post("/students")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"Aluno Sem Telefone","phone":"","teacherId":%d}

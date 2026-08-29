@@ -4,6 +4,7 @@ import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -40,6 +41,7 @@ class SchedulingAccessControlIT extends AbstractSchedulingIntegrationTest {
 
         mockMvc.perform(post("/announcements")
                         .cookie(linkedTeacherCookie(teacherId))
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"date":"2026-12-25","description":"Natal","suspendsClasses":true}
@@ -117,6 +119,7 @@ class SchedulingAccessControlIT extends AbstractSchedulingIntegrationTest {
     private void expectForbiddenToCancel(Cookie cookie, long studentId) throws Exception {
         mockMvc.perform(post("/schedule-exceptions")
                         .cookie(cookie)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"studentId":%d,"date":"%s","type":"CANCELED"}
@@ -127,6 +130,7 @@ class SchedulingAccessControlIT extends AbstractSchedulingIntegrationTest {
     private void expectForbiddenToCreateSchedule(Cookie cookie, long studentId) throws Exception {
         mockMvc.perform(post("/default-schedules")
                         .cookie(cookie)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"studentId":%d,"time":"07:00"}

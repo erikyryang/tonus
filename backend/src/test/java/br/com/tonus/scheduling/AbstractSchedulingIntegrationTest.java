@@ -8,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -50,6 +51,7 @@ abstract class AbstractSchedulingIntegrationTest extends AbstractRegistrationInt
     protected ResultActions postDefaultSchedule(long studentId, String time) throws Exception {
         return mockMvc.perform(post("/default-schedules")
                 .cookie(admin)
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {"studentId":%d,"time":"%s"}
@@ -66,6 +68,7 @@ abstract class AbstractSchedulingIntegrationTest extends AbstractRegistrationInt
             throws Exception {
         return mockMvc.perform(post("/announcements")
                 .cookie(admin)
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {"date":"%s","description":"%s","suspendsClasses":%b}
@@ -91,6 +94,7 @@ abstract class AbstractSchedulingIntegrationTest extends AbstractRegistrationInt
     protected ResultActions postException(String body) throws Exception {
         return mockMvc.perform(post("/schedule-exceptions")
                 .cookie(admin)
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body));
     }
@@ -120,6 +124,7 @@ abstract class AbstractSchedulingIntegrationTest extends AbstractRegistrationInt
         String login = unique(linkField.toLowerCase()) + "@tonus.com";
         mockMvc.perform(post("/users")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"login":"%s","password":"%s","role":"%s","%s":%d}

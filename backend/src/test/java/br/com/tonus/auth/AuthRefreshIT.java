@@ -11,6 +11,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -42,7 +43,7 @@ class AuthRefreshIT extends AbstractAuthIntegrationTest {
                 """, "expirado@tonus.com");
         assertThat(aged).isPositive();
 
-        mockMvc.perform(post("/auth/refresh").cookie(refreshCookie))
+        mockMvc.perform(post("/auth/refresh").cookie(refreshCookie).with(csrf()))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -53,7 +54,7 @@ class AuthRefreshIT extends AbstractAuthIntegrationTest {
         Cookie initialRefresh = extractCookie(loginResponse, REFRESH_COOKIE);
         Cookie initialAccess = extractCookie(loginResponse, ACCESS_COOKIE);
 
-        var refreshResult = mockMvc.perform(post("/auth/refresh").cookie(initialRefresh))
+        var refreshResult = mockMvc.perform(post("/auth/refresh").cookie(initialRefresh).with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(cookie().exists(ACCESS_COOKIE))
                 .andExpect(cookie().exists(REFRESH_COOKIE))
@@ -72,21 +73,21 @@ class AuthRefreshIT extends AbstractAuthIntegrationTest {
         MockHttpServletResponse loginResponse = login("student@tonus.com", "s3cret-pass");
         Cookie initialRefresh = extractCookie(loginResponse, REFRESH_COOKIE);
 
-        var firstRefreshResult = mockMvc.perform(post("/auth/refresh").cookie(initialRefresh))
+        var firstRefreshResult = mockMvc.perform(post("/auth/refresh").cookie(initialRefresh).with(csrf()))
                 .andExpect(status().isOk())
                 .andReturn();
         Cookie rotatedRefresh = extractCookie(firstRefreshResult.getResponse(), REFRESH_COOKIE);
 
-        mockMvc.perform(post("/auth/refresh").cookie(initialRefresh))
+        mockMvc.perform(post("/auth/refresh").cookie(initialRefresh).with(csrf()))
                 .andExpect(status().isUnauthorized());
 
-        mockMvc.perform(post("/auth/refresh").cookie(rotatedRefresh))
+        mockMvc.perform(post("/auth/refresh").cookie(rotatedRefresh).with(csrf()))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
     void refreshWithoutCookieReturnsUnauthorized() throws Exception {
-        mockMvc.perform(post("/auth/refresh"))
+        mockMvc.perform(post("/auth/refresh").with(csrf()))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -103,7 +104,7 @@ class AuthRefreshIT extends AbstractAuthIntegrationTest {
 
         jdbcTemplate.update("UPDATE users SET active = FALSE WHERE id = ?", user.getId());
 
-        mockMvc.perform(post("/auth/refresh").cookie(refreshCookie))
+        mockMvc.perform(post("/auth/refresh").cookie(refreshCookie).with(csrf()))
                 .andExpect(status().isUnauthorized());
     }
 

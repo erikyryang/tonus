@@ -20,6 +20,11 @@ src/
 ## Auth e rede — regras duras
 - Sessão vive em cookies httpOnly. JS NUNCA lê, grava ou anexa token.
   Não existe Authorization header, localStorage ou sessionStorage de auth.
+- Única exceção ao "JS nunca lê cookie": o CSRF. O backend exige o cookie
+  XSRF-TOKEN (não-httpOnly, deliberadamente) ecoado como header X-XSRF-TOKEN
+  em todo método não-GET (POST/PUT/PATCH/DELETE), inclusive no /auth/refresh.
+  É o padrão double-submit: o valor não é segredo; o que o protege é o
+  same-origin. O eco acontece SÓ no apiClient (lib/), nunca em componente.
 - Toda chamada usa o apiClient de lib/ (fetch com credentials: 'include',
   baseURL relativa /api). Proibido fetch/axios solto em componente.
 - Front e API são SAME-ORIGIN por decisão de arquitetura:

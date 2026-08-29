@@ -3,6 +3,7 @@ package br.com.tonus.registration;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -112,7 +113,7 @@ class UserLinkValidationIT extends AbstractRegistrationIntegrationTest {
     void rejectsUserForInactiveStudent() throws Exception {
         long teacherId = createTeacher(unique("Professora Do Inativo"));
         long studentId = createStudent(unique("Aluno Que Ja Saiu"), teacherId);
-        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin))
+        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
 
         postUser(uniqueLogin("aluno-inativo"), "STUDENT", "\"studentId\":" + studentId)
@@ -123,7 +124,7 @@ class UserLinkValidationIT extends AbstractRegistrationIntegrationTest {
     @Test
     void rejectsUserForInactiveTeacher() throws Exception {
         long teacherId = createTeacher(unique("Professor Que Ja Saiu"));
-        mockMvc.perform(patch("/teachers/{id}/deactivate", teacherId).cookie(admin))
+        mockMvc.perform(patch("/teachers/{id}/deactivate", teacherId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
 
         postUser(uniqueLogin("professor-inativo"), "TEACHER", "\"teacherId\":" + teacherId)
@@ -138,9 +139,9 @@ class UserLinkValidationIT extends AbstractRegistrationIntegrationTest {
     void acceptsUserForReactivatedStudent() throws Exception {
         long teacherId = createTeacher(unique("Professora Da Volta"));
         long studentId = createStudent(unique("Aluno Que Voltou"), teacherId);
-        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin))
+        mockMvc.perform(patch("/students/{id}/deactivate", studentId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
-        mockMvc.perform(patch("/students/{id}/activate", studentId).cookie(admin))
+        mockMvc.perform(patch("/students/{id}/activate", studentId).cookie(admin).with(csrf()))
                 .andExpect(status().isOk());
 
         postUser(uniqueLogin("aluno-voltou"), "STUDENT", "\"studentId\":" + studentId)
@@ -152,6 +153,7 @@ class UserLinkValidationIT extends AbstractRegistrationIntegrationTest {
         String link = linkField == null ? "" : "," + linkField;
         return mockMvc.perform(post("/users")
                 .cookie(admin)
+                .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {"login":"%s","password":"%s","role":"%s"%s}

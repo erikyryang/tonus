@@ -3,6 +3,7 @@ package br.com.tonus.notification;
 import br.com.tonus.registration.AbstractRegistrationIntegrationTest;
 import org.junit.jupiter.api.Test;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -36,9 +37,9 @@ class WhatsAppNotConfiguredIT extends AbstractRegistrationIntegrationTest {
 
         mockMvc.perform(get("/whatsapp/instances").cookie(admin))
                 .andExpect(status().isServiceUnavailable());
-        mockMvc.perform(post("/whatsapp/session").cookie(admin))
+        mockMvc.perform(post("/whatsapp/session").cookie(admin).with(csrf()))
                 .andExpect(status().isServiceUnavailable());
-        mockMvc.perform(delete("/whatsapp/session").cookie(admin))
+        mockMvc.perform(delete("/whatsapp/session").cookie(admin).with(csrf()))
                 .andExpect(status().isServiceUnavailable());
     }
 

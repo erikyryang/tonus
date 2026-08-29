@@ -7,6 +7,7 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -28,6 +29,7 @@ class StudentTeacherLinkIT extends AbstractRegistrationIntegrationTest {
     void rejectsStudentWithoutTeacher() throws Exception {
         mockMvc.perform(post("/students")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"%s","phone":"+5511944443333"}
@@ -40,6 +42,7 @@ class StudentTeacherLinkIT extends AbstractRegistrationIntegrationTest {
     void rejectsStudentWithNullTeacher() throws Exception {
         mockMvc.perform(post("/students")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"%s","phone":"+5511944443333","teacherId":null}
@@ -51,6 +54,7 @@ class StudentTeacherLinkIT extends AbstractRegistrationIntegrationTest {
     void rejectsStudentWithUnknownTeacher() throws Exception {
         mockMvc.perform(post("/students")
                         .cookie(admin)
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"%s","phone":"+5511944443333","teacherId":99999999}
