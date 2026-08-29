@@ -76,6 +76,12 @@ public class SchedulingService {
             if (defaultScheduleRepository.existsByStudentId(studentId)) {
                 throw new ScheduleAlreadyExistsException(studentId);
             }
+            // The schedule is leaving the old student, and so do their
+            // exceptions — the same cleanup deleteDefaultSchedule performs.
+            // Without it, schedule_exception (indexed by student_id + date,
+            // not by the schedule) would keep an old CANCELED that silently
+            // suppresses the class of a future schedule for that student.
+            scheduleExceptionRepository.deleteByStudentId(schedule.getStudentId());
         }
         schedule.update(studentId, time);
         return defaultScheduleRepository.save(schedule);
@@ -125,8 +131,15 @@ public class SchedulingService {
     @Transactional
     public ScheduleException cancelClass(Long studentId, LocalDate date) {
         requireNewException(studentId, date);
+        boolean classExisted = studentHasClassOn(studentId, date);
         ScheduleException saved = scheduleExceptionRepository.save(ScheduleException.cancellation(studentId, date));
-        events.publishEvent(new ClassCanceled(studentId, date));
+        // No class that day (no template, no reschedule landing there) means
+        // there is nobody to tell: a "your class was canceled" message for a
+        // class that never existed would be noise. The exception row still
+        // stands — the panel shows what the admin recorded and can undo it.
+        if (classExisted) {
+            events.publishEvent(new ClassCanceled(studentId, date));
+        }
         return saved;
     }
 
@@ -137,9 +150,14 @@ public class SchedulingService {
         }
         requireUsableRescheduleDate(newDate);
         requireNewException(studentId, date);
+        boolean classExisted = studentHasClassOn(studentId, date);
         ScheduleException saved = scheduleExceptionRepository.save(
                 ScheduleException.reschedule(studentId, date, newDate, newTime));
-        events.publishEvent(new ClassRescheduled(studentId, date, newDate, newTime));
+        // Same rule as the cancellation: no class on the origin day, no
+        // "your class was moved" message — there is no class to move.
+        if (classExisted) {
+            events.publishEvent(new ClassRescheduled(studentId, date, newDate, newTime));
+        }
         return saved;
     }
 
@@ -179,7 +197,7 @@ public class SchedulingService {
             throw new AnnouncementAlreadyExistsException(date);
         }
         Announcement saved = announcementRepository.save(new Announcement(date, description, suspendsClasses));
-        events.publishEvent(new AnnouncementCreated(date, description, suspendsClasses));
+        events.publishEvent(new AnnouncementCreated(saved.getId(), date, description, suspendsClasses));
         return saved;
     }
 
@@ -280,10 +298,21 @@ public class SchedulingService {
                                        List<ScheduleException> reschedulesIntoDay) {
         List<ScheduleEntry> entries = new ArrayList<>();
 
+        // Any exception takes the student out of the template; a CANCELED one
+        // also removes a reschedule landing on the day. Both sets are built
+        // unconditionally, not only on weekdays: a reschedule can create a
+        // weekend class, and canceling that class must be just as effective —
+        // otherwise the CANCELED exception changes nothing while the student
+        // still gets a "your class was canceled" message.
+        Set<Long> excepted = exceptionsOfDay.stream()
+                .map(ScheduleException::getStudentId)
+                .collect(Collectors.toSet());
+        Set<Long> canceled = exceptionsOfDay.stream()
+                .filter(exception -> exception.getType() == ExceptionType.CANCELED)
+                .map(ScheduleException::getStudentId)
+                .collect(Collectors.toSet());
+
         if (isWeekday(date)) {
-            Set<Long> excepted = exceptionsOfDay.stream()
-                    .map(ScheduleException::getStudentId)
-                    .collect(Collectors.toSet());
             for (DefaultSchedule schedule : schedules) {
                 if (excepted.contains(schedule.getStudentId())) {
                     continue;
@@ -295,6 +324,9 @@ public class SchedulingService {
         }
 
         for (ScheduleException reschedule : reschedulesIntoDay) {
+            if (canceled.contains(reschedule.getStudentId())) {
+                continue;
+            }
             entryOf(students, reschedule.getStudentId(), reschedule.getNewTime(),
                     ScheduleEntry.Origin.RESCHEDULED, reschedule.getDate(), reschedule.getId())
                     .ifPresent(entries::add);
@@ -310,17 +342,16 @@ public class SchedulingService {
      * call a student who is not coming. Outside the schedule and visible, the ADMIN sees what
      * they canceled and can undo it.
      *
-     * Weekend has no cancellation to show: there was no class to
-     * cancel, and the exception registered on that day changes nothing.
+     * A cancellation on a weekend is just as real as on a weekday: reschedules
+     * can create classes there, and a CANCELED exception has to be both
+     * effective in the expansion and visible here to be undone. The time can
+     * be null — there is no template on a weekend, and the reschedule's time
+     * is recorded on the reschedule, not on the cancellation.
      */
     private List<CanceledEntry> cancellations(LocalDate date,
                                               Map<Long, StudentSummary> students,
                                               List<DefaultSchedule> schedules,
                                               List<ScheduleException> exceptionsOfDay) {
-        if (!isWeekday(date)) {
-            return List.of();
-        }
-
         Map<Long, LocalTime> defaultTimes = schedules.stream()
                 .collect(Collectors.toMap(DefaultSchedule::getStudentId, DefaultSchedule::getTime));
 
@@ -509,6 +540,19 @@ public class SchedulingService {
         if (scheduleExceptionRepository.existsByStudentIdAndDate(studentId, date)) {
             throw new ExceptionAlreadyExistsException(studentId, date);
         }
+    }
+
+    /**
+     * Whether the student would have a class on {@code date}: the day's
+     * template (weekday + default schedule) or a reschedule landing on it.
+     * Decides whether canceling/rescheduling that day is notifying someone —
+     * a phantom operation has nobody to tell.
+     */
+    private boolean studentHasClassOn(Long studentId, LocalDate date) {
+        if (isWeekday(date) && defaultScheduleRepository.findByStudentId(studentId).isPresent()) {
+            return true;
+        }
+        return scheduleExceptionRepository.existsByNewDateAndStudentId(date, studentId);
     }
 
     private void requireExistingStudent(Long studentId) {

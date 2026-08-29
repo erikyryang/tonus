@@ -2,8 +2,6 @@ package br.com.tonus.shared.internal;
 
 import br.com.tonus.shared.Audited;
 import br.com.tonus.shared.BaseEntity;
-import br.com.tonus.shared.internal.domain.AuditLog;
-import br.com.tonus.shared.internal.domain.AuditLogRepository;
 import jakarta.persistence.PostPersist;
 import jakarta.persistence.PostUpdate;
 import java.time.Clock;
@@ -13,11 +11,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class AuditListener {
 
-    private final AuditLogRepository auditLogRepository;
+    private final AuditLogWriter auditLogWriter;
     private final Clock clock;
 
-    public AuditListener(@Lazy AuditLogRepository auditLogRepository, Clock clock) {
-        this.auditLogRepository = auditLogRepository;
+    public AuditListener(@Lazy AuditLogWriter auditLogWriter, Clock clock) {
+        this.auditLogWriter = auditLogWriter;
         this.clock = clock;
     }
 
@@ -36,6 +34,8 @@ public class AuditListener {
             return;
         }
         String entityId = entity instanceof BaseEntity base ? String.valueOf(base.getId()) : "unknown";
-        auditLogRepository.save(new AuditLog(entity.getClass().getSimpleName(), entityId, action, clock.instant()));
+        // REQUIRES_NEW via the writer: the audit commits even if the business
+        // transaction rolls back, so an attempted change leaves its trace.
+        auditLogWriter.record(entity.getClass().getSimpleName(), entityId, action, clock.instant());
     }
 }

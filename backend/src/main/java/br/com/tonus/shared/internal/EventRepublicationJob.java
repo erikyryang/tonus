@@ -64,7 +64,7 @@ public class EventRepublicationJob {
      * {@code BillingJobIT}.
      */
     @Scheduled(cron = "${shared.events.republish-cron:0 */5 * * * *}")
-    @SchedulerLock(name = "event-republication-job", lockAtMostFor = "PT5M", lockAtLeastFor = "PT0S")
+    @SchedulerLock(name = "event-republication-job", lockAtMostFor = "PT30M", lockAtLeastFor = "PT0S")
     public void republishIncompletePublications() {
         Instant now = clock.instant();
         Instant oldestWorthRetrying = now.minus(properties.maxAge());

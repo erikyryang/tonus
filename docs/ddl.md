@@ -82,6 +82,9 @@ Toda mudança entra como migration nova; migration aplicada não se edita.
 `id`, `entity_name`, `entity_id`, `action`, `changed_at`.
 
 - Populada pelo `AuditListener` apenas para entidades anotadas com `@Audited`.
+- Gravada em transação própria (REQUIRES_NEW, via `AuditLogWriter`): uma
+  mudança de negócio que depois faz rollback deixa mesmo assim o rastro da
+  tentativa — que é exatamente o que um log de compliance precisa encontrar.
 - Por decisão de arquitetura, só `invoice.status` e `default_schedule` serão
   auditados. Cadastro de aluno/professor **não** gera registro.
 
@@ -174,6 +177,14 @@ as consultas internas do Modulith para "incompleto" e "apagar concluído"
 também. `status` existe porque o reenvio interno do Modulith compara
 `status != RESUBMITTED`, e `NULL` nunca bate com esse `!=`; por isso o backfill
 da V024 preenche toda linha existente com `COMPLETED` ou `PUBLISHED`.
+
+Linhas **abandonadas** — nunca concluídas, além de `shared.events.max-age`, que
+é quando o `EventRepublicationJob` desiste de reentregar — são podadas na mesma
+janela de `retention` que as concluídas, pelo mesmo `EventPublicationCleanupJob`.
+Sem isso, um evento sem consumidor nunca completaria (e.g. os três de cobrança
+antes de `notification` consumi-los) e a tabela cresceria sem teto, arrastando o
+scan do job de republicação a cada 5 minutos. `max-age` decide por quanto tempo
+tentar; `retention`, por quanto tempo a linha continua respondendo "isso saiu?".
 
 ## `plan` (billing)
 
@@ -294,12 +305,15 @@ timestamps.
   CHECK de `invoice.status`. `BROADCAST` entrou na V023 (mudança 9): disparo
   manual do ADMIN, sem tabela própria — o evento e as linhas daqui são o único
   registro de que ele aconteceu.
-- **Não há coluna de status nem contador de tentativas.** A linha é gravada
-  antes do envio, e falha no envio derruba a transação inteira: uma tentativa
-  malsucedida nunca chega a existir no banco. Quem rastreia falha é
-  `event_publication.completion_date IS NULL` — a tabela do Modulith já é o
-  registro de "não terminou", e duplicá-lo aqui daria dois lugares para
-  discordar.
+- **`status` (`DELIVERED` | `DISCARDED`) veio na V026.** A linha passa a
+  registrar *como* o aviso foi tratado: entregue, ou deliberadamente
+  descartado (aluno inativo ou sem contato). O marcador `DISCARDED` existe pela
+  idempotência do at-least-once: sem ele, uma reentrega do mesmo evento (um
+  fan-out que falhou em outro aluno mantém a publicação incompleta) mandaria um
+  aviso velho para um aluno reativado no meio do caminho. **Não é um retrocesso
+  da regra antiga:** falha de envio continua sem deixar linha (a linha e o envio
+  dividem a transação, e a falha derruba as duas) — descarte é decisão, não
+  falha.
 - `idx_notification_log_student` — histórico de avisos de um aluno.
 - Sem `@Audited`: a tabela já é, ela própria, o registro do que aconteceu.
 - **Podada por `notification.log-retention` (180 dias), e isso só é seguro

@@ -44,6 +44,25 @@ class RegistrationActivationIT extends AbstractRegistrationIntegrationTest {
     }
 
     /**
+     * The teacher check only applies on the actual transition. Deactivating a
+     * teacher does not deactivate their students (InactiveTeacherRuleIT), so an
+     * already-active student can legitimately point to an inactive teacher —
+     * and activating them is a no-op that must succeed, not a 400.
+     */
+    @Test
+    void activatingAlreadyActiveStudentOfInactiveTeacherIsANoOp() throws Exception {
+        long teacherId = createTeacher(unique("Professor Que Saiu"));
+        long studentId = createStudent(unique("Aluno Ja Ativo"), teacherId);
+
+        mockMvc.perform(patch("/teachers/{id}/deactivate", teacherId).cookie(admin))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(patch("/students/{id}/activate", studentId).cookie(admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.active").value(true));
+    }
+
+    /**
      * Reactivating a student whose teacher left would bring back a broken link:
      * the admin needs to reassign first.
      */

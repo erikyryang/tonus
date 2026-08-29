@@ -104,6 +104,17 @@ class RegistrationListingFilterIT extends AbstractRegistrationIntegrationTest {
                 .andExpect(jsonPath("$.content").isArray());
     }
 
+    /**
+     * A sort by a property that doesn't exist is a client typo, not a server
+     * bug: it must come back as a 400, not a 500 ("telefone" is the field
+     * name in the wire contract, but the entity's property is "phone").
+     */
+    @Test
+    void unknownSortPropertyIsRejectedWithBadRequest() throws Exception {
+        mockMvc.perform(get("/students").param("sort", "telefone").cookie(admin))
+                .andExpect(status().isBadRequest());
+    }
+
     private MvcResult pageOf(String path, int page, int size) throws Exception {
         return mockMvc.perform(get(path).cookie(admin)
                         .param("page", String.valueOf(page))

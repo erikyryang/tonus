@@ -70,6 +70,16 @@
             <groupId>org.springframework.modulith</groupId>
             <artifactId>spring-modulith-starter-jpa</artifactId>
         </dependency>
+        <!-- The cleanup job deletes abandoned (never-completed) publications,
+             which the public events-api cannot do — it only resubmits or
+             deletes completed ones. EventPublicationRepository is the SPI
+             behind the registry, already on the runtime classpath via the
+             starter; promoted to compile so the job can use it. Version stays
+             managed by the Modulith BOM. -->
+        <dependency>
+            <groupId>org.springframework.modulith</groupId>
+            <artifactId>spring-modulith-events-core</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>

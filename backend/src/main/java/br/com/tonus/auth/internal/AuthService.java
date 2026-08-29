@@ -15,6 +15,7 @@ import java.util.Collection;
 import java.util.List;
 import java.time.Duration;
 import java.util.Base64;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,13 @@ public class AuthService {
     private final Clock clock;
     private final Duration refreshTokenTtl;
     private final SecureRandom secureRandom = new SecureRandom();
+    /**
+     * A hash that matches nothing, spent on the "login does not exist" path so
+     * the response takes as long as a real bcrypt check — otherwise the timing
+     * difference would tell an attacker which logins exist, undoing the
+     * deliberate "same response" in {@link #login}.
+     */
+    private final String dummyHash;
 
     public AuthService(UserRepository userRepository,
                         RefreshTokenRepository refreshTokenRepository,
@@ -46,6 +54,7 @@ public class AuthService {
         this.registrationFacade = registrationFacade;
         this.clock = clock;
         this.refreshTokenTtl = properties.refreshToken().ttl();
+        this.dummyHash = passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
     @Transactional
@@ -63,10 +72,20 @@ public class AuthService {
      */
     @Transactional
     public AuthTokens login(String login, String rawPassword) {
-        User user = userRepository.findByLogin(login)
-                .filter(u -> passwordEncoder.matches(rawPassword, u.getPassword()))
-                .filter(User::isActive)
-                .orElseThrow(InvalidCredentialsException::new);
+        Optional<User> maybeUser = userRepository.findByLogin(login);
+        if (maybeUser.isEmpty()) {
+            // Equalize the response time with the real check below: without
+            // it, a login that doesn't exist answers in microseconds and one
+            // that does takes ~100ms of bcrypt — a timing side channel that
+            // tells an attacker which logins exist, undoing the deliberate
+            // "same response" below.
+            passwordEncoder.matches(rawPassword, dummyHash);
+            throw new InvalidCredentialsException();
+        }
+        User user = maybeUser.get();
+        if (!passwordEncoder.matches(rawPassword, user.getPassword()) || !user.isActive()) {
+            throw new InvalidCredentialsException();
+        }
 
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = issueRefreshToken(user.getId(), UUID.randomUUID());
@@ -112,7 +131,13 @@ public class AuthService {
             throw new InvalidRefreshTokenException();
         }
 
+        // Same guard as activeLoginOf and login: a deactivated user must not
+        // renew access through an unused refresh token. The deactivation
+        // listener revokes the tokens asynchronously, and in the window before
+        // it runs — or if the event is ever redelivered late — this check is
+        // what stops the session from being renewed instead of dying.
         User user = userRepository.findById(token.getUserId())
+                .filter(User::isActive)
                 .orElseThrow(InvalidRefreshTokenException::new);
 
         String accessToken = jwtService.generateAccessToken(user);

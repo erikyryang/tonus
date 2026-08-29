@@ -133,14 +133,44 @@ class DayScheduleForAdminPanelIT extends AbstractSchedulingIntegrationTest {
         assertThat(studentIdsOf(daySchedule(MONDAY).get("cancellations"))).doesNotContain(studentId);
     }
 
+    /**
+     * A cancellation on a weekend is just as real as on a weekday: reschedules
+     * can create weekend classes, and canceling one must both suppress it in
+     * the expansion and list it in the panel to be undone. Before the fix, a
+     * CANCELED on a Saturday changed nothing while the class stayed on screen.
+     */
     @Test
-    void weekendHasNoCancellations() throws Exception {
+    void weekendCancellationIsEffectiveAndVisible() throws Exception {
         long teacherId = createTeacher(unique("Professor Do Sabado Cancelado"));
         long studentId = createStudent(unique("Aluno Do Sabado Cancelado"), teacherId);
         createDefaultSchedule(studentId, "07:00");
+        // A weekend class only exists because a reschedule landed there.
+        rescheduleClass(studentId, MONDAY, SATURDAY, "10:00");
         cancelClass(studentId, SATURDAY);
 
-        assertThat(daySchedule(SATURDAY).get("cancellations")).isEmpty();
+        JsonNode day = daySchedule(SATURDAY);
+
+        assertThat(studentIdsOf(day.get("entries"))).doesNotContain(studentId);
+        assertThat(studentIdsOf(day.get("cancellations"))).contains(studentId);
+    }
+
+    /**
+     * A reschedule is an exception like any other: canceling the destination
+     * day removes the makeup class too — not just the template one. Otherwise
+     * the reschedule would be the one class that can never be canceled.
+     */
+    @Test
+    void cancelingTheDayRemovesTheRescheduledClassToo() throws Exception {
+        long teacherId = createTeacher(unique("Professor Da Remarcacao Cancelada"));
+        long studentId = createStudent(unique("Aluno Da Remarcacao Cancelada"), teacherId);
+        createDefaultSchedule(studentId, "07:00");
+        rescheduleClass(studentId, MONDAY, WEDNESDAY, "09:00");
+
+        cancelClass(studentId, WEDNESDAY);
+
+        JsonNode day = daySchedule(WEDNESDAY);
+        assertThat(studentIdsOf(day.get("entries"))).doesNotContain(studentId);
+        assertThat(studentIdsOf(day.get("cancellations"))).contains(studentId);
     }
 
     private JsonNode entryOf(JsonNode day, long studentId) {

@@ -11,6 +11,11 @@ import java.time.LocalDate;
  * reason is what makes the notice worth anything. Without them the consumer would have to
  * query the schedule to build the text — and `notification` does not ask `scheduling`
  * anything, by architectural decision.
+ *
+ * Carries the announcement's id because it is the fact's identity: the consumer
+ * keys its idempotency on it. The date alone would make a delete + recreate on
+ * the same day read as a redelivery of the old announcement, swallowing the
+ * corrected notice.
  */
-public record AnnouncementCreated(LocalDate date, String description, boolean suspendsClasses) {
+public record AnnouncementCreated(Long announcementId, LocalDate date, String description, boolean suspendsClasses) {
 }

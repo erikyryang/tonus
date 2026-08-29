@@ -107,6 +107,24 @@ class AuthUserCreationIT extends AbstractAuthIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /**
+     * Bcrypt only reads the first 72 bytes: accepting more would store a key
+     * where two passwords sharing those 72 bytes are interchangeable.
+     */
+    @Test
+    void rejectsPasswordLongerThanSeventyTwoCharacters() throws Exception {
+        long studentId = createStudent();
+        String login = uniqueLogin("senha-longa");
+
+        mockMvc.perform(post("/users")
+                        .cookie(admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"login":"%s","password":"%s","role":"STUDENT","studentId":%d}
+                                """.formatted(login, "a".repeat(73), studentId)))
+                .andExpect(status().isBadRequest());
+    }
+
     @Test
     void nonAdminCannotCreateUsers() throws Exception {
         Cookie teacher = cookieFor("teacher-users@tonus.com", Role.TEACHER);

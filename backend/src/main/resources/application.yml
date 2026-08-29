@@ -60,6 +60,13 @@ spring:
   mvc:
     problemdetails:
       enabled: true
+  task:
+    scheduling:
+      # The crons are written in the studio's timezone (billing at 3am, the
+      # two cleanups half an hour later). The JVM's default timezone is not
+      # pinned anywhere — on a UTC container the same cron would fire at
+      # 00:30 São Paulo and break the intended ordering between the jobs.
+      zone: America/Sao_Paulo
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:tonus}
     username: ${DB_USER:tonus}
@@ -100,8 +107,9 @@ shared:
     # counter, so without a ceiling a permanently lost delivery would be
     # retried every 5 minutes forever. One day, because a canceled-class
     # notice isn't worth anything anymore after that. The row stays in the
-    # database with a null completion_date — that's the evidence that notice
-    # never went out.
+    # database with a null completion_date as evidence that the notice never
+    # went out — until the cleanup job prunes it at the retention window,
+    # which is what keeps the registry from growing without bound.
     max-age: 24h
     # Pruning of already-completed deliveries: the registry doesn't delete
     # anything on its own, and the table sits on the path of every

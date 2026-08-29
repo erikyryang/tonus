@@ -81,7 +81,7 @@ class SchedulingEventsIT {
 
     @Test
     void cancellationPublishesClassCanceled(AssertablePublishedEvents events) {
-        long studentId = seedStudent();
+        long studentId = seedStudentWithSchedule();
 
         schedulingService.cancelClass(studentId, MONDAY);
 
@@ -93,7 +93,7 @@ class SchedulingEventsIT {
 
     @Test
     void reschedulePublishesClassRescheduled(AssertablePublishedEvents events) {
-        long studentId = seedStudent();
+        long studentId = seedStudentWithSchedule();
 
         schedulingService.rescheduleClass(studentId, MONDAY, WEDNESDAY, LocalTime.of(8, 0));
 
@@ -105,14 +105,30 @@ class SchedulingEventsIT {
                 .matchingValue(ClassRescheduled::newTime, LocalTime.of(8, 0));
     }
 
+    /**
+     * No class on the origin day means there is nobody to tell: the "canceled"
+     * notice exists to inform a student who would have come. The exception row
+     * is still created — it is what the panel shows — but the event, whose
+     * only consumer is the WhatsApp notice, does not go out.
+     */
+    @Test
+    void cancelingADayWithoutAClassPublishesNoEvent(AssertablePublishedEvents events) {
+        long studentId = seedStudent();
+
+        schedulingService.cancelClass(studentId, MONDAY);
+
+        assertThat(events.ofType(ClassCanceled.class)).isEmpty();
+    }
+
     @Test
     void announcementPublishesAnnouncementCreated(AssertablePublishedEvents events) {
         LocalDate date = LocalDate.parse("2026-12-25");
 
-        schedulingService.createAnnouncement(date, "Natal", true);
+        long id = schedulingService.createAnnouncement(date, "Natal", true).getId();
 
         assertThat(events)
                 .contains(AnnouncementCreated.class)
+                .matchingValue(AnnouncementCreated::announcementId, id)
                 .matchingValue(AnnouncementCreated::date, date)
                 .matchingValue(AnnouncementCreated::description, "Natal")
                 .matchingValue(AnnouncementCreated::suspendsClasses, true);
@@ -135,5 +151,12 @@ class SchedulingEventsIT {
                 VALUES ('Aluno Do Evento', '+5511988880000', ?, TRUE, now(), now())
                 RETURNING id
                 """, Long.class, teacherId);
+    }
+
+    /** A student who actually has a class to cancel or reschedule. */
+    private long seedStudentWithSchedule() {
+        long studentId = seedStudent();
+        schedulingService.createDefaultSchedule(studentId, LocalTime.of(7, 0));
+        return studentId;
     }
 }

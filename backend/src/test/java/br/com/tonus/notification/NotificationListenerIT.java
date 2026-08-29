@@ -143,6 +143,10 @@ class NotificationListenerIT extends AbstractNotificationIntegrationTest {
      * went out. The realistic case is billing — the student leaves owing, the
      * subscription stays active, and they start receiving overdue-invoice
      * reminders indefinitely.
+     *
+     * The log counts one DISCARDED row per skipped event: the row is the
+     * idempotency marker that stops a later redelivery of the same event from
+     * sending a stale notice if the student ever comes back.
      */
     @Test
     void departedStudentReceivesNothingAndDoesNotBlockTheEvent() {
@@ -156,8 +160,8 @@ class NotificationListenerIT extends AbstractNotificationIntegrationTest {
                 () -> countCompletedPublications("ClassCanceled", student.id()) == 1
                         && countCompletedPublications("InvoiceOverdue", student.id()) == 1);
         assertThat(sender.countSentTo(student.phone())).isZero();
-        assertThat(countLogs(student.id(), "CLASS_CANCELED")).isZero();
-        assertThat(countLogs(student.id(), "INVOICE_OVERDUE")).isZero();
+        assertThat(countLogs(student.id(), "CLASS_CANCELED")).isEqualTo(1);
+        assertThat(countLogs(student.id(), "INVOICE_OVERDUE")).isEqualTo(1);
     }
 
     @Test
@@ -169,9 +173,33 @@ class NotificationListenerIT extends AbstractNotificationIntegrationTest {
 
         eventually("publicação concluída mesmo sem aluno",
                 () -> countCompletedPublications("ClassCanceled", ghostId) == 1);
-        assertThat(countLogs(ghostId, "CLASS_CANCELED")).isZero();
+        // One DISCARDED row: the ghost is "not active" by definition, and the
+        // marker is recorded for the same reason as for a departed student.
+        assertThat(countLogs(ghostId, "CLASS_CANCELED")).isEqualTo(1);
         // The differential, not "is empty": the fake is shared by the class
         // and an earlier test listener may record after the reset.
         assertThat(sender.sent()).hasSize(sentBefore);
+    }
+
+    /**
+     * The reason the DISCARDED row exists: a redelivery of the same event
+     * (the publication stayed incomplete because the fan-out failed on
+     * another student) must not send a stale notice to a student who was
+     * reactivated in the meantime.
+     */
+    @Test
+    void reactivatedStudentDoesNotGetTheDiscardedNoticeOnRedelivery() {
+        Student student = seedStudent("Aluno Reativado Depois Do Descarte");
+        jdbcTemplate.update("UPDATE student SET active = FALSE WHERE id = ?", student.id());
+        publish(new ClassCanceled(student.id(), MONDAY));
+        eventually("descarte registrado", () -> countLogs(student.id(), "CLASS_CANCELED") == 1);
+
+        jdbcTemplate.update("UPDATE student SET active = TRUE WHERE id = ?", student.id());
+        publish(new ClassCanceled(student.id(), MONDAY));
+
+        eventually("reentrega processada sem novo envio",
+                () -> countCompletedPublications("ClassCanceled", student.id()) == 2);
+        assertThat(sender.countSentTo(student.phone())).isZero();
+        assertThat(countLogs(student.id(), "CLASS_CANCELED")).isEqualTo(1);
     }
 }

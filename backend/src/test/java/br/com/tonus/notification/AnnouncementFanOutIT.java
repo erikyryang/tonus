@@ -29,7 +29,7 @@ class AnnouncementFanOutIT extends AbstractNotificationIntegrationTest {
         Student second = seedStudent("Aluno Feriado Dois");
         Student third = seedStudent("Aluno Feriado Tres");
 
-        publish(new AnnouncementCreated(christmas, "Natal", true));
+        publish(new AnnouncementCreated(1001L, christmas, "Natal", true));
 
         eventually("os três alunos avisados", () -> sender.countSentTo(first.phone()) == 1
                 && sender.countSentTo(second.phone()) == 1
@@ -53,7 +53,7 @@ class AnnouncementFanOutIT extends AbstractNotificationIntegrationTest {
         LocalDate date = LocalDate.parse("2026-11-11");
         Student student = seedStudent("Aluno Do Aviso Sem Suspensao");
 
-        publish(new AnnouncementCreated(date, "Obra na rua, entrada pelos fundos", false));
+        publish(new AnnouncementCreated(1002L, date, "Obra na rua, entrada pelos fundos", false));
 
         eventually("o aluno avisado", () -> sender.countSentTo(student.phone()) == 1);
         assertThat(countLogs(student.id(), "ANNOUNCEMENT_NOTICE")).isEqualTo(1);
@@ -75,10 +75,10 @@ class AnnouncementFanOutIT extends AbstractNotificationIntegrationTest {
         LocalDate date = LocalDate.parse("2026-11-13");
         Student student = seedStudent("Aluno Do Aviso Reprocessado");
 
-        publish(new AnnouncementCreated(date, "Recepção em obras", false));
+        publish(new AnnouncementCreated(1003L, date, "Recepção em obras", false));
         eventually("primeira entrega", () -> sender.countSentTo(student.phone()) == 1);
 
-        publish(new AnnouncementCreated(date, "Recepção em obras", false));
+        publish(new AnnouncementCreated(1003L, date, "Recepção em obras", false));
 
         eventually("o listener rodou de novo", () -> sender.countAttemptsTo(student.phone()) >= 1);
         assertThat(sender.countSentTo(student.phone())).isEqualTo(1);
@@ -97,10 +97,10 @@ class AnnouncementFanOutIT extends AbstractNotificationIntegrationTest {
         LocalDate date = LocalDate.parse("2026-11-14");
         Student student = seedStudent("Aluno Do Comunicado Corrigido");
 
-        publish(new AnnouncementCreated(date, "Feriado municipal", true));
+        publish(new AnnouncementCreated(1004L, date, "Feriado municipal", true));
         eventually("aviso de suspensão entregue", () -> sender.countSentTo(student.phone()) == 1);
 
-        publish(new AnnouncementCreated(date, "Afinal teremos aula", false));
+        publish(new AnnouncementCreated(1005L, date, "Afinal teremos aula", false));
 
         eventually("correção entregue", () -> sender.countSentTo(student.phone()) == 2);
         assertThat(countLogs(student.id(), "ANNOUNCEMENT_SUSPENSION")).isEqualTo(1);
@@ -113,7 +113,7 @@ class AnnouncementFanOutIT extends AbstractNotificationIntegrationTest {
         LocalDate date = LocalDate.parse("2026-11-12");
         Student student = seedStudent("Aluno Do Aviso Com Suspensao");
 
-        publish(new AnnouncementCreated(date, "Feriado municipal", true));
+        publish(new AnnouncementCreated(1004L, date, "Feriado municipal", true));
 
         eventually("o aluno avisado", () -> sender.countSentTo(student.phone()) == 1);
         assertThat(countLogs(student.id(), "ANNOUNCEMENT_SUSPENSION")).isEqualTo(1);
@@ -134,7 +134,7 @@ class AnnouncementFanOutIT extends AbstractNotificationIntegrationTest {
         Student third = seedStudent("Aluno Seguinte");
         sender.failFor(failing.phone());
 
-        publish(new AnnouncementCreated(carnival, "Carnaval", true));
+        publish(new AnnouncementCreated(1006L, carnival, "Carnaval", true));
 
         eventually("os dois alunos entregáveis foram avisados",
                 () -> sender.countSentTo(first.phone()) == 1 && sender.countSentTo(third.phone()) == 1);
@@ -155,12 +155,12 @@ class AnnouncementFanOutIT extends AbstractNotificationIntegrationTest {
         Student pending = seedStudent("Aluno Pendente");
         sender.failFor(pending.phone());
 
-        publish(new AnnouncementCreated(laborDay, "Dia do Trabalho", true));
+        publish(new AnnouncementCreated(1007L, laborDay, "Dia do Trabalho", true));
         eventually("primeira passada avisou quem dava",
                 () -> sender.countSentTo(delivered.phone()) == 1);
 
         sender.reset();
-        publish(new AnnouncementCreated(laborDay, "Dia do Trabalho", true));
+        publish(new AnnouncementCreated(1007L, laborDay, "Dia do Trabalho", true));
 
         eventually("segunda passada avisou o pendente",
                 () -> sender.countSentTo(pending.phone()) == 1);
@@ -189,7 +189,7 @@ class AnnouncementFanOutIT extends AbstractNotificationIntegrationTest {
                 students.add(student);
             }
 
-            publish(new AnnouncementCreated(LocalDate.parse("2026-09-07"), "Independencia", true));
+            publish(new AnnouncementCreated(1008L, LocalDate.parse("2026-09-07"), "Independencia", true));
 
             // The default limit is 5: the sixth attempt never happens. The wait
             // is for "at least 5" and the assertion is for "exactly 5" —

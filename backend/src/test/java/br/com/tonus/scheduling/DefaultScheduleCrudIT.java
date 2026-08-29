@@ -68,6 +68,36 @@ class DefaultScheduleCrudIT extends AbstractSchedulingIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    /**
+     * Re-pointing a schedule to another student is "the schedule is leaving
+     * the old owner", and the old owner's exceptions leave with it — the same
+     * cleanup {@code deleteDefaultSchedule} performs. Otherwise a CANCELED
+     * indexed by (student_id, date) would survive the move and silently
+     * suppress the class of the schedule that student gets next.
+     */
+    @Test
+    void movingScheduleToAnotherStudentCleansTheOldOwnersExceptions() throws Exception {
+        long teacherId = createTeacher(unique("Professor Da Mudanca"));
+        long first = createStudent(unique("Aluno Antigo Da Mudanca"), teacherId);
+        long second = createStudent(unique("Aluno Novo Da Mudanca"), teacherId);
+        long id = createDefaultSchedule(first, "07:00");
+        cancelClass(first, MONDAY);
+
+        mockMvc.perform(put("/default-schedules/{id}", id)
+                        .cookie(admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"studentId":%d,"time":"07:00"}
+                                """.formatted(second)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.studentId").value(second));
+
+        createDefaultSchedule(first, "07:00");
+        assertThat(daySchedule(MONDAY).get("entries").findValues("studentId"))
+                .extracting(JsonNode::asLong)
+                .contains(first);
+    }
+
     @Test
     void unknownScheduleIsNotFound() throws Exception {
         mockMvc.perform(get("/default-schedules/{id}", 999_999_999L).cookie(admin))

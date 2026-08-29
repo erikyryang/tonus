@@ -135,4 +135,19 @@ class AnnouncementCrudIT extends AbstractSchedulingIntegrationTest {
                                 """))
                 .andExpect(status().isBadRequest());
     }
+
+    /**
+     * The column is VARCHAR(255): a longer description would fail at the
+     * database as a 500, when the client should have been told at the door.
+     */
+    @Test
+    void rejectsDescriptionLongerThanTheColumn() throws Exception {
+        mockMvc.perform(post("/announcements")
+                        .cookie(admin)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"date":"2027-12-01","description":"%s","suspendsClasses":true}
+                                """.formatted("a".repeat(256))))
+                .andExpect(status().isBadRequest());
+    }
 }

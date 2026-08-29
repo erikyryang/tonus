@@ -16,6 +16,9 @@ public interface ScheduleExceptionRepository
     /** What enters D's schedule: the reschedules whose destination is D. */
     List<ScheduleException> findByNewDate(LocalDate newDate);
 
+    /** Whether a reschedule lands on D for this student — a class exists there. */
+    boolean existsByNewDateAndStudentId(LocalDate newDate, Long studentId);
+
     /**
      * The exceptions of a student in an interval — both ends at once.
      *

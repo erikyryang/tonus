@@ -1,5 +1,6 @@
 package br.com.tonus.notification.internal;
 
+import br.com.tonus.notification.internal.domain.DeliveryStatus;
 import br.com.tonus.notification.internal.domain.MessageTemplate;
 import br.com.tonus.notification.internal.domain.NotificationLog;
 import br.com.tonus.notification.internal.domain.NotificationLogRepository;
@@ -78,14 +79,21 @@ public class NotificationService {
         // both cases nothing is thrown: reprocessing wouldn't bring the
         // student back, and the publication would stay pending forever,
         // clogging up the registry.
+        //
+        // The skip is recorded, not just logged: the DISCARDED row is what
+        // keeps a redelivery of the same event — a fan-out that failed on
+        // another student keeps the publication incomplete — from sending a
+        // stale notice to a student who was reactivated in the meantime.
         if (!registration.studentIsActive(studentId)) {
             log.info("Aviso {} descartado: aluno {} não está ativo no cadastro", template, studentId);
+            markDiscarded(studentId, template, referenceKey);
             return;
         }
 
         Optional<StudentContact> contact = registration.findStudentContact(studentId);
         if (contact.isEmpty()) {
             log.warn("Aviso {} descartado: aluno {} sumiu do cadastro", template, studentId);
+            markDiscarded(studentId, template, referenceKey);
             return;
         }
 
@@ -94,5 +102,10 @@ public class NotificationService {
 
         // Neither phone nor message body in the log: both are personal data.
         log.info("Aviso {} entregue ao aluno {}", template, studentId);
+    }
+
+    private void markDiscarded(Long studentId, MessageTemplate template, String referenceKey) {
+        logs.saveAndFlush(new NotificationLog(studentId, template, referenceKey, clock.instant(),
+                DeliveryStatus.DISCARDED));
     }
 }

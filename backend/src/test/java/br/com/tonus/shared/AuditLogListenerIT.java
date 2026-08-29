@@ -11,6 +11,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Import(TestClockConfig.class)
 class AuditLogListenerIT extends AbstractIntegrationTest {
@@ -20,6 +21,9 @@ class AuditLogListenerIT extends AbstractIntegrationTest {
 
     @Autowired
     private AuditLogRepository auditLogRepository;
+
+    @Autowired
+    private TransactionTemplate transactionTemplate;
 
     @Test
     void savingNewAuditedEntityCreatesAuditLogEntry() {
@@ -45,5 +49,26 @@ class AuditLogListenerIT extends AbstractIntegrationTest {
 
         assertThat(logs).hasSize(2);
         assertThat(logs).anyMatch(log -> log.getAction().equals("UPDATE"));
+    }
+
+    /**
+     * The audit write runs in its own transaction (REQUIRES_NEW): a business
+     * change that later rolls back still leaves the trace of the attempt. For
+     * a compliance log, an attempted-and-rejected modification is exactly
+     * what should be findable.
+     */
+    @Test
+    void rolledBackChangeStillLeavesAnAuditTrace() {
+        Long entityId = transactionTemplate.execute(status -> {
+            SampleAuditedEntity saved = entityRepository.saveAndFlush(new SampleAuditedEntity("foo"));
+            status.setRollbackOnly();
+            return saved.getId();
+        });
+
+        List<AuditLog> logs = auditLogRepository.findByEntityNameAndEntityId(
+                "SampleAuditedEntity", entityId.toString());
+
+        assertThat(logs).hasSize(1);
+        assertThat(logs.get(0).getAction()).isEqualTo("CREATE");
     }
 }

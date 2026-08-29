@@ -70,6 +70,10 @@ Entrega concluída é apagada depois de `shared.events.retention` (7 dias), pelo
 - **Publica:** `scheduling`, em `SchedulingService.cancelClass`.
 - **Significa:** a aula daquele aluno naquele dia não acontece.
 - **Consome:** `notification` (SPEC-005) — avisa o aluno por WhatsApp.
+- **Só é publicado quando a aula existia** (horário padrão naquele dia ou
+  remarcação chegando nele). Cancelar um dia sem aula é registrado no banco —
+  o painel mostra o que o admin gravou e permite desfazer —, mas não há a quem
+  avisar: "sua aula foi cancelada" para uma aula que nunca existiu seria ruído.
 - **Idempotência:** o consumidor precisa tolerar o mesmo aviso duas vezes — a
   entrega é at-least-once, e mandar WhatsApp repetido é o efeito colateral mais
   visível que existe. Em `notification` a garantia é a UNIQUE de
@@ -80,6 +84,8 @@ Entrega concluída é apagada depois de `shared.events.retention` (7 dias), pelo
 - **Publica:** `scheduling`, em `SchedulingService.rescheduleClass`.
 - **Significa:** a aula mudou de dia/hora.
 - **Consome:** `notification` (SPEC-005) — avisa o aluno por WhatsApp.
+- **Só é publicado quando havia aula no dia de origem**, mesma regra de
+  `ClassCanceled`: sem aula de onde partir, não há a quem avisar a mudança.
 - **Carrega a data original** porque quem avisa o aluno precisa dizer de onde
   para onde; "sua aula foi remarcada" sem a origem não informa nada.
 - **Idempotência:** a chave em `notification_log` inclui origem *e* destino. A
@@ -87,7 +93,7 @@ Entrega concluída é apagada depois de `shared.events.retention` (7 dias), pelo
   exceção e recriá-la republica o evento com `originalDate` igual e destino
   diferente —, e chavear só pela origem engoliria o segundo aviso.
 
-### `AnnouncementCreated(LocalDate date, String description, boolean suspendsClasses)`
+### `AnnouncementCreated(Long announcementId, LocalDate date, String description, boolean suspendsClasses)`
 
 - **Publica:** `scheduling`, em `SchedulingService.createAnnouncement`.
 - **Significa:** o estúdio tem um aviso sobre aquele dia. Com
@@ -99,9 +105,15 @@ Entrega concluída é apagada depois de `shared.events.retention` (7 dias), pelo
   motivo é o que faz o aviso valer alguma coisa. Sem eles o consumidor teria de
   perguntar à agenda para montar o texto, e `notification` não pergunta nada a
   `scheduling` — a dependência é só de compilação, num sentido só.
-- **O template escolhido faz parte da idempotência:** `ANNOUNCEMENT_SUSPENSION`
-  e `ANNOUNCEMENT_NOTICE` são chaves diferentes em `notification_log`, com a
-  data como `reference_key` nas duas.
+- **A chave de idempotência é o `announcementId`, não a data.** A data é única
+  por dia, mas apagar e recriar um comunicado no mesmo dia é um fato novo — um
+  aviso corrigido — e a data como `reference_key` faria o segundo aviso ser
+  lido como reentrega do primeiro e engolido pela UNIQUE de `notification_log`.
+  O id diferencia as duas publicações.
+- **O template escolhido também faz parte da idempotência:**
+  `ANNOUNCEMENT_SUSPENSION` e `ANNOUNCEMENT_NOTICE` são chaves diferentes em
+  `notification_log`, de modo que a correção de um comunicado que trocou o
+  efeito chega mesmo com o mesmo id.
 - **Não carrega a lista de alunos afetados:** quem são eles é pergunta que o
   consumidor faz no momento do consumo, porque a resposta muda entre a
   publicação e o consumo.

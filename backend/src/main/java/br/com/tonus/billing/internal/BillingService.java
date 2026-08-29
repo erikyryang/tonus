@@ -131,7 +131,11 @@ public class BillingService {
     @Transactional
     public PlanEnrollment enroll(Long studentId, Long planId) {
         requireActiveStudent(studentId);
-        if (!planRepository.existsById(planId)) {
+        // A deactivated plan drops out of new enrollments (see Plan): accepting
+        // one here would create an enrollment that looks active in the listing
+        // but is silently never billed by the daily job.
+        Plan plan = planRepository.findById(planId).orElseThrow(() -> new UnknownPlanException(planId));
+        if (!plan.isActive()) {
             throw new UnknownPlanException(planId);
         }
         if (planEnrollmentRepository.existsByStudentIdAndPlanId(studentId, planId)) {

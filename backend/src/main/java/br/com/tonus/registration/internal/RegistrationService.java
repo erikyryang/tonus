@@ -106,11 +106,18 @@ public class RegistrationService {
     /**
      * Reactivating requires that the linked teacher still be active — otherwise the
      * student would come back already pointing to someone who left the studio.
+     *
+     * The check only applies on the actual transition. An already-active student
+     * can legitimately point to an inactive teacher (deactivating a teacher does
+     * not deactivate their students), and rejecting that no-op would break the
+     * endpoint's idempotency with a misleading error.
      */
     @Transactional
     public Student activateStudent(Long id) {
         Student student = requireStudent(id);
-        requireActiveTeacher(student.getTeacherId());
+        if (!student.isActive()) {
+            requireActiveTeacher(student.getTeacherId());
+        }
         student.activate();
         return studentRepository.save(student);
     }

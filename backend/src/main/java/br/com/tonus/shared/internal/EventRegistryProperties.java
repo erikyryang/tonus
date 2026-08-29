@@ -35,5 +35,9 @@ public record EventRegistryProperties(Duration minAge, Duration maxAge, Duration
         if (retention == null) {
             retention = Duration.ofDays(7);
         }
+        if (minAge.compareTo(maxAge) >= 0) {
+            throw new IllegalArgumentException(
+                    "shared.events.min-age (" + minAge + ") precisa ser menor que max-age (" + maxAge + ")");
+        }
     }
 }

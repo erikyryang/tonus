@@ -104,6 +104,22 @@ class PlanEnrollmentIT extends AbstractBillingIntegrationTest {
     }
 
     /**
+     * A deactivated plan drops out of new enrollments (see Plan): accepting one
+     * would create an enrollment that looks active in the listing but is
+     * silently never billed by the daily job.
+     */
+    @Test
+    void deactivatedPlanIsRejected() throws Exception {
+        long studentId = createStudent(unique("Aluno Do Plano Inativo"),
+                createTeacher(unique("Professor Do Plano Inativo")));
+        long planId = createPlan(unique("Plano Inativo"), "350.00");
+        mockMvc.perform(patch("/plans/{id}/deactivate", planId).cookie(admin))
+                .andExpect(status().isOk());
+
+        postEnrollment(studentId, planId).andExpect(status().isBadRequest());
+    }
+
+    /**
      * The listing answers "which are this student's plans", which is the
      * question on the student screen — and the only question it asks.
      */

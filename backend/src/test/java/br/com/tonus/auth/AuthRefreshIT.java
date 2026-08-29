@@ -91,6 +91,23 @@ class AuthRefreshIT extends AbstractAuthIntegrationTest {
     }
 
     /**
+     * A deactivated user must not renew access through an unused refresh
+     * token. The deactivation listener revokes tokens asynchronously, and in
+     * the window before it runs the token is still valid — the check here is
+     * what closes that gap.
+     */
+    @Test
+    void refreshIsRejectedForDeactivatedUser() throws Exception {
+        User user = createUser("desativado@tonus.com", "s3cret-pass", Role.ADMIN);
+        Cookie refreshCookie = extractCookie(login("desativado@tonus.com", "s3cret-pass"), REFRESH_COOKIE);
+
+        jdbcTemplate.update("UPDATE users SET active = FALSE WHERE id = ?", user.getId());
+
+        mockMvc.perform(post("/auth/refresh").cookie(refreshCookie))
+                .andExpect(status().isUnauthorized());
+    }
+
+    /**
      * The reuse detection must survive concurrency: two requests carrying the
      * same token both read {@code used=false}, and only the conditional UPDATE
      * may win. The repository method returning 1 exactly once is what makes

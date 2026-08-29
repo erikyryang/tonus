@@ -2,6 +2,7 @@ package br.com.tonus.shared.internal.web;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.access.AccessDeniedException;
@@ -37,6 +38,18 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(AuthenticationException.class)
     public void rethrowAuthentication(AuthenticationException ex) {
         throw ex;
+    }
+
+    /**
+     * An unknown {@code sort} column on a listing is a client error, not a
+     * server bug: Spring Data throws this when {@code ?sort=telefone} names a
+     * property that doesn't exist. Without this it would fall into the 500
+     * catch-all below — a typo producing a 500.
+     */
+    @ExceptionHandler(PropertyReferenceException.class)
+    public ProblemDetail handleUnknownSortProperty(PropertyReferenceException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
+                "Propriedade de ordenação desconhecida: " + ex.getPropertyName());
     }
 
     @ExceptionHandler(Exception.class)

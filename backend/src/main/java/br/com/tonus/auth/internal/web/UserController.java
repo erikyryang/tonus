@@ -88,6 +88,17 @@ class UserController {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
     }
 
+    /**
+     * Safety net for the same race billing guards in {@code BillingExceptionHandler}:
+     * the pre-check in {@code AuthService.createUser} has a window, and a concurrent
+     * request can win the UNIQUE constraint first — without this handler that
+     * surfaces as a 500 instead of the 409 the endpoint already knows how to say.
+     */
+    @ExceptionHandler(org.springframework.dao.DuplicateKeyException.class)
+    ProblemDetail handleConcurrentDuplicate() {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, "Login já em uso");
+    }
+
     @ExceptionHandler(UnknownLinkedPersonException.class)
     ProblemDetail handleUnknownLinkedPerson(UnknownLinkedPersonException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());

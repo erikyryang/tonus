@@ -10,8 +10,14 @@ public record CreateUserRequest(
         @NotBlank @Size(max = 255) String login,
         // Minimum of 8, with no composition rule: it's the floor below which
         // the 5 attempts/minute rate limit (LoginRateLimiter) is the only
-        // defense against brute force. The cap mirrors users' VARCHAR(255) column.
-        @NotBlank @Size(min = 8, max = 255,
+        // defense against brute force.
+        //
+        // Max of 72, not the column's 255: bcrypt only reads the first 72
+        // bytes of the password, and accepting a longer one would silently
+        // store a key where two passwords sharing those 72 bytes are
+        // interchangeable. Rejecting it up front beats discovering the
+        // truncation in a login that works by accident.
+        @NotBlank @Size(min = 8, max = 72,
                 message = "senha deve ter no mínimo 8 caracteres") String password,
         @NotNull Role role,
         Long studentId,

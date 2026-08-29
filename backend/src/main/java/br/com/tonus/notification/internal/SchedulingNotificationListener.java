@@ -80,20 +80,26 @@ class SchedulingNotificationListener {
      * behind it. Aborting early reaches the same place — the publication
      * stays incomplete and the republication job tries again later — without
      * paying the toll.
+     *
+     * The idempotency key is the announcement's id, not the date: a delete +
+     * recreate on the same day is a *new* fact, and keying on the date would
+     * make its notice be read as a redelivery of the old announcement and
+     * swallowed by the UNIQUE in notification_log.
      */
     @ApplicationModuleListener
     public void on(AnnouncementCreated event) {
         /*
          * The template is chosen by the effect, and it's not just the text
          * that changes: it enters the idempotency key together with the
-         * date. "We won't have class" and "classes happen normally" are
-         * opposite notices, and sending the former for an announcement that
-         * doesn't suspend classes would empty the room on a class day.
+         * reference (the announcement's id), so "we won't have class" and
+         * "classes happen normally" are opposite notices, and sending the
+         * former for an announcement that doesn't suspend classes would
+         * empty the room on a class day.
          */
         MessageTemplate template = event.suspendsClasses()
                 ? MessageTemplate.ANNOUNCEMENT_SUSPENSION
                 : MessageTemplate.ANNOUNCEMENT_NOTICE;
-        fanOutToActiveStudents("comunicado", event.date().toString(), template,
+        fanOutToActiveStudents("comunicado", event.announcementId().toString(), template,
                 MessageTemplate.date(event.date()), event.description());
     }
 
@@ -137,7 +143,15 @@ class SchedulingNotificationListener {
             try {
                 notifications.notifyStudent(student.studentId(), template, reference, args);
                 consecutiveFailures = 0;
-            } catch (RuntimeException e) {
+            } catch (WhatsAppDeliveryException e) {
+                // Only a delivery failure is "the gateway being down" — the
+                // one condition that justifies both counting toward the abort
+                // and treating the fan-out as pending. A programming error
+                // (NPE, template mismatch) must propagate as itself: swallowed
+                // here, it would look like five consecutive gateway failures,
+                // the whole publication would be retried for a day, and the
+                // developer reading the WARN would hunt the gateway instead
+                // of the code.
                 log.warn("Falha ao avisar o aluno {} do {} {}", student.studentId(), kind, reference, e);
                 failed.add(student.studentId());
                 if (++consecutiveFailures >= limit) {
