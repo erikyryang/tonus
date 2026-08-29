@@ -1,10 +1,17 @@
 package br.com.tonus.shared;
 
 import br.com.tonus.auth.AbstractAuthIntegrationTest;
+import br.com.tonus.shared.internal.web.GlobalExceptionHandler;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -38,5 +45,31 @@ class UnmappedExceptionIT extends AbstractAuthIntegrationTest {
                         org.hamcrest.Matchers.containsString("segredo interno"))))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("IllegalStateException"))));
+    }
+
+    /**
+     * The client sees a generic 500, but the cause must be findable: a 500
+     * that is never logged is a bug that hides itself. The handler has to
+     * record the exception server-side with its stacktrace.
+     */
+    @Test
+    void unmappedExceptionIsLoggedServerSide() throws Exception {
+        Cookie admin = adminCookie("admin-boom-log@tonus.com");
+        Logger logger = (Logger) LoggerFactory.getLogger(GlobalExceptionHandler.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+
+        try {
+            mockMvc.perform(get("/test/probe/boom").cookie(admin))
+                    .andExpect(status().isInternalServerError());
+
+            assertThat(appender.list)
+                    .anyMatch(event -> event.getLevel() == Level.ERROR
+                            && event.getThrowableProxy() != null
+                            && event.getThrowableProxy().getClassName().contains("IllegalStateException"));
+        } finally {
+            logger.detachAppender(appender);
+        }
     }
 }

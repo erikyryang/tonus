@@ -1,10 +1,12 @@
 package br.com.tonus.billing;
 
 import br.com.tonus.billing.internal.BillingService;
+import br.com.tonus.billing.internal.domain.Invoice;
 import br.com.tonus.billing.internal.domain.InvoiceRepository;
 import br.com.tonus.support.PostgresContainer;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -106,6 +108,40 @@ class BillingJobIT {
         // become OVERDUE in this same call.
         assertThat(events.ofType(InvoiceOverdue.class).matchingValue(InvoiceOverdue::invoiceId, invoiceId))
                 .hasSize(1);
+    }
+
+    @Test
+    void jobRunningAfterDueDayStillInvoicesTheMonthWithItsRealDueDate(AssertablePublishedEvents events) {
+        // Registered on the 10th: their due day is the 10th, already past for
+        // this class's fixed clock (15th). The strict-equality gate would have
+        // skipped this student for the whole month; the catch-up must invoice
+        // them, on the real due date, not on "today".
+        long studentId = seedStudent("2026-01-10 10:00:00");
+        seedEnrollment(studentId, seedPlan("Plano Do Catch Up", "220.00"));
+
+        billingService.generateDueInvoices();
+        billingService.generateDueInvoices();
+
+        assertThat(invoiceRepository.findAll())
+                .filteredOn(invoice -> invoice.getStudentId().equals(studentId))
+                .singleElement()
+                .satisfies(invoice -> assertThat(invoice.getDueDate()).isEqualTo(LocalDate.of(2026, 7, 10)));
+        assertThat(events.ofType(InvoiceDueSoon.class).matchingValue(InvoiceDueSoon::studentId, studentId))
+                .hasSize(1);
+    }
+
+    @Test
+    void jobDoesNotInvoiceAStudentWhoseDueDayHasNotArrived() {
+        // Registered on the 20th: their due day is the 20th, still ahead of
+        // this class's fixed clock (15th). Nothing to bill yet.
+        long studentId = seedStudent("2026-01-20 10:00:00");
+        seedEnrollment(studentId, seedPlan("Plano Do Futuro", "220.00"));
+
+        billingService.generateDueInvoices();
+
+        assertThat(invoiceRepository.findAll())
+                .filteredOn(invoice -> invoice.getStudentId().equals(studentId))
+                .isEmpty();
     }
 
     private long seedStudent(String createdAt) {

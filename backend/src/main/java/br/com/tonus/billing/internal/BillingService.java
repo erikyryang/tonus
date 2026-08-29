@@ -263,12 +263,21 @@ public class BillingService {
 
     /**
      * Step 1 of the daily job: generates the billing period's invoice for
-     * every student with an active plan whose due date is today.
+     * every student with an active plan whose due date is today — or has
+     * already passed without being invoiced.
      *
      * One invoice per student, with the sum of the plans — the student with
      * three plans gets one charge, not three. The existence check is the
      * business idempotency; uk_invoice_student_period is the database safety
      * net behind it.
+     *
+     * The comparison is "due date not after today" on purpose: gating on
+     * strict equality would permanently lose a month whenever the job didn't
+     * run on the exact due day (deployment, outage), with no catch-up in the
+     * following runs. The idempotency above turns the wider window into a
+     * safe catch-up instead of a double charge. The invoice keeps its real
+     * due date even when it is born late, so the overdue countdown and the
+     * notice reflect when the charge was actually due.
      *
      * The queries are set-based, not per student: active plans, active
      * enrollments and registration dates come in three queries, and the loop
@@ -302,15 +311,16 @@ public class BillingService {
             if (registration == null) {
                 continue;
             }
-            if (!DueDates.forMonth(registration, currentMonth).equals(today)) {
+            LocalDate dueDate = DueDates.forMonth(registration, currentMonth);
+            if (dueDate.isAfter(today)) {
                 continue;
             }
             if (invoiceRepository.existsByStudentIdAndReferenceMonth(studentId, currentMonth.atDay(1))) {
                 continue;
             }
             BigDecimal amount = amountOf(entry.getValue(), discountPercent);
-            Invoice invoice = invoiceRepository.save(new Invoice(studentId, currentMonth, amount, today));
-            events.publishEvent(new InvoiceDueSoon(invoice.getId(), studentId, today, amount));
+            Invoice invoice = invoiceRepository.save(new Invoice(studentId, currentMonth, amount, dueDate));
+            events.publishEvent(new InvoiceDueSoon(invoice.getId(), studentId, dueDate, amount));
         }
     }
 

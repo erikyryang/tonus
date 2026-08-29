@@ -72,6 +72,11 @@ class BillingQueryCountIT extends AbstractBillingIntegrationTest {
      * isolates what we want to guarantee — the read path — from the cost
      * of inserting an invoice, which is proportional by nature (insert +
      * audit + event recording) and isn't N+1.
+     *
+     * The due date must be *ahead* of today for the job to skip them: the
+     * job invoices whoever's due date has already passed (catch-up), so a
+     * past due date would generate an invoice and the ceiling would measure
+     * the write path.
      */
     @Test
     void dailyJobResolvesEverythingInBulkBeforeDeciding() throws Exception {
@@ -87,9 +92,10 @@ class BillingQueryCountIT extends AbstractBillingIntegrationTest {
             for (int i = 0; i < PLANS; i++) {
                 long studentId = createStudent(marker + "-aluno-" + i, createTeacher(marker + "-prof-" + i));
                 enroll(studentId, planId);
-                // Registered on the 5th; "today" for the suite's clock is the 27th.
+                // Registered on the 30th; their July due date (the 30th) is
+                // still ahead of "today" for the suite's clock (the 27th).
                 jdbcTemplate.update("UPDATE student SET created_at = ?::timestamp WHERE id = ?",
-                        "2026-03-05 09:00:00", studentId);
+                        "2026-03-30 09:00:00", studentId);
             }
 
             Statistics statistics = sessionFactory.getStatistics();

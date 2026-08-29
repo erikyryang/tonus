@@ -104,8 +104,13 @@ public class AuthService {
             throw new InvalidRefreshTokenException();
         }
 
-        token.markUsed();
-        refreshTokenRepository.save(token);
+        // Atomic consume: two concurrent requests carrying the same token both
+        // read used=false above, but only one conditional UPDATE wins. The
+        // loser is treated as a reuse — family revoked, nothing issued.
+        if (refreshTokenRepository.markUsedIfUnused(token.getId()) != 1) {
+            revokeFamily(token.getFamily());
+            throw new InvalidRefreshTokenException();
+        }
 
         User user = userRepository.findById(token.getUserId())
                 .orElseThrow(InvalidRefreshTokenException::new);
